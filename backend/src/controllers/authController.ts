@@ -30,37 +30,41 @@ export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
     console.log(`Login attempt for ${email}`);
 
-    // --- MOCK LOGIN FOR DEMO ---
-    if ((email === 'admin@museodeantioquia.co' || email === 'daironmoreno24@gmail.com') && password === 'admin123') {
-        const mockUser = {
-            id: 'mock-admin-id',
-            email: email,
-            role: 'ADMIN',
-            name: email === 'daironmoreno24@gmail.com' ? 'Dairon Moreno (Admin)' : 'Administrador (Demo)',
-            areaId: 'area-3'
-        };
-        const token = jwt.sign(
-            { id: mockUser.id, email: mockUser.email, role: mockUser.role, areaId: mockUser.areaId },
-            process.env.JWT_SECRET || 'fallback_secret',
-            { expiresIn: '8h' }
-        );
-        return res.json({ token, user: mockUser });
-    }
+    // --- MOCK LOGIN FOR DEMO (Only if DB is not connected) ---
+    const isDemoMode = !process.env.DATABASE_URL || process.env.DATABASE_URL.includes("mock");
 
-    if (email === 'testuser@museodeantioquia.co' && password === 'user123') {
-        const mockUser = {
-            id: 'mock-user-id',
-            email: 'testuser@museodeantioquia.co',
-            role: 'USER',
-            name: 'Usuario de Prueba',
-            areaId: 'area-1'
-        };
-        const token = jwt.sign(
-            { id: mockUser.id, email: mockUser.email, role: mockUser.role, areaId: mockUser.areaId },
-            process.env.JWT_SECRET || 'fallback_secret',
-            { expiresIn: '8h' }
-        );
-        return res.json({ token, user: mockUser });
+    if (isDemoMode) {
+        if ((email === 'admin@museodeantioquia.co' || email === 'daironmoreno24@gmail.com') && password === 'admin123') {
+            const mockUser = {
+                id: 'mock-admin-id',
+                email: email,
+                role: 'ADMIN',
+                name: email === 'daironmoreno24@gmail.com' ? 'Dairon Moreno (Admin)' : 'Administrador (Demo)',
+                areaId: 'area-3'
+            };
+            const token = jwt.sign(
+                { id: mockUser.id, email: mockUser.email, role: mockUser.role, areaId: mockUser.areaId },
+                process.env.JWT_SECRET || 'fallback_secret',
+                { expiresIn: '8h' }
+            );
+            return res.json({ token, user: mockUser });
+        }
+
+        if (email === 'testuser@museodeantioquia.co' && password === 'user123') {
+            const mockUser = {
+                id: 'mock-user-id',
+                email: 'testuser@museodeantioquia.co',
+                role: 'USER',
+                name: 'Usuario de Prueba',
+                areaId: 'area-1'
+            };
+            const token = jwt.sign(
+                { id: mockUser.id, email: mockUser.email, role: mockUser.role, areaId: mockUser.areaId },
+                process.env.JWT_SECRET || 'fallback_secret',
+                { expiresIn: '8h' }
+            );
+            return res.json({ token, user: mockUser });
+        }
     }
     // --- END MOCK LOGIN ---
 

@@ -282,17 +282,24 @@ const prismaMock: any = {
     }
 };
 
-let prisma = prismaMock;
+// Database Initialization
+let prisma: PrismaClient;
 
 if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("mock")) {
-    try {
-        const { PrismaClient } = require('@prisma/client');
-        prisma = new PrismaClient();
-    } catch (e) {
-        console.error('Prisma initialization failed. Using placeholder.');
-    }
+    console.log('--- PRODUCTION MODE: Connecting to Database ---');
+    prisma = new PrismaClient({
+        log: ['error', 'warn'],
+    });
+    // Test connection
+    prisma.$connect()
+        .then(() => console.log('Successfully connected to Azure PostgreSQL'))
+        .catch((e) => {
+            console.error('DATABASE CONNECTION ERROR:', e.message);
+            console.error('Check your DATABASE_URL and Azure Firewall rules.');
+        });
 } else {
-    console.log('--- DEMO MODE: Database disabled ---');
+    console.log('--- DEMO MODE: Database disabled (using prismaMock) ---');
+    prisma = prismaMock as any;
 }
 
 const PORT = process.env.PORT || 4000;
