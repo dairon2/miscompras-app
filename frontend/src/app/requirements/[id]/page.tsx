@@ -47,7 +47,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
     // Status Change State
     const [showStatusModal, setShowStatusModal] = useState(false);
-    const [statusForm, setStatusForm] = useState({ status: '', procurementStatus: '', remarks: '' });
+    const [statusForm, setStatusForm] = useState({ status: '', procurementStatus: '', remarks: '', receivedAtSatisfaction: false });
     const [formError, setFormError] = useState('');
     const [selectedFile, setSelectedFile] = useState<any>(null);
 
@@ -100,7 +100,8 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
             setStatusForm({
                 status: response.data.status,
                 procurementStatus: response.data.procurementStatus,
-                remarks: ''
+                remarks: '',
+                receivedAtSatisfaction: false
             });
         } catch (err) {
             console.error("Error fetching requirement", err);
