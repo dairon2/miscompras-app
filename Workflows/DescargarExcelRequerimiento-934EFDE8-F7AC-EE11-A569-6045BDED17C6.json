@@ -1,0 +1,467 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_onedriveforbusiness": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedonedriveforbusiness_e97b9"
+        },
+        "api": {
+          "name": "shared_onedriveforbusiness"
+        }
+      },
+      "shared_excelonlinebusiness": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedexcelonlinebusiness_58523"
+        },
+        "api": {
+          "name": "shared_excelonlinebusiness"
+        }
+      },
+      "shared_onedriveforbusiness_1": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedonedriveforbusiness_6e267"
+        },
+        "api": {
+          "name": "shared_onedriveforbusiness"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "46ef72d0-a905-4862-8329-e5b2351b3f13"
+          },
+          "type": "Request",
+          "kind": "PowerApp",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "Inicializarvariable_Valor": {
+                  "type": "string",
+                  "description": "Escriba el valor inicial.",
+                  "x-ms-powerflows-param-ispartial": false
+                },
+                "Agregarunafilaaunatabla_Fila": {
+                  "type": "any",
+                  "description": "Fila que se agregará en la tabla de Excel especificada.. Este parámetro se usa como parte de \"DE8ECAD2-143F-4CFF-8073-7E4A687DFFE9\"",
+                  "x-ms-powerflows-param-ispartial": true
+                }
+              },
+              "required": [
+                "Inicializarvariable_Valor",
+                "Agregarunafilaaunatabla_Fila"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Inicializar_variable": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "d97b1d6e-4a9c-48ca-a08d-6208e9753530"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "DatosExcel",
+                "type": "string",
+                "value": "@{triggerBody()['Inicializarvariable_Valor']}"
+              }
+            ]
+          }
+        },
+        "Análisis_del_archivo_JSON": {
+          "runAfter": {
+            "Inicializar_variable": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b5973933-58cd-4919-a8a9-4ea6e512a705"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@variables('DatosExcel')",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "Author": {
+                    "type": "object",
+                    "properties": {
+                      "Claims": {
+                        "type": "string"
+                      },
+                      "Department": {},
+                      "DisplayName": {
+                        "type": "string"
+                      },
+                      "Email": {
+                        "type": "string"
+                      },
+                      "JobTitle": {}
+                    }
+                  },
+                  "Cantidad": {
+                    "type": "integer"
+                  },
+                  "Categor_x00ed_a": {
+                    "type": "object",
+                    "properties": {
+                      "Value": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "Created": {
+                    "type": "string"
+                  },
+                  "Editor": {
+                    "type": "object",
+                    "properties": {
+                      "Claims": {
+                        "type": "string"
+                      },
+                      "Department": {},
+                      "DisplayName": {
+                        "type": "string"
+                      },
+                      "Email": {
+                        "type": "string"
+                      },
+                      "JobTitle": {}
+                    }
+                  },
+                  "FechadeOrdendeServicio": {
+                    "type": "string"
+                  },
+                  "ID": {
+                    "type": "integer"
+                  },
+                  "IdArea": {
+                    "type": "object",
+                    "properties": {
+                      "Id": {
+                        "type": "integer"
+                      },
+                      "Value": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "Modified": {
+                    "type": "string"
+                  },
+                  "NameLider": {
+                    "type": "object",
+                    "properties": {
+                      "Claims": {
+                        "type": "string"
+                      },
+                      "Department": {},
+                      "DisplayName": {
+                        "type": "string"
+                      },
+                      "Email": {
+                        "type": "string"
+                      },
+                      "JobTitle": {}
+                    }
+                  },
+                  "Presupuesto": {
+                    "type": "object",
+                    "properties": {
+                      "Id": {
+                        "type": "integer"
+                      },
+                      "Value": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "Title": {
+                    "type": "string"
+                  },
+                  "field_2": {
+                    "type": "string"
+                  },
+                  "field_4": {
+                    "type": "string"
+                  },
+                  "field_5": {
+                    "type": "object",
+                    "properties": {
+                      "Value": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "{FilenameWithExtension}": {
+                    "type": "string"
+                  },
+                  "{FullPath}": {
+                    "type": "string"
+                  },
+                  "{HasAttachments}": {
+                    "type": "boolean"
+                  },
+                  "{Identifier}": {
+                    "type": "string"
+                  },
+                  "{IsFolder}": {
+                    "type": "boolean"
+                  },
+                  "{Link}": {
+                    "type": "string"
+                  },
+                  "{Name}": {
+                    "type": "string"
+                  },
+                  "{Path}": {
+                    "type": "string"
+                  },
+                  "{Thumbnail}": {
+                    "type": "object",
+                    "properties": {
+                      "Large": {},
+                      "Medium": {},
+                      "Small": {}
+                    }
+                  },
+                  "{VersionNumber}": {
+                    "type": "string"
+                  },
+                  "Fechaacordadadeentrega": {
+                    "type": "string"
+                  },
+                  "N_x00fa_merodefactura": {
+                    "type": "integer"
+                  },
+                  "Proveedor": {
+                    "type": "object",
+                    "properties": {
+                      "Id": {
+                        "type": "integer"
+                      },
+                      "Value": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "Quienaprueba": {
+                    "type": "object",
+                    "properties": {
+                      "Claims": {
+                        "type": "string"
+                      },
+                      "Department": {},
+                      "DisplayName": {
+                        "type": "string"
+                      },
+                      "Email": {
+                        "type": "string"
+                      },
+                      "JobTitle": {}
+                    }
+                  },
+                  "Valordelacompra": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "Author",
+                  "Categor_x00ed_a",
+                  "Created",
+                  "Editor",
+                  "FechadeOrdendeServicio",
+                  "ID",
+                  "Modified",
+                  "Presupuesto",
+                  "Title",
+                  "field_5",
+                  "{FilenameWithExtension}",
+                  "{FullPath}",
+                  "{HasAttachments}",
+                  "{Identifier}",
+                  "{IsFolder}",
+                  "{Link}",
+                  "{Name}",
+                  "{Path}",
+                  "{Thumbnail}",
+                  "{VersionNumber}"
+                ]
+              }
+            }
+          }
+        },
+        "Redactar": {
+          "runAfter": {
+            "Análisis_del_archivo_JSON": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "560025f1-6129-46d5-a685-8a99bc1d885b"
+          },
+          "type": "Compose",
+          "inputs": "@concat('/ReportesPresu/',guid(),'Reporte.xlsx')"
+        },
+        "Copiar_archivo": {
+          "runAfter": {
+            "Redactar": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "b!bZwmUsHnWUGF2q-c3aDoEi_JGsDlYM9Hu4VJsYEGHcBA0zRGwICkQZXZ9jbXGuvi.01VG43COAM2MIAUJFUTBEYBYR6NGMOL4JI": "/Compras/Requerimientos/Requemientosrportes.xlsx",
+            "operationMetadataId": "e3bcd458-18f4-43b7-8ec4-fb5bafb3b924",
+            "b!bZwmUsHnWUGF2q-c3aDoEi_JGsDlYM9Hu4VJsYEGHcBA0zRGwICkQZXZ9jbXGuvi.01VG43COHK4SLM6CLT6RFL427KYKETXYQJ": "/Compras/Requerimientos/reporterequerimiento.xlsx",
+            "b!bZwmUsHnWUGF2q-c3aDoEi_JGsDlYM9Hu4VJsYEGHcBA0zRGwICkQZXZ9jbXGuvi.01VG43COEOXQ75EIBGR5DINEC4FPL5RQK7": "/Reporte.xlsx"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "CopyDriveFile",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "id": "b!bZwmUsHnWUGF2q-c3aDoEi_JGsDlYM9Hu4VJsYEGHcBA0zRGwICkQZXZ9jbXGuvi.01VG43COEOXQ75EIBGR5DINEC4FPL5RQK7",
+              "destination": "@outputs('Redactar')",
+              "overwrite": true
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Aplicar_a_cada_uno": {
+          "foreach": "@body('Análisis_del_archivo_JSON')",
+          "actions": {
+            "Agregar_una_fila_a_una_tabla": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "02377159-2295-4415-8ea1-088fc6da9aa9",
+                "tableId": "Tablaexcel2"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_excelonlinebusiness",
+                  "operationId": "AddRowV2",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness"
+                },
+                "parameters": {
+                  "source": "me",
+                  "drive": "b!bZwmUsHnWUGF2q-c3aDoEi_JGsDlYM9Hu4VJsYEGHcBA0zRGwICkQZXZ9jbXGuvi",
+                  "file": "@outputs('Copiar_archivo')?['body/Id']",
+                  "table": "Tablaexcel2",
+                  "item": {
+                    "ID": "@{items('Aplicar_a_cada_uno')['ID']}",
+                    "DETALLES DEL REQUERIMIENTO": "@{items('Aplicar_a_cada_uno')['Title']}",
+                    "VALOR COMPRA": "@{items('Aplicar_a_cada_uno')?['Valordelacompra']}",
+                    "Estado": "@{items('Aplicar_a_cada_uno')?['field_5']?['Value']}",
+                    "Categoría": "@{items('Aplicar_a_cada_uno')?['Categor_x00ed_a']?['Value']}",
+                    "Número de Factura": "@{items('Aplicar_a_cada_uno')?['N_x00fa_merodefactura']}",
+                    "Subgrupo": "@{triggerBody()['Agregarunafilaaunatabla_Fila']}"
+                  }
+                },
+                "authentication": {
+                  "type": "Raw",
+                  "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Copiar_archivo": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d97ec516-f326-473d-a1a1-dfb40195a934"
+          },
+          "type": "Foreach"
+        },
+        "Crear_un_vínculo_para_compartir": {
+          "runAfter": {
+            "Aplicar_a_cada_uno": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "57d0cd41-953f-424f-b781-5a0f92ccc8eb"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness_1",
+              "operationId": "CreateShareLinkV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "id": "@outputs('Copiar_archivo')?['body/Id']",
+              "type": "Edit",
+              "scope": "Anonymous"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Responder_a_una_instancia_de_PowerApps_o_a_un_flujo": {
+          "runAfter": {
+            "Crear_un_vínculo_para_compartir": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c7393251-d3b7-4738-a933-f9d6dbc13a05"
+          },
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "statusCode": 200,
+            "body": {
+              "urlrequerimientos": "@outputs('Crear_un_vínculo_para_compartir')?['body/WebUrl']"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "urlrequerimientos": {
+                  "title": "UrlRequerimientos",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

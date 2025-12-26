@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: miscompras_backend
+    ports:
+      - "4000:4000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=4000
+    # Add other env vars here or use env_file
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend/uploads:/app/uploads
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: miscompras_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # In production, this should match your public domain or Load Balancer URL
+      - NEXT_PUBLIC_API_URL=http://localhost:4000/api
+    depends_on:
+      - backend
+    restart: unless-stopped

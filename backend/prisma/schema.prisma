@@ -1,0 +1,196 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  area      Area?    @relation(fields: [areaId], references: [id])
+  areaId    String?
+
+  requirementsCreated Requirement[] @relation("CreatedBy")
+  requirementsOwned   Requirement[] @relation("OwnedBy")
+  managedBudgets      Budget[]      @relation("BudgetManager")
+}
+
+enum Role {
+  USER
+  LEADER
+  DIRECTOR
+  ADMIN
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  code        String        @unique
+  description String?
+  budgets     Budget[]
+  requirements Requirement[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Area {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  users     User[]
+  requirements Requirement[]
+  budgets      Budget[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Supplier {
+  id           String        @id @default(uuid())
+  name         String
+  taxId        String        @unique
+  contactEmail String?
+  contactPhone String?
+  requirements Requirement[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+
+model Category {
+  id          String   @id @default(uuid())
+  // El código ayuda a la jerarquía, ej: "1.1", "2.4"
+  code        String   @unique 
+  // El nombre descriptivo, ej: "Honorarios"
+  name        String   @unique 
+  
+  // Relación: Una categoría puede estar en muchos presupuestos
+  budgets     Budget[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Budget {
+  id          String   @id @default(uuid())
+  amount      Decimal  @db.Decimal(15, 2)
+  available   Decimal  @db.Decimal(15, 2)
+  
+  // Relación con Categoría
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  String
+
+  project     Project  @relation(fields: [projectId], references: [id])
+  projectId   String
+  
+  area        Area     @relation(fields: [areaId], references: [id])
+  areaId      String
+
+  manager     User?    @relation("BudgetManager", fields: [managerId], references: [id])
+  managerId   String?
+
+  requirements Requirement[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Unicidad: No puede haber dos presupuestos para la misma Categoría en el mismo Proyecto/Área
+  @@unique([projectId, areaId, categoryId])
+}
+
+model Requirement {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  quantity    String?  // New field for quantity/units
+  estimatedAmount Decimal? @db.Decimal(15, 2) // Renamed or made optional
+  actualAmount    Decimal? @db.Decimal(15, 2) // New field for assistant
+  
+  status      Status   @default(PENDING_COORDINATION)
+  procurementStatus ProcurementStatus @default(PENDIENTE)
+
+  project     Project @relation(fields: [projectId], references: [id])
+  projectId   String
+
+  area        Area    @relation(fields: [areaId], references: [id])
+  areaId      String
+
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+  supplierId  String?
+  manualSupplierName String? // For when supplier is not in DB
+
+  createdBy   User     @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById String
+
+  currentOwner User?   @relation("OwnedBy", fields: [currentOwnerId], references: [id])
+  currentOwnerId String?
+
+  attachments Attachment[]
+  logs        HistoryLog[]
+
+  budget      Budget?  @relation(fields: [budgetId], references: [id])
+  budgetId    String?
+
+  purchaseOrderNumber String?
+  invoiceNumber       String?
+  deliveryDate        DateTime?
+  
+  receivedAtSatisfaction Boolean @default(false)
+  satisfactionComments   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Status {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+enum ProcurementStatus {
+  ANULADO
+  ENTREGADO
+  EN_TRAMITE
+  PENDIENTE
+  FINALIZADO
+  POSTERGADO
+}
+
+model Attachment {
+  id            String      @id @default(uuid())
+  fileName      String
+  fileUrl       String
+  requirement   Requirement @relation(fields: [requirementId], references: [id])
+  requirementId String
+  createdAt     DateTime    @default(now())
+}
+
+model HistoryLog {
+  id            String      @id @default(uuid())
+  action        String
+  details       String?
+  requirement   Requirement @relation(fields: [requirementId], references: [id])
+  requirementId String
+  createdAt     DateTime    @default(now())
+}
+
+model Notification {
+  id            String   @id @default(uuid())
+  title         String
+  message       String
+  type          String   @default("INFO") // INFO, SUCCESS, WARNING, ERROR
+  isRead        Boolean  @default(false)
+  userId        String
+  requirementId String?
+  createdAt     DateTime @default(now())
+}

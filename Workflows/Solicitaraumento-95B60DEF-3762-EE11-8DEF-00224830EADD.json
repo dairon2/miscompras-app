@@ -1,0 +1,315 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "invoker",
+        "connection": {},
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_approvals": {
+        "runtimeSource": "invoker",
+        "connection": {},
+        "api": {
+          "name": "shared_approvals"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "invoker",
+        "connection": {},
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "c883ce68-490e-47ec-a603-f39d4f3d83b5"
+          },
+          "type": "Request",
+          "kind": "PowerApp",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "Obtenerelemento_Identificador": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Identificador exclusivo de un elemento que se recuperará",
+                  "x-ms-powerflows-param-ispartial": false
+                }
+              },
+              "required": [
+                "Obtenerelemento_Identificador"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Obtener_elemento": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "66b39eed-50a7-405b-b379-070f113993e6"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://museodeantioquia.sharepoint.com/sites/DocumentosdeOperaciones",
+              "table": "ce32bdeb-f8a1-4ce1-8f3a-15f451a941da",
+              "id": "@triggerBody()['Obtenerelemento_Identificador']"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Variable_monto": {
+          "runAfter": {
+            "Obtener_elemento": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "febf98e1-e0af-4ab8-8c29-edfbbedb7fb0"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Varmonto",
+                "type": "float",
+                "value": "@outputs('Obtener_elemento')?['body/Monto']"
+              }
+            ]
+          }
+        },
+        "Variable_Aumento": {
+          "runAfter": {
+            "Variable_monto": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "909b34ea-cb44-4602-a09d-fcf0856483c2"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "VarAumentopres",
+                "type": "float",
+                "value": "@outputs('Obtener_elemento')?['body/Solicituddeaumento']"
+              }
+            ]
+          }
+        },
+        "Variable_resultado": {
+          "runAfter": {
+            "Variable_Aumento": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "594d3a62-ae96-4215-bfc2-2dc17418d53f"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ResultadoMONTO",
+                "type": "float"
+              }
+            ]
+          }
+        },
+        "Condición": {
+          "actions": {
+            "Iniciar_y_esperar_una_aprobación": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "fedf9525-0c8d-48bf-8ebc-b52799339eac"
+              },
+              "type": "OpenApiConnectionWebhook",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_approvals",
+                  "operationId": "StartAndWaitForAnApproval",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals"
+                },
+                "parameters": {
+                  "approvalType": "Basic",
+                  "WebhookApprovalCreationInput/title": "Solicitud de aumento para el Rubro  @{outputs('Obtener_elemento')?['body/field_3']}",
+                  "WebhookApprovalCreationInput/assignedTo": "dairon.moreno@museodeantioquia.co;",
+                  "WebhookApprovalCreationInput/details": "Hola  Juliana Y Damaris\nTienes una solicitud de  @{outputs('Obtener_elemento')?['body/L_x00ed_der/DisplayName']} para que por favor aumentes un valor de  $ @{outputs('Obtener_elemento')?['body/Solicituddeaumento']} al   Rubro:@{outputs('Obtener_elemento')?['body/field_3']} .\nMotivo:  @{outputs('Obtener_elemento')?['body/Motivodelasolicitud']}",
+                  "WebhookApprovalCreationInput/itemLink": "@outputs('Obtener_elemento')?['body/{Link}']",
+                  "WebhookApprovalCreationInput/enableNotifications": true,
+                  "WebhookApprovalCreationInput/enableReassignment": true
+                },
+                "authentication": {
+                  "type": "Raw",
+                  "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                }
+              }
+            },
+            "Condición_2": {
+              "actions": {
+                "Enviar_correo_electrónico_(V2)": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "0c5f00dc-33f4-47e6-b2c5-8789c2bf611e"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                    },
+                    "parameters": {
+                      "emailMessage/To": "@outputs('Obtener_elemento')?['body/L_x00ed_der/Email']",
+                      "emailMessage/Subject": "Respuesta a tu solicitud de aumento",
+                      "emailMessage/Body": "<p>Hola @{outputs('Obtener_elemento')?['body/L_x00ed_der/DisplayName']}.<br>\nTu solicitud de aumento para el Rubro @{outputs('Obtener_elemento')?['body/field_3']} fue aprobada por el valor solicitado.</p>",
+                      "emailMessage/Importance": "Normal"
+                    },
+                    "authentication": {
+                      "type": "Raw",
+                      "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                    }
+                  }
+                },
+                "Establecer_variable": {
+                  "runAfter": {
+                    "Enviar_correo_electrónico_(V2)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "07b52652-3b94-46e9-bd13-d63e4b7998ca"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "ResultadoMONTO",
+                    "value": "@add(variables('Varmonto'),variables('VarAumentopres'))"
+                  }
+                },
+                "Actualizar_elemento": {
+                  "runAfter": {
+                    "Establecer_variable": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "4683da9a-d7c4-4094-9467-3a67f5740f8c"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "PatchItem",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                    },
+                    "parameters": {
+                      "dataset": "https://museodeantioquia.sharepoint.com/sites/DocumentosdeOperaciones",
+                      "table": "ce32bdeb-f8a1-4ce1-8f3a-15f451a941da",
+                      "id": "@triggerBody()['Obtenerelemento_Identificador']",
+                      "item/field_6": "@add(Outputs('Obtener_elemento')?['body/field_6'], variables('VarAumentopres'))",
+                      "item/Monto": "@variables('ResultadoMONTO')"
+                    },
+                    "authentication": {
+                      "type": "Raw",
+                      "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Iniciar_y_esperar_una_aprobación": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Enviar_correo_electrónico_(V2)_2": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "d8112a5b-06e8-4a37-ba30-0492cfabc648"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_office365",
+                        "operationId": "SendEmailV2",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                      },
+                      "parameters": {
+                        "emailMessage/To": "@outputs('Obtener_elemento')?['body/L_x00ed_der/Email']",
+                        "emailMessage/Subject": "Respuesta a tu solicitud de aumento",
+                        "emailMessage/Body": "<p>Hola @{outputs('Obtener_elemento')?['body/L_x00ed_der/DisplayName']}, lamentablemente no podemos aumentar el valor solicitado, lo máximo que podemos agregar al Rubro @{outputs('Obtener_elemento')?['body/field_3']} es : <br>\n<br>\nSi estas de acuerdo por favor vuelve a realizar la solicitud por un valor que no supere el valor.</p>",
+                        "emailMessage/Importance": "Normal"
+                      },
+                      "authentication": {
+                        "type": "Raw",
+                        "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "not": {
+                  "contains": [
+                    "@outputs('Iniciar_y_esperar_una_aprobación')?['body/outcome']",
+                    "Reject"
+                  ]
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "4f67bc2e-109e-408c-8f84-d78e3e949106"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Variable_resultado": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "greaterOrEquals": [
+              "@outputs('Obtener_elemento')?['body/Solicituddeaumento']",
+              1
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "edc7f242-4b04-413c-b7a2-5b481db7e6d7"
+          },
+          "type": "If"
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

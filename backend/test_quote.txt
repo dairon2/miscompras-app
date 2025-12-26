@@ -1,0 +1,4 @@
+Este es un documento de prueba para validar la funcionalidad de archivos adjuntos en el sistema de Mis Compras.
+Cotización #12345
+Monto: $1.500.000
+Proveedor: Papelería El Cid

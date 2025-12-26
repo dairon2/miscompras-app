@@ -1,0 +1,812 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_onedriveforbusiness": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedonedriveforbusiness_e97b9"
+        },
+        "api": {
+          "name": "shared_onedriveforbusiness"
+        }
+      },
+      "shared_approvals": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedapprovals_22f63"
+        },
+        "api": {
+          "name": "shared_approvals"
+        }
+      },
+      "shared_sharepointonline": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_40a64"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedoffice365_2dba1"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "1af14ce3-b6dd-4922-8051-988a406c9af2"
+          },
+          "type": "Request",
+          "kind": "PowerApp",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "Creararchivo_Nombredearchivo": {
+                  "type": "string",
+                  "description": "Nombre del archivo. OneDrive no permite ciertos caracteres y se reemplazarán por guiones bajos.",
+                  "x-ms-powerflows-param-ispartial": false
+                },
+                "Creararchivo_Nombredearchivo_1": {
+                  "type": "string"
+                },
+                "Creararchivo_Contenidodelarchivo": {
+                  "type": "string",
+                  "format": "binary",
+                  "description": "Contenido del archivo.",
+                  "x-ms-powerflows-param-ispartial": false
+                },
+                "Inicializarvariable_Valor": {
+                  "type": "integer",
+                  "description": "Escriba el valor inicial.",
+                  "x-ms-powerflows-param-ispartial": false
+                },
+                "InicializarvariableUsuarioapp_Valor": {
+                  "type": "string",
+                  "description": "Escriba el valor inicial.",
+                  "x-ms-powerflows-param-ispartial": false
+                },
+                "Inicializarvariable_Valor_1": {
+                  "type": "any"
+                },
+                "CreararchivoHtmlAPROBADO_Contenidodelarchivo": {
+                  "type": "string",
+                  "format": "binary",
+                  "description": "Contenido del archivo.",
+                  "x-ms-powerflows-param-ispartial": false
+                }
+              },
+              "required": [
+                "Creararchivo_Nombredearchivo",
+                "Creararchivo_Nombredearchivo_1",
+                "Creararchivo_Contenidodelarchivo",
+                "Inicializarvariable_Valor",
+                "InicializarvariableUsuarioapp_Valor",
+                "Inicializarvariable_Valor_1",
+                "CreararchivoHtmlAPROBADO_Contenidodelarchivo"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Crear_archivo_Html": {
+          "runAfter": {
+            "Inicializar_variable_respuesta": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "dc261791-1b71-4fe9-81fb-12bb917a04dd"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "CreateFile",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "folderPath": "/Compras/Requerimientos",
+              "name": "@triggerBody()['Creararchivo_Nombredearchivo_1']",
+              "body": "@triggerBody()['Creararchivo_Contenidodelarchivo']"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          },
+          "runtimeConfiguration": {
+            "contentTransfer": {
+              "transferMode": "Chunked"
+            }
+          }
+        },
+        "Convertir_un_archivo": {
+          "runAfter": {
+            "Obtener_contenido_de_archivo": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "efccf2ec-2e69-4aea-aa75-84f57c5ad58a"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "ConvertFile",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "id": "@outputs('Crear_archivo_Html')?['body/Id']",
+              "type": "PDF"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Crear_archivo_2": {
+          "runAfter": {
+            "Convertir_un_archivo": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "edbb99c7-02da-48ce-aca0-a75cc31fa6b4"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "CreateFile",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "folderPath": "/Compras/Requerimientos",
+              "name": "Requerimiento Nº@{variables('AprobadorJefe')}.pdf",
+              "body": "@body('Convertir_un_archivo')"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          },
+          "runtimeConfiguration": {
+            "contentTransfer": {
+              "transferMode": "Chunked"
+            }
+          }
+        },
+        "Obtener_contenido_de_archivo": {
+          "runAfter": {
+            "Crear_archivo_Html": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1605b744-5bb9-4029-a77b-32b520da1cb9"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "GetFileContent",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "id": "@outputs('Crear_archivo_Html')?['body/Id']",
+              "inferContentType": true
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Eliminar_archivo": {
+          "runAfter": {
+            "Condición": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "5fd677be-aba1-43bd-9590-1032c5950aee"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "DeleteFile",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "id": "@outputs('Crear_archivo_Html')?['body/Id']"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Crear_un_vínculo_para_compartir": {
+          "runAfter": {
+            "Crear_archivo_2": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "99d8a95f-3909-4df4-9791-b4b67d96a494"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "CreateShareLinkV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "id": "@outputs('Crear_archivo_2')?['body/Id']",
+              "type": "Edit",
+              "scope": "Anonymous"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Iniciar_y_esperar_una_aprobación_Compras": {
+          "runAfter": {
+            "Crear_un_vínculo_para_compartir": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ef66522b-0c32-4888-bacf-1078e9f7e6d8"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_approvals",
+              "operationId": "StartAndWaitForAnApproval",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals"
+            },
+            "parameters": {
+              "approvalType": "Basic",
+              "WebhookApprovalCreationInput/title": "Solicitud nueva para aprobar el Requerimiento N° @{variables('AprobadorJefe')}",
+              "WebhookApprovalCreationInput/assignedTo": "maryluz.agudelo@museodeantioquia.co",
+              "WebhookApprovalCreationInput/details": "Tienes un nuevo requerimiento por aprobar de parte @{variables('usuario')}.",
+              "WebhookApprovalCreationInput/itemLink": "@outputs('Crear_un_vínculo_para_compartir')?['body/WebUrl']",
+              "WebhookApprovalCreationInput/enableNotifications": true,
+              "WebhookApprovalCreationInput/enableReassignment": true,
+              "WebhookApprovalCreationInput/attachments": [
+                {
+                  "name": "@outputs('Crear_archivo_2')?['body/Name']",
+                  "content": "@body('Convertir_un_archivo')"
+                }
+              ]
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Inicializar_variable_Aprobador_líder": {
+          "runAfter": {
+            "Inicializar_variable_Usuarioapp": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "973c550f-9d9b-4fb5-a426-529a6ed9ff75"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AprobadorJefe",
+                "type": "string",
+                "value": "@{triggerBody()['Inicializarvariable_Valor']}"
+              }
+            ]
+          }
+        },
+        "Condición": {
+          "actions": {
+            "Aplicar_a_cada_uno_6": {
+              "foreach": "@outputs('Iniciar_y_esperar_una_aprobación_Compras')?['body/responses']",
+              "actions": {
+                "Iniciar_y_esperar_una_aprobación_de_Financiera": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "9a3d18c2-566c-4df2-a258-038ee6060b2a"
+                  },
+                  "type": "OpenApiConnectionWebhook",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_approvals",
+                      "operationId": "StartAndWaitForAnApproval",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals"
+                    },
+                    "parameters": {
+                      "approvalType": "Basic",
+                      "WebhookApprovalCreationInput/title": "Solicitud nueva para aprobar el Requerimiento N° @{variables('AprobadorJefe')}.",
+                      "WebhookApprovalCreationInput/assignedTo": "juliana.restrepo@museodeantioquia.co",
+                      "WebhookApprovalCreationInput/details": "Tienes un nuevo requerimiento por aprobar de parte  @{variables('usuario')} , este ya fue aprobado por  Maryluz Agudelo y deja el siguiente comentario:  @{items('Aplicar_a_cada_uno_6')?['comments']},   ",
+                      "WebhookApprovalCreationInput/itemLink": "@{outputs('Crear_un_vínculo_para_compartir')?['body/WebUrl']};  @{items('Aplicar_a_cada_uno_6')?['comments']}",
+                      "WebhookApprovalCreationInput/enableNotifications": true,
+                      "WebhookApprovalCreationInput/enableReassignment": true,
+                      "WebhookApprovalCreationInput/attachments": [
+                        {
+                          "name": "@outputs('Crear_archivo_2')?['body/Name']",
+                          "content": "@body('Convertir_un_archivo')"
+                        }
+                      ]
+                    },
+                    "authentication": {
+                      "type": "Raw",
+                      "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                    }
+                  }
+                },
+                "Condición_2": {
+                  "actions": {
+                    "Establecer_variable_3": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "c4e99c67-da4c-48dc-b9ab-a743d9e14778"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "respuesta",
+                        "value": "@outputs('Iniciar_y_esperar_una_aprobación_Compras')?['body/outcome']"
+                      }
+                    },
+                    "Obtener_elementos_2": {
+                      "runAfter": {
+                        "Establecer_variable_3": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "47fb77b9-10c7-494a-a5f4-50f010f039ea"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_sharepointonline",
+                          "operationId": "GetItems",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                        },
+                        "parameters": {
+                          "dataset": "https://museodeantioquia.sharepoint.com/sites/DocumentosdeOperaciones",
+                          "table": "1008b85a-6668-46d7-9845-2ac72f9f08c6",
+                          "$filter": "Estadodesolicitud eq 'Sin estado'  and N_x00fa_meroderequerimiento eq '@{variables('IDdocumento')}'"
+                        },
+                        "authentication": {
+                          "type": "Raw",
+                          "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                        }
+                      }
+                    },
+                    "Aplicar_a_cada_uno_3": {
+                      "foreach": "@outputs('Obtener_elementos_2')?['body/value']",
+                      "actions": {
+                        "Aplicar_a_cada_uno_7": {
+                          "foreach": "@outputs('Iniciar_y_esperar_una_aprobación_Compras')?['body/responses']",
+                          "actions": {
+                            "Aplicar_a_cada_uno_8": {
+                              "foreach": "@outputs('Obtener_elementos_2')?['body/value']",
+                              "actions": {
+                                "Actualizar_elemento_2": {
+                                  "runAfter": {},
+                                  "metadata": {
+                                    "operationMetadataId": "39b1410f-10cb-4f73-8edb-3dab2b363536"
+                                  },
+                                  "type": "OpenApiConnection",
+                                  "inputs": {
+                                    "host": {
+                                      "connectionName": "shared_sharepointonline",
+                                      "operationId": "PatchItem",
+                                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                    },
+                                    "parameters": {
+                                      "dataset": "https://museodeantioquia.sharepoint.com/sites/DocumentosdeOperaciones",
+                                      "table": "1008b85a-6668-46d7-9845-2ac72f9f08c6",
+                                      "id": "@items('Aplicar_a_cada_uno_3')?['ID']",
+                                      "item/Estadodesolicitud": "@variables('respuesta')",
+                                      "item/N_x00fa_meroderequerimiento": "@items('Aplicar_a_cada_uno_8')?['RequerimientoNum']",
+                                      "item/Comentarioaprobadorl_x00ed_der": "@items('Aplicar_a_cada_uno_7')?['comments']",
+                                      "item/Vinculo_x0020_al_x0020_requerimi": "@outputs('Crear_un_vínculo_para_compartir')?['body/WebUrl']",
+                                      "item/field_5/Value": "Pendientes",
+                                      "item/Categor_x00ed_a/Value": "Orden de Compra",
+                                      "item/Quienaprueba/Claims": "@items('Aplicar_a_cada_uno_7')?['responder/email']"
+                                    },
+                                    "authentication": {
+                                      "type": "Raw",
+                                      "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                                    }
+                                  }
+                                }
+                              },
+                              "runAfter": {},
+                              "metadata": {
+                                "operationMetadataId": "948c70c1-e7dd-4849-a49e-bebf4304a6b5"
+                              },
+                              "type": "Foreach"
+                            }
+                          },
+                          "runAfter": {},
+                          "metadata": {
+                            "operationMetadataId": "4a9dd531-0df6-44f6-9c34-7dc24aaeeb36"
+                          },
+                          "type": "Foreach"
+                        }
+                      },
+                      "runAfter": {
+                        "Obtener_elementos_2": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "21de8b7c-e1c7-4e62-bd53-b3f000ae7784"
+                      },
+                      "type": "Foreach"
+                    },
+                    "Enviar_correo_electrónico_Aprobado": {
+                      "runAfter": {
+                        "Crear_archivo_APROBADO": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "7a66d3ff-2639-4cff-8b1d-a9ebbfb3b639"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_office365",
+                          "operationId": "SendEmailV2",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                        },
+                        "parameters": {
+                          "emailMessage/To": "@variables('usuario')",
+                          "emailMessage/Subject": "Requerimiento @{outputs('Crear_archivo_2')?['body/Name']} Aprobado",
+                          "emailMessage/Body": "<p>Hola @{variables('usuario')} &nbsp;,<br>\nTu solicitud de Requerimiento fue aprobada .</p>",
+                          "emailMessage/Attachments": [
+                            {
+                              "Name": "@outputs('Crear_archivo_APROBADO')?['body/Name']",
+                              "ContentBytes": "@body('Convertir_un_archivo_2')"
+                            }
+                          ],
+                          "emailMessage/Importance": "Normal"
+                        },
+                        "authentication": {
+                          "type": "Raw",
+                          "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                        }
+                      }
+                    },
+                    "Crear_archivo_Html_APROBADO": {
+                      "runAfter": {
+                        "Aplicar_a_cada_uno_3": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "dc261791-1b71-4fe9-81fb-12bb917a04dd"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_onedriveforbusiness",
+                          "operationId": "CreateFile",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+                        },
+                        "parameters": {
+                          "folderPath": "/Compras/Requerimientos",
+                          "name": "@{utcNow()}..html",
+                          "body": "@triggerBody()['CreararchivoHtmlAPROBADO_Contenidodelarchivo']"
+                        },
+                        "authentication": {
+                          "type": "Raw",
+                          "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                        }
+                      },
+                      "runtimeConfiguration": {
+                        "contentTransfer": {
+                          "transferMode": "Chunked"
+                        }
+                      }
+                    },
+                    "Obtener_contenido_de_archivo_2": {
+                      "runAfter": {
+                        "Crear_archivo_Html_APROBADO": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "1605b744-5bb9-4029-a77b-32b520da1cb9"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_onedriveforbusiness",
+                          "operationId": "GetFileContent",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+                        },
+                        "parameters": {
+                          "id": "@outputs('Crear_archivo_Html_APROBADO')?['body/Id']",
+                          "inferContentType": true
+                        },
+                        "authentication": {
+                          "type": "Raw",
+                          "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                        }
+                      }
+                    },
+                    "Convertir_un_archivo_2": {
+                      "runAfter": {
+                        "Obtener_contenido_de_archivo_2": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "efccf2ec-2e69-4aea-aa75-84f57c5ad58a"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_onedriveforbusiness",
+                          "operationId": "ConvertFile",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+                        },
+                        "parameters": {
+                          "id": "@outputs('Crear_archivo_Html_APROBADO')?['body/Id']",
+                          "type": "PDF"
+                        },
+                        "authentication": {
+                          "type": "Raw",
+                          "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                        }
+                      }
+                    },
+                    "Crear_archivo_APROBADO": {
+                      "runAfter": {
+                        "Convertir_un_archivo_2": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "edbb99c7-02da-48ce-aca0-a75cc31fa6b4"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_onedriveforbusiness",
+                          "operationId": "CreateFile",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+                        },
+                        "parameters": {
+                          "folderPath": "/Compras/Requerimientos",
+                          "name": "Requerimiento Nº@{variables('AprobadorJefe')}.pdf",
+                          "body": "@body('Convertir_un_archivo_2')"
+                        },
+                        "authentication": {
+                          "type": "Raw",
+                          "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                        }
+                      },
+                      "runtimeConfiguration": {
+                        "contentTransfer": {
+                          "transferMode": "Chunked"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Iniciar_y_esperar_una_aprobación_de_Financiera": [
+                      "Succeeded"
+                    ]
+                  },
+                  "else": {
+                    "actions": {
+                      "Enviar_correo_electrónico_Rechazado_por_jefe_2": {
+                        "runAfter": {},
+                        "metadata": {
+                          "operationMetadataId": "7a66d3ff-2639-4cff-8b1d-a9ebbfb3b639"
+                        },
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "host": {
+                            "connectionName": "shared_office365",
+                            "operationId": "SendEmailV2",
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                          },
+                          "parameters": {
+                            "emailMessage/To": "@variables('usuario')",
+                            "emailMessage/Subject": "Requerimiento @{outputs('Crear_archivo_2')?['body/Name']} Rechazado",
+                            "emailMessage/Body": "<p>Hola @{variables('usuario')}&nbsp;,<br>\nno podemos aprobar tu Requerimiento&nbsp;</p>",
+                            "emailMessage/Importance": "Normal"
+                          },
+                          "authentication": {
+                            "type": "Raw",
+                            "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "expression": {
+                    "equals": [
+                      "@outputs('Iniciar_y_esperar_una_aprobación_de_Financiera')?['body/outcome']",
+                      "Approve"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e94ca979-7fa3-43ef-ab8e-bc39b03575e8"
+                  },
+                  "type": "If"
+                }
+              },
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "09d02044-1e63-4b8b-8647-0703fa596ca2"
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {
+            "Iniciar_y_esperar_una_aprobación_Compras": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {
+              "Aplicar_a_cada_uno_2": {
+                "foreach": "@outputs('Iniciar_y_esperar_una_aprobación_Compras')?['body/responses']",
+                "actions": {
+                  "Enviar_correo_electrónico_Rechazado_por_jefe": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "7a66d3ff-2639-4cff-8b1d-a9ebbfb3b639"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_office365",
+                        "operationId": "SendEmailV2",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                      },
+                      "parameters": {
+                        "emailMessage/To": "@variables('usuario')",
+                        "emailMessage/Subject": "Requerimiento @{outputs('Crear_archivo_2')?['body/Name']} Rechazado",
+                        "emailMessage/Body": "<p>Hola &nbsp;@{variables('usuario')},<br>\nno podemos aprobar tu requerimiento por el sigueinte motivo: @{items('Aplicar_a_cada_uno_2')?['comments']}</p>",
+                        "emailMessage/Importance": "Normal"
+                      },
+                      "authentication": {
+                        "type": "Raw",
+                        "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                      }
+                    }
+                  },
+                  "Establecer_variable": {
+                    "runAfter": {
+                      "Enviar_correo_electrónico_Rechazado_por_jefe": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "dad8173d-c170-489c-b29a-d8a05f518a55"
+                    },
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "respuesta",
+                      "value": "@outputs('Iniciar_y_esperar_una_aprobación_Compras')?['body/outcome']"
+                    }
+                  }
+                },
+                "runAfter": {},
+                "metadata": {
+                  "operationMetadataId": "40ed1c1b-c1e4-40ab-bd3e-69cdeaa312c2"
+                },
+                "type": "Foreach"
+              }
+            }
+          },
+          "expression": {
+            "equals": [
+              "@outputs('Iniciar_y_esperar_una_aprobación_Compras')?['body/outcome']",
+              "Approve"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "41ac4061-ca3c-4970-b482-ed4bd77b2e16"
+          },
+          "type": "If"
+        },
+        "Inicializar_variable_Usuarioapp": {
+          "runAfter": {
+            "Inicializar_variable_ID_Documento": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6cd7e4f5-c6e2-4e3d-a07b-1ce25f975ea2"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "usuario",
+                "type": "string",
+                "value": "@{triggerBody()['InicializarvariableUsuarioapp_Valor']}"
+              }
+            ]
+          }
+        },
+        "Inicializar_variable_respuesta": {
+          "runAfter": {
+            "Inicializar_variable_Aprobador_líder": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6e2cf3eb-1a84-4b14-912f-bb79f5c573ba"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "respuesta",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Inicializar_variable_ID_Documento": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "dab8da80-a08c-477a-aa4d-e8d707d6a7ee"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "IDdocumento",
+                "type": "string",
+                "value": "@{triggerBody()['Inicializarvariable_Valor_1']}"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

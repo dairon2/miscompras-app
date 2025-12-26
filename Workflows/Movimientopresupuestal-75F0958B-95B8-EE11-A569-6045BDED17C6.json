@@ -1,0 +1,574 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_40a64"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_approvals": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedapprovals_22f63"
+        },
+        "api": {
+          "name": "shared_approvals"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedoffice365_2dba1"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      },
+      "shared_onedriveforbusiness": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedonedriveforbusiness_e97b9"
+        },
+        "api": {
+          "name": "shared_onedriveforbusiness"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "c6ad58c2-6797-431f-9ad9-d9de6ad24fd7"
+          },
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "iddisminuye",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Escribir entrada",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "number": {
+                  "title": "idaumento",
+                  "type": "number",
+                  "x-ms-dynamically-added": true,
+                  "description": "Escriba un número.",
+                  "x-ms-content-hint": "NUMBER"
+                },
+                "text_1": {
+                  "title": "VariableHtml",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Escribir entrada",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_2": {
+                  "title": "Html2",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Escribir entrada",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text",
+                "number",
+                "text_1",
+                "text_2"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Obtener_elementos_a_disminuir": {
+          "runAfter": {
+            "Crear_archivo_final": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0c8d3129-e015-4cd3-9718-2c5022198f47"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://museodeantioquia.sharepoint.com/sites/DocumentosdeOperaciones",
+              "table": "ce32bdeb-f8a1-4ce1-8f3a-15f451a941da",
+              "$filter": "'@{triggerBody()['text']}'  eq IdSolicitudAumdismi  "
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Obtener_elemento": {
+          "runAfter": {
+            "Obtener_elementos_a_disminuir": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8d77b25c-6a4a-4874-a5af-efbcd25e0e12"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://museodeantioquia.sharepoint.com/sites/DocumentosdeOperaciones",
+              "table": "ce32bdeb-f8a1-4ce1-8f3a-15f451a941da",
+              "id": "@triggerBody()['number']"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Condición": {
+          "actions": {
+            "Iniciar_y_esperar_una_aprobación": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "fedf9525-0c8d-48bf-8ebc-b52799339eac"
+              },
+              "type": "OpenApiConnectionWebhook",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_approvals",
+                  "operationId": "StartAndWaitForAnApproval",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals"
+                },
+                "parameters": {
+                  "approvalType": "Basic",
+                  "WebhookApprovalCreationInput/title": "Solicitud de aumento para el Rubro  @{outputs('Obtener_elemento')?['body/field_3']}",
+                  "WebhookApprovalCreationInput/assignedTo": "juliana.restrepo@museodeantioquia.co;damaris.benedetti@museodeantioquia.co;",
+                  "WebhookApprovalCreationInput/details": " Hola  Juliana Y Damaris\nTienen una solicitud de  @{outputs('Obtener_elemento')?['body/L_x00ed_der/DisplayName']} para que por favor aumentes un valor de  $ @{outputs('Obtener_elemento')?['body/Solicituddeaumento']} al   Rubro:@{outputs('Obtener_elemento')?['body/field_3']} . \nMotivo:  @{outputs('Obtener_elemento')?['body/Motivodelasolicitud']}\n\n\n\n\n\n",
+                  "WebhookApprovalCreationInput/itemLink": "@outputs('Obtener_elemento')?['body/{Link}']",
+                  "WebhookApprovalCreationInput/enableNotifications": true,
+                  "WebhookApprovalCreationInput/enableReassignment": true,
+                  "WebhookApprovalCreationInput/attachments": [
+                    {
+                      "name": "@outputs('Crear_archivo_final')?['body/Name']",
+                      "content": "@body('Convertir_un_archivo')"
+                    }
+                  ]
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Condición_2": {
+              "actions": {
+                "Enviar_correo_electrónico_(V2)": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "0c5f00dc-33f4-47e6-b2c5-8789c2bf611e"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                    },
+                    "parameters": {
+                      "emailMessage/To": "@outputs('Obtener_elemento')?['body/L_x00ed_der/Email']",
+                      "emailMessage/Subject": "Respuesta a tu solicitud de aumento",
+                      "emailMessage/Body": "<p>Hola @{outputs('Obtener_elemento')?['body/L_x00ed_der/DisplayName']}.<br>\nTu solicitud de aumento para el Rubro @{outputs('Obtener_elemento')?['body/field_3']} fue aprobada por el valor solicitado.&nbsp;</p>",
+                      "emailMessage/Cc": "juliana.restrepo@museodeantioquia.co;damaris.benedetti@museodeantioquia.co",
+                      "emailMessage/Attachments": [
+                        {
+                          "Name": "@outputs('Crear_archivo_final_2')?['body/Name']",
+                          "ContentBytes": "@body('Convertir_un_archivo_2')"
+                        }
+                      ],
+                      "emailMessage/Importance": "Normal"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Actualizar_elemento": {
+                  "runAfter": {
+                    "Enviar_correo_electrónico_(V2)": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "4683da9a-d7c4-4094-9467-3a67f5740f8c"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "PatchItem",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                    },
+                    "parameters": {
+                      "dataset": "https://museodeantioquia.sharepoint.com/sites/DocumentosdeOperaciones",
+                      "table": "ce32bdeb-f8a1-4ce1-8f3a-15f451a941da",
+                      "id": "@outputs('Obtener_elemento')?['body/ID']",
+                      "item/field_6": "@add(outputs('Obtener_elemento')?['body/field_6'], outputs('Obtener_elemento')?['body/Solicituddeaumento'])",
+                      "item/Monto": "@add(outputs('Obtener_elemento')?['body/Monto'], outputs('Obtener_elemento')?['body/Solicituddeaumento'])"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Aplicar_a_cada_uno": {
+                  "foreach": "@outputs('Obtener_elementos_a_disminuir')?['body/value']",
+                  "actions": {
+                    "Actualizar_elemento_2": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "7da67b36-89d5-41e2-b6da-a25841d8eb08"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_sharepointonline",
+                          "operationId": "PatchItem",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                        },
+                        "parameters": {
+                          "dataset": "https://museodeantioquia.sharepoint.com/sites/DocumentosdeOperaciones",
+                          "table": "ce32bdeb-f8a1-4ce1-8f3a-15f451a941da",
+                          "id": "@items('Aplicar_a_cada_uno')?['ID']",
+                          "item/field_6": "@Sub(if(empty(triggerOutputs()?['body/field_6']), items('Aplicar_a_cada_uno')?['field_6'], int(triggerOutputs()?['body/field_6'])), if(empty(triggerOutputs()?['body/Solicituddedisminuci_x00f3_n']), items('Aplicar_a_cada_uno')?['Solicituddedisminuci_x00f3_n'], int(triggerOutputs()?['body/Solicituddedisminuci_x00f3_n'])))",
+                          "item/Monto": "@Sub(if(empty(triggerOutputs()?['body/Monto']), items('Aplicar_a_cada_uno')?['Monto'], int(triggerOutputs()?['body/Monto'])), if(empty(triggerOutputs()?['body/Solicituddedisminuci_x00f3_n']), items('Aplicar_a_cada_uno')?['Solicituddedisminuci_x00f3_n'], int(triggerOutputs()?['body/Solicituddedisminuci_x00f3_n'])))"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Actualizar_elemento": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "45cd22d6-189f-489c-993c-3a5417ed9537"
+                  },
+                  "type": "Foreach"
+                }
+              },
+              "runAfter": {
+                "Crear_archivo_final_2": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Enviar_correo_electrónico_(V2)_2": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "d8112a5b-06e8-4a37-ba30-0492cfabc648"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_office365",
+                        "operationId": "SendEmailV2",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                      },
+                      "parameters": {
+                        "emailMessage/To": "@outputs('Obtener_elemento')?['body/L_x00ed_der/Email']",
+                        "emailMessage/Subject": "Respuesta a tu solicitud de aumento",
+                        "emailMessage/Body": "<p>Hola @{outputs('Obtener_elemento')?['body/L_x00ed_der/DisplayName']}, lamentablemente no podemos aumentar el valor solicitado, lo máximo que podemos agregar al Rubro @{outputs('Obtener_elemento')?['body/field_3']} es :<br>\n<br>\nSi estas de acuerdo por favor vuelve a realizar la solicitud por otro valor o ponganse en contacto con el Proceso Financiero.</p>",
+                        "emailMessage/Cc": "damaris.benedetti@museodeantioquia.co;juliana.restrepo@museodeantioquia.co",
+                        "emailMessage/Importance": "Normal"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "not": {
+                  "contains": [
+                    "@outputs('Iniciar_y_esperar_una_aprobación')?['body/outcome']",
+                    "Reject"
+                  ]
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "4f67bc2e-109e-408c-8f84-d78e3e949106"
+              },
+              "type": "If"
+            },
+            "Crear_archivo_2": {
+              "runAfter": {
+                "Iniciar_y_esperar_una_aprobación": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "6f685374-b975-49d5-989f-1f7b47658730"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_onedriveforbusiness",
+                  "operationId": "CreateFile",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+                },
+                "parameters": {
+                  "folderPath": "/Compras/Presupuestos",
+                  "name": "@{utcNow()}.html",
+                  "body": "@triggerBody()['text_2']"
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runtimeConfiguration": {
+                "contentTransfer": {
+                  "transferMode": "Chunked"
+                }
+              }
+            },
+            "Convertir_un_archivo_2": {
+              "runAfter": {
+                "Obtener_contenido_de_archivo_2": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "72570ba2-8637-49a9-b904-20e331b3421b"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_onedriveforbusiness",
+                  "operationId": "ConvertFile",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+                },
+                "parameters": {
+                  "id": "@outputs('Crear_archivo_2')?['body/Id']",
+                  "type": "PDF"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Obtener_contenido_de_archivo_2": {
+              "runAfter": {
+                "Crear_archivo_2": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f8a4ed8d-c528-4a1e-8921-ced96f6107c6"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_onedriveforbusiness",
+                  "operationId": "GetFileContent",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+                },
+                "parameters": {
+                  "id": "@outputs('Crear_archivo_2')?['body/Id']",
+                  "inferContentType": true
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Crear_archivo_final_2": {
+              "runAfter": {
+                "Convertir_un_archivo_2": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "852969cd-df6c-4b6b-a2ad-ce6c1cb52b26"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_onedriveforbusiness",
+                  "operationId": "CreateFile",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+                },
+                "parameters": {
+                  "folderPath": "/Compras/Presupuestos",
+                  "name": "@{utcNow()}@{triggerBody()['number']}.pdf",
+                  "body": "@body('Convertir_un_archivo_2')"
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runtimeConfiguration": {
+                "contentTransfer": {
+                  "transferMode": "Chunked"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Obtener_elemento": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {
+              "Enviar_correo_electrónico_(V2)_3": {
+                "runAfter": {},
+                "metadata": {
+                  "operationMetadataId": "d8112a5b-06e8-4a37-ba30-0492cfabc648"
+                },
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "host": {
+                    "connectionName": "shared_office365",
+                    "operationId": "SendEmailV2",
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                  },
+                  "parameters": {
+                    "emailMessage/To": "@outputs('Obtener_elemento')?['body/L_x00ed_der/Email']",
+                    "emailMessage/Subject": "Respuesta a tu solicitud de aumento",
+                    "emailMessage/Body": "<p>Hola @{outputs('Obtener_elemento')?['body/L_x00ed_der/DisplayName']}, lamentablemente no podemos atendertu solcitud, ya que el valor solicitado debe ser mayor a $ 1 &nbsp;@{outputs('Obtener_elemento')?['body/field_3']} es :<br>\n<br>\nSi estas de acuerdo por favor vuelve a realizar la solicitud por otro valor o ponganse en contacto con el Proceso Financiero.</p>",
+                    "emailMessage/Cc": "damaris.benedetti@museodeantioquia.co;juliana.restrepo@museodeantioquia.co",
+                    "emailMessage/Importance": "Normal"
+                  },
+                  "authentication": "@parameters('$authentication')"
+                }
+              }
+            }
+          },
+          "expression": {
+            "greaterOrEquals": [
+              "@outputs('Obtener_elemento')?['body/Solicituddeaumento']",
+              1
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "edc7f242-4b04-413c-b7a2-5b481db7e6d7"
+          },
+          "type": "If"
+        },
+        "Crear_archivo": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "6f685374-b975-49d5-989f-1f7b47658730"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "CreateFile",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "folderPath": "/Compras/Presupuestos",
+              "name": "@{utcNow()}.html",
+              "body": "@triggerBody()['text_1']"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "contentTransfer": {
+              "transferMode": "Chunked"
+            }
+          }
+        },
+        "Obtener_contenido_de_archivo": {
+          "runAfter": {
+            "Crear_archivo": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f8a4ed8d-c528-4a1e-8921-ced96f6107c6"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "GetFileContent",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "id": "@outputs('Crear_archivo')?['body/Id']",
+              "inferContentType": true
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Convertir_un_archivo": {
+          "runAfter": {
+            "Obtener_contenido_de_archivo": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "72570ba2-8637-49a9-b904-20e331b3421b"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "ConvertFile",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "id": "@outputs('Crear_archivo')?['body/Id']",
+              "type": "PDF"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Crear_archivo_final": {
+          "runAfter": {
+            "Convertir_un_archivo": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "852969cd-df6c-4b6b-a2ad-ce6c1cb52b26"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "CreateFile",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "folderPath": "/Compras/Presupuestos",
+              "name": "@{utcNow()}@{triggerBody()['number']}.pdf",
+              "body": "@body('Convertir_un_archivo')"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "contentTransfer": {
+              "transferMode": "Chunked"
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

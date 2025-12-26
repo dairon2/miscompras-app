@@ -1,0 +1,426 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_onedriveforbusiness": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedonedriveforbusiness_e97b9"
+        },
+        "api": {
+          "name": "shared_onedriveforbusiness"
+        }
+      },
+      "shared_excelonlinebusiness": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedexcelonlinebusiness_58523"
+        },
+        "api": {
+          "name": "shared_excelonlinebusiness"
+        }
+      },
+      "shared_onedriveforbusiness_1": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedonedriveforbusiness_6e267"
+        },
+        "api": {
+          "name": "shared_onedriveforbusiness"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "46ef72d0-a905-4862-8329-e5b2351b3f13"
+          },
+          "type": "Request",
+          "kind": "PowerApp",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "Inicializarvariable_Valor": {
+                  "type": "string",
+                  "description": "Escriba el valor inicial.",
+                  "x-ms-powerflows-param-ispartial": false
+                }
+              },
+              "required": [
+                "Inicializarvariable_Valor"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Inicializar_variable": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "d97b1d6e-4a9c-48ca-a08d-6208e9753530"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "DatosExcel",
+                "type": "string",
+                "value": "@{triggerBody()['Inicializarvariable_Valor']}"
+              }
+            ]
+          }
+        },
+        "Análisis_del_archivo_JSON": {
+          "runAfter": {
+            "Inicializar_variable": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "641e98ee-84a8-4455-bd4e-4bf405558dca"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@variables('DatosExcel')",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "Author": {
+                    "type": "object",
+                    "properties": {
+                      "Claims": {
+                        "type": "string"
+                      },
+                      "Department": {},
+                      "DisplayName": {
+                        "type": "string"
+                      },
+                      "Email": {
+                        "type": "string"
+                      },
+                      "JobTitle": {}
+                    }
+                  },
+                  "Created": {
+                    "type": "string"
+                  },
+                  "Editor": {
+                    "type": "object",
+                    "properties": {
+                      "Claims": {
+                        "type": "string"
+                      },
+                      "Department": {},
+                      "DisplayName": {
+                        "type": "string"
+                      },
+                      "Email": {
+                        "type": "string"
+                      },
+                      "JobTitle": {}
+                    }
+                  },
+                  "Ejecutado": {
+                    "type": "integer"
+                  },
+                  "GRUPO": {
+                    "type": "object",
+                    "properties": {
+                      "Value": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "ID": {
+                    "type": "integer"
+                  },
+                  "IdArea": {
+                    "type": "object",
+                    "properties": {
+                      "Id": {
+                        "type": "integer"
+                      },
+                      "Value": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "L_x00ed_der": {
+                    "type": "object",
+                    "properties": {
+                      "Claims": {
+                        "type": "string"
+                      },
+                      "Department": {},
+                      "DisplayName": {
+                        "type": "string"
+                      },
+                      "Email": {
+                        "type": "string"
+                      },
+                      "JobTitle": {}
+                    }
+                  },
+                  "Modified": {
+                    "type": "string"
+                  },
+                  "Monto": {
+                    "type": "integer"
+                  },
+                  "Solicituddeaumento": {
+                    "type": "integer"
+                  },
+                  "Subgrupo": {
+                    "type": "string"
+                  },
+                  "Title": {
+                    "type": "string"
+                  },
+                  "field_3": {
+                    "type": "string"
+                  },
+                  "field_6": {
+                    "type": "integer"
+                  },
+                  "{FilenameWithExtension}": {
+                    "type": "string"
+                  },
+                  "{FullPath}": {
+                    "type": "string"
+                  },
+                  "{HasAttachments}": {
+                    "type": "boolean"
+                  },
+                  "{Identifier}": {
+                    "type": "string"
+                  },
+                  "{IsFolder}": {
+                    "type": "boolean"
+                  },
+                  "{Link}": {
+                    "type": "string"
+                  },
+                  "{Name}": {
+                    "type": "string"
+                  },
+                  "{Path}": {
+                    "type": "string"
+                  },
+                  "{Thumbnail}": {
+                    "type": "object",
+                    "properties": {
+                      "Large": {},
+                      "Medium": {},
+                      "Small": {}
+                    }
+                  },
+                  "{VersionNumber}": {
+                    "type": "string"
+                  },
+                  "AumentoPresupuestal": {
+                    "type": "integer"
+                  },
+                  "IdProyecto": {
+                    "type": "object",
+                    "properties": {
+                      "Id": {
+                        "type": "integer"
+                      },
+                      "Value": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "Author",
+                  "Created",
+                  "Editor",
+                  "GRUPO",
+                  "ID",
+                  "IdArea",
+                  "L_x00ed_der",
+                  "Modified",
+                  "Monto",
+                  "Subgrupo",
+                  "field_3",
+                  "{FilenameWithExtension}",
+                  "{FullPath}",
+                  "{HasAttachments}",
+                  "{Identifier}",
+                  "{IsFolder}",
+                  "{Link}",
+                  "{Name}",
+                  "{Path}",
+                  "{Thumbnail}",
+                  "{VersionNumber}"
+                ]
+              }
+            }
+          }
+        },
+        "Redactar": {
+          "runAfter": {
+            "Análisis_del_archivo_JSON": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "89515381-6743-46f4-9d57-e0fd031df27b"
+          },
+          "type": "Compose",
+          "inputs": "@concat('/ReportesPresu/',guid(),'Reportepresupuesto.xlsx')"
+        },
+        "Copiar_archivo": {
+          "runAfter": {
+            "Redactar": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "b!bZwmUsHnWUGF2q-c3aDoEi_JGsDlYM9Hu4VJsYEGHcBA0zRGwICkQZXZ9jbXGuvi.01VG43COBHNPQUIIFIG5A32RKN474M3HJL": "/Compras/Presupuestos/Libro.xlsx",
+            "operationMetadataId": "b15464a8-eecf-4a1e-a55d-fe0a2bf3187b",
+            "b!bZwmUsHnWUGF2q-c3aDoEi_JGsDlYM9Hu4VJsYEGHcBA0zRGwICkQZXZ9jbXGuvi.01VG43COC4Q2YJZTMXVZDJIZPM5U3UWHTK": "/LibroReportePresupuestosAppCompras.xlsx"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness",
+              "operationId": "CopyDriveFile",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "id": "b!bZwmUsHnWUGF2q-c3aDoEi_JGsDlYM9Hu4VJsYEGHcBA0zRGwICkQZXZ9jbXGuvi.01VG43COC4Q2YJZTMXVZDJIZPM5U3UWHTK",
+              "destination": "@outputs('Redactar')",
+              "overwrite": true
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Aplicar_a_cada_uno": {
+          "foreach": "@body('Análisis_del_archivo_JSON')",
+          "actions": {
+            "Agregar_una_fila_a_una_tabla": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "002540d5-5a63-464a-aa9a-500b1295efe9",
+                "tableId": "Tablaexcel2"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_excelonlinebusiness",
+                  "operationId": "AddRowV2",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness"
+                },
+                "parameters": {
+                  "source": "me",
+                  "drive": "b!bZwmUsHnWUGF2q-c3aDoEi_JGsDlYM9Hu4VJsYEGHcBA0zRGwICkQZXZ9jbXGuvi",
+                  "file": "@outputs('Copiar_archivo')?['body/Id']",
+                  "table": "Tablaexcel2",
+                  "item": {
+                    "Grupo": "@{items('Aplicar_a_cada_uno')?['GRUPO']?['Value']}",
+                    "Subgrupo": "@{items('Aplicar_a_cada_uno')['Subgrupo']}",
+                    "Rubro": "@{items('Aplicar_a_cada_uno')['field_3']}",
+                    "Monto": "@{items('Aplicar_a_cada_uno')['Monto']}",
+                    "Ejecutado": "@{items('Aplicar_a_cada_uno')?['Ejecutado']}",
+                    "Saldo": "@{items('Aplicar_a_cada_uno')?['field_6']}",
+                    "ID": "@{items('Aplicar_a_cada_uno')['ID']}"
+                  }
+                },
+                "authentication": {
+                  "type": "Raw",
+                  "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Copiar_archivo": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a7202c5a-948e-4d1d-97be-e4c1900e35e5"
+          },
+          "type": "Foreach"
+        },
+        "Crear_un_vínculo_para_compartir": {
+          "runAfter": {
+            "Aplicar_a_cada_uno": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7e89d229-d8ee-436c-bb51-349a5d3fa80d"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_onedriveforbusiness_1",
+              "operationId": "CreateShareLinkV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+            },
+            "parameters": {
+              "id": "@outputs('Copiar_archivo')?['body/Id']",
+              "type": "Edit",
+              "scope": "Anonymous"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Responder_a_una_instancia_de_PowerApps_o_a_un_flujo": {
+          "runAfter": {
+            "Crear_un_vínculo_para_compartir": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "486af2c5-0d26-4133-9f9d-abd2f9367dc8"
+          },
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "statusCode": 200,
+            "body": {
+              "urlpresupuesto": "@outputs('Crear_un_vínculo_para_compartir')?['body/WebUrl']"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "urlpresupuesto": {
+                  "title": "UrlPresupuesto",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

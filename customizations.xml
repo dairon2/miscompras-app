@@ -1,0 +1,386 @@
+<ImportExportXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Entities>
+    <Entity>
+      <Name LocalizedName="cr5a8_requerimientos1s" OriginalName="cr5a8_requerimientos1s">cra5f_cr5a8_requerimientos1s</Name>
+      <EntityInfo>
+        <entity Name="cra5f_cr5a8_requerimientos1s">
+          <LocalizedNames>
+            <LocalizedName description="cr5a8_requerimientos1s" languagecode="3082" />
+          </LocalizedNames>
+          <LocalizedCollectionNames>
+            <LocalizedCollectionName description="cr5a8_requerimientos1ss" languagecode="3082" />
+          </LocalizedCollectionNames>
+          <Descriptions>
+            <Description description="" languagecode="3082" />
+          </Descriptions>
+          <attributes />
+          <EntitySetName>cra5f_cr5a8_requerimientos1ses</EntitySetName>
+          <IsDuplicateCheckSupported>0</IsDuplicateCheckSupported>
+          <IsBusinessProcessEnabled>0</IsBusinessProcessEnabled>
+          <IsRequiredOffline>0</IsRequiredOffline>
+          <IsInteractionCentricEnabled>0</IsInteractionCentricEnabled>
+          <IsCollaboration>0</IsCollaboration>
+          <AutoRouteToOwnerQueue>0</AutoRouteToOwnerQueue>
+          <IsConnectionsEnabled>0</IsConnectionsEnabled>
+          <EntityColor></EntityColor>
+          <IsDocumentManagementEnabled>0</IsDocumentManagementEnabled>
+          <AutoCreateAccessTeams>0</AutoCreateAccessTeams>
+          <IsOneNoteIntegrationEnabled>0</IsOneNoteIntegrationEnabled>
+          <IsKnowledgeManagementEnabled>0</IsKnowledgeManagementEnabled>
+          <IsSLAEnabled>0</IsSLAEnabled>
+          <IsDocumentRecommendationsEnabled>0</IsDocumentRecommendationsEnabled>
+          <IsBPFEntity>0</IsBPFEntity>
+          <OwnershipTypeMask>UserOwned</OwnershipTypeMask>
+          <IsAuditEnabled>0</IsAuditEnabled>
+          <IsRetrieveAuditEnabled>0</IsRetrieveAuditEnabled>
+          <IsRetrieveMultipleAuditEnabled>0</IsRetrieveMultipleAuditEnabled>
+          <IsActivity>0</IsActivity>
+          <ActivityTypeMask></ActivityTypeMask>
+          <IsActivityParty>0</IsActivityParty>
+          <IsReplicated>0</IsReplicated>
+          <IsReplicationUserFiltered>0</IsReplicationUserFiltered>
+          <IsMailMergeEnabled>0</IsMailMergeEnabled>
+          <IsVisibleInMobile>0</IsVisibleInMobile>
+          <IsVisibleInMobileClient>0</IsVisibleInMobileClient>
+          <IsReadOnlyInMobileClient>0</IsReadOnlyInMobileClient>
+          <IsOfflineInMobileClient>0</IsOfflineInMobileClient>
+          <DaysSinceRecordLastModified>0</DaysSinceRecordLastModified>
+          <MobileOfflineFilters></MobileOfflineFilters>
+          <IsMapiGridEnabled>1</IsMapiGridEnabled>
+          <IsReadingPaneEnabled>1</IsReadingPaneEnabled>
+          <IsQuickCreateEnabled>0</IsQuickCreateEnabled>
+          <SyncToExternalSearchIndex>0</SyncToExternalSearchIndex>
+          <IntroducedVersion>1.0.0.0</IntroducedVersion>
+          <IsCustomizable>1</IsCustomizable>
+          <IsRenameable>1</IsRenameable>
+          <IsMappable>1</IsMappable>
+          <CanModifyAuditSettings>1</CanModifyAuditSettings>
+          <CanModifyMobileVisibility>1</CanModifyMobileVisibility>
+          <CanModifyMobileClientVisibility>1</CanModifyMobileClientVisibility>
+          <CanModifyMobileClientReadOnly>1</CanModifyMobileClientReadOnly>
+          <CanModifyMobileClientOffline>1</CanModifyMobileClientOffline>
+          <CanModifyConnectionSettings>1</CanModifyConnectionSettings>
+          <CanModifyDuplicateDetectionSettings>1</CanModifyDuplicateDetectionSettings>
+          <CanModifyMailMergeSettings>1</CanModifyMailMergeSettings>
+          <CanModifyQueueSettings>1</CanModifyQueueSettings>
+          <CanCreateAttributes>1</CanCreateAttributes>
+          <CanCreateForms>1</CanCreateForms>
+          <CanCreateCharts>1</CanCreateCharts>
+          <CanCreateViews>1</CanCreateViews>
+          <CanModifyAdditionalSettings>1</CanModifyAdditionalSettings>
+          <CanEnableSyncToExternalSearchIndex>1</CanEnableSyncToExternalSearchIndex>
+          <IconVectorName></IconVectorName>
+          <EnforceStateTransitions>0</EnforceStateTransitions>
+          <CanChangeHierarchicalRelationship>1</CanChangeHierarchicalRelationship>
+          <EntityHelpUrlEnabled>0</EntityHelpUrlEnabled>
+          <EntityHelpUrl></EntityHelpUrl>
+          <ChangeTrackingEnabled>1</ChangeTrackingEnabled>
+          <CanChangeTrackingBeEnabled>1</CanChangeTrackingBeEnabled>
+          <IsEnabledForExternalChannels>0</IsEnabledForExternalChannels>
+          <IsMSTeamsIntegrationEnabled>0</IsMSTeamsIntegrationEnabled>
+          <IsSolutionAware>0</IsSolutionAware>
+          <HasRelatedNotes>True</HasRelatedNotes>
+        </entity>
+      </EntityInfo>
+      <RibbonDiffXml>
+        <CustomActions />
+        <Templates>
+          <RibbonTemplates Id="Mscrm.Templates"></RibbonTemplates>
+        </Templates>
+        <CommandDefinitions />
+        <RuleDefinitions>
+          <TabDisplayRules />
+          <DisplayRules />
+          <EnableRules />
+        </RuleDefinitions>
+        <LocLabels />
+      </RibbonDiffXml>
+    </Entity>
+  </Entities>
+  <Roles></Roles>
+  <Workflows>
+    <Workflow WorkflowId="{95b60def-3762-ee11-8def-00224830eadd}" Name="Solicitar aumento">
+      <JsonFileName>/Workflows/Solicitaraumento-95B60DEF-3762-EE11-8DEF-00224830EADD.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <RunAs>1</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <PrimaryEntity>none</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="3082" description="Solicitar aumento" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{835cdc01-8044-ee11-bdf3-00224830eadd}" Name="AprobarPresupuestos">
+      <JsonFileName>/Workflows/AprobarPresupuestos-835CDC01-8044-EE11-BDF3-00224830EADD.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <RunAs>1</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <PrimaryEntity>none</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="3082" description="AprobarPresupuestos" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{3105ae1d-bb33-ee11-bdf4-00224830eadd}" Name="Solicitud de requerimiento">
+      <JsonFileName>/Workflows/Solicitudderequerimiento-3105AE1D-BB33-EE11-BDF4-00224830EADD.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <RunAs>1</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <PrimaryEntity>none</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="3082" description="Solicitud de requerimiento" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{3238547f-d446-ee11-be6d-00224830eadd}" Name="ObtenerDatosAdjuntos">
+      <JsonFileName>/Workflows/ObtenerDatosAdjuntos-3238547F-D446-EE11-BE6D-00224830EADD.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <RunAs>1</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <PrimaryEntity>none</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="3082" description="ObtenerDatosAdjuntos" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{127030f3-d7ac-ee11-a569-6045bded17c6}" Name="Crear pdf aprobación requerimiento">
+      <JsonFileName>/Workflows/Crearpdfaprobacinrequerimiento-127030F3-D7AC-EE11-A569-6045BDED17C6.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <RunAs>1</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.2</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <PrimaryEntity>none</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="3082" description="Crear pdf aprobación requerimiento" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{934efde8-f7ac-ee11-a569-6045bded17c6}" Name="Descargar Excel Requerimiento">
+      <JsonFileName>/Workflows/DescargarExcelRequerimiento-934EFDE8-F7AC-EE11-A569-6045BDED17C6.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <RunAs>1</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.2</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <PrimaryEntity>none</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="3082" description="Descargar Excel Requerimiento" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{944efde8-f7ac-ee11-a569-6045bded17c6}" Name="Descargar Excel Presupuestos">
+      <JsonFileName>/Workflows/DescargarExcelPresupuestos-944EFDE8-F7AC-EE11-A569-6045BDED17C6.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <RunAs>1</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.2</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <PrimaryEntity>none</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="3082" description="Descargar Excel Presupuestos" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{75f0958b-95b8-ee11-a569-6045bded17c6}" Name="Movimientopresupuestal">
+      <JsonFileName>/Workflows/Movimientopresupuestal-75F0958B-95B8-EE11-A569-6045BDED17C6.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <RunAs>1</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.3</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <PrimaryEntity>none</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="3082" description="Movimientopresupuestal" />
+      </LocalizedNames>
+    </Workflow>
+  </Workflows>
+  <FieldSecurityProfiles></FieldSecurityProfiles>
+  <Templates />
+  <EntityMaps />
+  <EntityRelationships />
+  <OrganizationSettings />
+  <optionsets />
+  <CustomControls />
+  <EntityDataProviders />
+  <CanvasApps>
+    <CanvasApp>
+      <Name>cra5f_gestordecompras_c235a</Name>
+      <AppVersion>2024-01-31T19:02:59Z</AppVersion>
+      <Status>Ready</Status>
+      <CreatedByClientVersion>3.24013.17.0</CreatedByClientVersion>
+      <MinClientVersion>3.24013.17.0</MinClientVersion>
+      <Tags>{"primaryDeviceWidth":"1366","primaryDeviceHeight":"768","supportsPortrait":"true","supportsLandscape":"true","primaryFormFactor":"Tablet","publisherVersion":"3.24013.17","minimumRequiredApiVersion":"2.2.0","hasComponent":"true","hasUnlockedComponent":"true","isUnifiedRootApp":"false","sienaVersion":"20240128T202735Z-3.24012.8.0","showStatusBar":"false","offlineLargeFilesSupport":"false"}</Tags>
+      <IsCdsUpgraded>0</IsCdsUpgraded>
+      <GalleryItemId xsi:nil="true"></GalleryItemId>
+      <BackgroundColor>RGBA(0,176,240,1)</BackgroundColor>
+      <DisplayName>MIS  COMPRAS</DisplayName>
+      <Description>La aplicación MIS COMPRAS  del  Museo de Antioquia es una herramienta fácil de usar que permite a nuestro equipo administrativo realizar y supervisar eficientemente el proceso de adquisición de productos y servicios. Con esta aplicación, podrás registrar y mantener una base de datos de proveedores,  generar Requerimientos de compra y hacer un seguimiento en tiempo real de las mismas.</Description>
+      <CommitMessage xsi:nil="true"></CommitMessage>
+      <Publisher xsi:nil="true"></Publisher>
+      <AuthorizationReferences>[]</AuthorizationReferences>
+      <ConnectionReferences>{"80c464c9-cb4b-4a9f-81e2-5dc6a3802d60":{"id":"/providers/microsoft.powerapps/apis/shared_sharepointonline","displayName":"SharePoint","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1674/1.0.1674.3602/sharepointonline/icon.png","dataSources":["Requerimientos","Proyectos","Áreas","Proveedores","Presupuestos","Administradores"],"dependencies":[],"dependents":["ae1fbafe-ad75-4c23-857c-ee1834dfe476","5b7e3443-a91a-46c2-84ad-46f372e7460c","dffc7925-e7e7-4750-9801-bc4c06fc1d80","3fe36109-58b3-421e-a7bd-e7d4a77c9a8b","7a78971d-f958-49d3-b37d-4c80f0a97bac"],"parameterHints":{},"parameterHintsV2":{},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{"https://museodeantioquia.sharepoint.com/sites/DocumentosdeOperaciones":{"dataSources":{"Requerimientos":{"tableName":"1008b85a-6668-46d7-9845-2ac72f9f08c6"},"Proyectos":{"tableName":"0e5388c7-8481-4878-988f-543e2629522f"},"Áreas":{"tableName":"8eca4ffa-cebf-4794-a854-341a69af0fd1"},"Proveedores":{"tableName":"a296b4af-60c3-486c-93c2-3c494fb3047e"},"Presupuestos":{"tableName":"ce32bdeb-f8a1-4ce1-8f3a-15f451a941da"},"Administradores":{"tableName":"d9339884-2cdf-4120-93ba-ff2c9963473d"}}}},"apiTier":"Standard","actions":["providers/PowerPlatform.Governance/Operations/Read","providers/PowerPlatform.Governance/Operations/Write","providers/PowerPlatform.Governance/Operations/Delete"]},"daf37be1-e4c6-4a2d-a2f1-5e731ec8716c":{"id":"/providers/microsoft.powerapps/apis/shared_office365users","displayName":"Usuarios de Office 365","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1672/1.0.1672.3545/office365users/icon.png","dataSources":["UsuariosdeOffice365"],"dependencies":[],"dependents":[],"parameterHints":{},"parameterHintsV2":{},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":["MyProfile_V2","SearchUser"]},"65e07adb-2f36-4a64-ab81-2ef8872bbd59":{"id":"/providers/microsoft.powerapps/apis/shared_office365","displayName":"Office 365 Outlook","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1669/1.0.1669.3522/office365/icon.png","dataSources":["Office365Outlook"],"dependencies":[],"dependents":["ae1fbafe-ad75-4c23-857c-ee1834dfe476","c99e6866-56af-456a-8c6f-99d31bfacc1c","5b7e3443-a91a-46c2-84ad-46f372e7460c","3fe36109-58b3-421e-a7bd-e7d4a77c9a8b"],"parameterHints":{},"parameterHintsV2":{},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"ae1fbafe-ad75-4c23-857c-ee1834dfe476":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["Solicitudderequerimiento"],"dependencies":["80c464c9-cb4b-4a9f-81e2-5dc6a3802d60","65e07adb-2f36-4a64-ab81-2ef8872bbd59"],"dependents":[],"parameterHints":{"workflowName":{"value":"255a1b3d-60ea-4add-ab33-f837ec0c5d97"},"workflowEntityId":{"value":"3105ae1d-bb33-ee11-bdf4-00224830eadd"},"80c464c9-cb4b-4a9f-81e2-5dc6a3802d60":{"value":"shared_sharepointonline"},"65e07adb-2f36-4a64-ab81-2ef8872bbd59":{"value":"shared_office365"}},"parameterHintsV2":{"workflowName":{"value":"255a1b3d-60ea-4add-ab33-f837ec0c5d97"},"workflowEntityId":{"value":"3105ae1d-bb33-ee11-bdf4-00224830eadd"},"shared_sharepointonline":{"value":"80c464c9-cb4b-4a9f-81e2-5dc6a3802d60"},"shared_office365":{"value":"65e07adb-2f36-4a64-ab81-2ef8872bbd59"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"c99e6866-56af-456a-8c6f-99d31bfacc1c":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["Copiade:CrearpdfdeReque"],"dependencies":["95ea76d0-37dc-417b-9444-035c48617c56","65e07adb-2f36-4a64-ab81-2ef8872bbd59"],"dependents":[],"parameterHints":{"workflowName":{"value":"95e34f46-0bad-4579-8aaa-bb4cc39922c0"},"workflowEntityId":{},"95ea76d0-37dc-417b-9444-035c48617c56":{"value":"shared_onedriveforbusiness"},"65e07adb-2f36-4a64-ab81-2ef8872bbd59":{"value":"shared_office365"}},"parameterHintsV2":{"workflowName":{"value":"95e34f46-0bad-4579-8aaa-bb4cc39922c0"},"workflowEntityId":{},"shared_onedriveforbusiness":{"value":"95ea76d0-37dc-417b-9444-035c48617c56"},"shared_office365":{"value":"65e07adb-2f36-4a64-ab81-2ef8872bbd59"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":["Run"]},"95ea76d0-37dc-417b-9444-035c48617c56":{"id":"/providers/microsoft.powerapps/apis/shared_onedriveforbusiness","displayName":"OneDrive para la Empresa","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1669/1.0.1669.3522/onedriveforbusiness/icon.png","dataSources":[],"dependencies":[],"dependents":["c99e6866-56af-456a-8c6f-99d31bfacc1c","5b7e3443-a91a-46c2-84ad-46f372e7460c"],"parameterHints":{},"parameterHintsV2":{},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"5b7e3443-a91a-46c2-84ad-46f372e7460c":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["Crearpdfaprobaciónrequerimiento"],"dependencies":["95ea76d0-37dc-417b-9444-035c48617c56","fd357bc0-6e02-420b-9fd0-445f755eea89","65e07adb-2f36-4a64-ab81-2ef8872bbd59","80c464c9-cb4b-4a9f-81e2-5dc6a3802d60"],"dependents":[],"parameterHints":{"workflowName":{"value":"170177f7-1b85-491d-8748-d6eebeb336a2"},"workflowEntityId":{},"95ea76d0-37dc-417b-9444-035c48617c56":{"value":"shared_onedriveforbusiness"},"fd357bc0-6e02-420b-9fd0-445f755eea89":{"value":"shared_approvals"},"65e07adb-2f36-4a64-ab81-2ef8872bbd59":{"value":"shared_office365"},"80c464c9-cb4b-4a9f-81e2-5dc6a3802d60":{"value":"shared_sharepointonline"}},"parameterHintsV2":{"workflowName":{"value":"170177f7-1b85-491d-8748-d6eebeb336a2"},"workflowEntityId":{},"shared_onedriveforbusiness":{"value":"95ea76d0-37dc-417b-9444-035c48617c56"},"shared_approvals":{"value":"fd357bc0-6e02-420b-9fd0-445f755eea89"},"shared_office365":{"value":"65e07adb-2f36-4a64-ab81-2ef8872bbd59"},"shared_sharepointonline":{"value":"80c464c9-cb4b-4a9f-81e2-5dc6a3802d60"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":["Run"]},"fd357bc0-6e02-420b-9fd0-445f755eea89":{"id":"/providers/microsoft.powerapps/apis/shared_approvals","displayName":"Aprobaciones","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1650/1.0.1650.3374/approvals/icon.png","dataSources":[],"dependencies":[],"dependents":["5b7e3443-a91a-46c2-84ad-46f372e7460c","3fe36109-58b3-421e-a7bd-e7d4a77c9a8b"],"parameterHints":{},"parameterHintsV2":{},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"dffc7925-e7e7-4750-9801-bc4c06fc1d80":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["ObtenerDatosAdjuntos"],"dependencies":["80c464c9-cb4b-4a9f-81e2-5dc6a3802d60"],"dependents":[],"parameterHints":{"workflowName":{"value":"00ec7d11-b936-4f62-ac71-e066839df959"},"workflowEntityId":{"value":"3238547f-d446-ee11-be6d-00224830eadd"},"80c464c9-cb4b-4a9f-81e2-5dc6a3802d60":{"value":"shared_sharepointonline"}},"parameterHintsV2":{"workflowName":{"value":"00ec7d11-b936-4f62-ac71-e066839df959"},"workflowEntityId":{"value":"3238547f-d446-ee11-be6d-00224830eadd"},"shared_sharepointonline":{"value":"80c464c9-cb4b-4a9f-81e2-5dc6a3802d60"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":["Run"]},"3fe36109-58b3-421e-a7bd-e7d4a77c9a8b":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["Solicitaraumento"],"dependencies":["80c464c9-cb4b-4a9f-81e2-5dc6a3802d60","fd357bc0-6e02-420b-9fd0-445f755eea89","65e07adb-2f36-4a64-ab81-2ef8872bbd59"],"dependents":[],"parameterHints":{"workflowName":{"value":"c194bba6-06f3-4a13-9456-e0a94b4d590a"},"workflowEntityId":{"value":"95b60def-3762-ee11-8def-00224830eadd"},"80c464c9-cb4b-4a9f-81e2-5dc6a3802d60":{"value":"shared_sharepointonline"},"fd357bc0-6e02-420b-9fd0-445f755eea89":{"value":"shared_approvals"},"65e07adb-2f36-4a64-ab81-2ef8872bbd59":{"value":"shared_office365"}},"parameterHintsV2":{"workflowName":{"value":"c194bba6-06f3-4a13-9456-e0a94b4d590a"},"workflowEntityId":{"value":"95b60def-3762-ee11-8def-00224830eadd"},"shared_sharepointonline":{"value":"80c464c9-cb4b-4a9f-81e2-5dc6a3802d60"},"shared_approvals":{"value":"fd357bc0-6e02-420b-9fd0-445f755eea89"},"shared_office365":{"value":"65e07adb-2f36-4a64-ab81-2ef8872bbd59"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":["Run"]},"7a78971d-f958-49d3-b37d-4c80f0a97bac":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["SumarvalordecompraaPresupuesto"],"dependencies":["80c464c9-cb4b-4a9f-81e2-5dc6a3802d60"],"dependents":[],"parameterHints":{"workflowName":{"value":"f8bd4f91-da57-4667-bc93-f18bd4bb80e0"},"workflowEntityId":{},"80c464c9-cb4b-4a9f-81e2-5dc6a3802d60":{"value":"shared_sharepointonline"}},"parameterHintsV2":{"workflowName":{"value":"f8bd4f91-da57-4667-bc93-f18bd4bb80e0"},"workflowEntityId":{},"shared_sharepointonline":{"value":"80c464c9-cb4b-4a9f-81e2-5dc6a3802d60"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"ee069fa5-00ec-44cb-b569-53fad35aa4e1":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["DescargarExcelPresupuestos"],"dependencies":["6edc1da1-db55-4c99-8c4d-c0115dc16de5","51ddf08e-ae5d-472a-a115-2e756e1821bf","6a7ad39f-ad13-47f8-bb81-a8f664987364"],"dependents":[],"parameterHints":{"workflowName":{"value":"ec62152f-0b17-441f-b163-cdff7bd3fa85"},"workflowEntityId":{"value":"944efde8-f7ac-ee11-a569-6045bded17c6"},"6edc1da1-db55-4c99-8c4d-c0115dc16de5":{"value":"shared_onedriveforbusiness"},"51ddf08e-ae5d-472a-a115-2e756e1821bf":{"value":"shared_excelonlinebusiness"},"6a7ad39f-ad13-47f8-bb81-a8f664987364":{"value":"shared_onedriveforbusiness_1"}},"parameterHintsV2":{"workflowName":{"value":"ec62152f-0b17-441f-b163-cdff7bd3fa85"},"workflowEntityId":{"value":"944efde8-f7ac-ee11-a569-6045bded17c6"},"shared_onedriveforbusiness":{"value":"6edc1da1-db55-4c99-8c4d-c0115dc16de5"},"shared_excelonlinebusiness":{"value":"51ddf08e-ae5d-472a-a115-2e756e1821bf"},"shared_onedriveforbusiness_1":{"value":"6a7ad39f-ad13-47f8-bb81-a8f664987364"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":["Run"]},"6edc1da1-db55-4c99-8c4d-c0115dc16de5":{"id":"/providers/microsoft.powerapps/apis/shared_onedriveforbusiness","displayName":"OneDrive para la Empresa","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1669/1.0.1669.3522/onedriveforbusiness/icon.png","dataSources":[],"dependencies":[],"dependents":["ee069fa5-00ec-44cb-b569-53fad35aa4e1","2455ec54-2ab2-47d8-bb16-bc7a3e9a1647","84b2590c-275a-4b99-8de7-2cc0a9d6b936","24f6bb9d-5058-4e51-b757-0dc3ee208d5d"],"parameterHints":{},"parameterHintsV2":{},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"51ddf08e-ae5d-472a-a115-2e756e1821bf":{"id":"/providers/microsoft.powerapps/apis/shared_excelonlinebusiness","displayName":"Excel Online (Empresas)","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1658/1.0.1658.3452/excelonlinebusiness/icon.png","dataSources":[],"dependencies":[],"dependents":["ee069fa5-00ec-44cb-b569-53fad35aa4e1","2455ec54-2ab2-47d8-bb16-bc7a3e9a1647"],"parameterHints":{},"parameterHintsV2":{},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"6a7ad39f-ad13-47f8-bb81-a8f664987364":{"id":"/providers/microsoft.powerapps/apis/shared_onedriveforbusiness","displayName":"OneDrive para la Empresa","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1669/1.0.1669.3522/onedriveforbusiness/icon.png","dataSources":[],"dependencies":[],"dependents":["ee069fa5-00ec-44cb-b569-53fad35aa4e1","2455ec54-2ab2-47d8-bb16-bc7a3e9a1647","1337cf60-664b-404e-8b23-3bbbf4875959"],"parameterHints":{},"parameterHintsV2":{},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"2455ec54-2ab2-47d8-bb16-bc7a3e9a1647":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["DescargarExcelRequerimiento"],"dependencies":["6edc1da1-db55-4c99-8c4d-c0115dc16de5","51ddf08e-ae5d-472a-a115-2e756e1821bf","6a7ad39f-ad13-47f8-bb81-a8f664987364"],"dependents":[],"parameterHints":{"workflowName":{"value":"f8f7c022-2dd7-47d0-abbd-0b40ea3f99a6"},"workflowEntityId":{"value":"934efde8-f7ac-ee11-a569-6045bded17c6"},"6edc1da1-db55-4c99-8c4d-c0115dc16de5":{"value":"shared_onedriveforbusiness"},"51ddf08e-ae5d-472a-a115-2e756e1821bf":{"value":"shared_excelonlinebusiness"},"6a7ad39f-ad13-47f8-bb81-a8f664987364":{"value":"shared_onedriveforbusiness_1"}},"parameterHintsV2":{"workflowName":{"value":"f8f7c022-2dd7-47d0-abbd-0b40ea3f99a6"},"workflowEntityId":{"value":"934efde8-f7ac-ee11-a569-6045bded17c6"},"shared_onedriveforbusiness":{"value":"6edc1da1-db55-4c99-8c4d-c0115dc16de5"},"shared_excelonlinebusiness":{"value":"51ddf08e-ae5d-472a-a115-2e756e1821bf"},"shared_onedriveforbusiness_1":{"value":"6a7ad39f-ad13-47f8-bb81-a8f664987364"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":["Run"]},"1337cf60-664b-404e-8b23-3bbbf4875959":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["AprobarPresupuestos"],"dependencies":["6a7ad39f-ad13-47f8-bb81-a8f664987364","7de7c687-be6f-4bd8-a729-6f2a3b09ed33","6429560c-b0dd-4eb5-a0e2-7564ae571238","9c26a850-9c82-4cc4-9269-e606890850f0"],"dependents":[],"parameterHints":{"workflowName":{"value":"a635840f-7de8-4889-981a-6c1523fee784"},"workflowEntityId":{"value":"835cdc01-8044-ee11-bdf3-00224830eadd"},"6a7ad39f-ad13-47f8-bb81-a8f664987364":{"value":"shared_onedriveforbusiness_1"},"7de7c687-be6f-4bd8-a729-6f2a3b09ed33":{"value":"shared_approvals_1"},"6429560c-b0dd-4eb5-a0e2-7564ae571238":{"value":"shared_sharepointonline_1"},"9c26a850-9c82-4cc4-9269-e606890850f0":{"value":"shared_office365"}},"parameterHintsV2":{"workflowName":{"value":"a635840f-7de8-4889-981a-6c1523fee784"},"workflowEntityId":{"value":"835cdc01-8044-ee11-bdf3-00224830eadd"},"shared_onedriveforbusiness_1":{"value":"6a7ad39f-ad13-47f8-bb81-a8f664987364"},"shared_approvals_1":{"value":"7de7c687-be6f-4bd8-a729-6f2a3b09ed33"},"shared_sharepointonline_1":{"value":"6429560c-b0dd-4eb5-a0e2-7564ae571238"},"shared_office365":{"value":"9c26a850-9c82-4cc4-9269-e606890850f0"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":["Run"]},"7de7c687-be6f-4bd8-a729-6f2a3b09ed33":{"id":"/providers/microsoft.powerapps/apis/shared_approvals","displayName":"Aprobaciones","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1650/1.0.1650.3374/approvals/icon.png","dataSources":[],"dependencies":[],"dependents":["1337cf60-664b-404e-8b23-3bbbf4875959","84b2590c-275a-4b99-8de7-2cc0a9d6b936","24f6bb9d-5058-4e51-b757-0dc3ee208d5d"],"parameterHints":{},"parameterHintsV2":{},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"6429560c-b0dd-4eb5-a0e2-7564ae571238":{"id":"/providers/microsoft.powerapps/apis/shared_sharepointonline","displayName":"SharePoint","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1674/1.0.1674.3602/sharepointonline/icon.png","dataSources":[],"dependencies":[],"dependents":["1337cf60-664b-404e-8b23-3bbbf4875959","84b2590c-275a-4b99-8de7-2cc0a9d6b936","24f6bb9d-5058-4e51-b757-0dc3ee208d5d","2f606207-93e3-4877-93ce-c7c0e7330b7d"],"parameterHints":{},"parameterHintsV2":{},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"9c26a850-9c82-4cc4-9269-e606890850f0":{"id":"/providers/microsoft.powerapps/apis/shared_office365","displayName":"Office 365 Outlook","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1669/1.0.1669.3522/office365/icon.png","dataSources":[],"dependencies":[],"dependents":["1337cf60-664b-404e-8b23-3bbbf4875959","84b2590c-275a-4b99-8de7-2cc0a9d6b936","24f6bb9d-5058-4e51-b757-0dc3ee208d5d","cdd13a7e-964a-42b3-9bd7-ff847fb124b5"],"parameterHints":{},"parameterHintsV2":{},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"84b2590c-275a-4b99-8de7-2cc0a9d6b936":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["Movimientopresupuestal"],"dependencies":["6429560c-b0dd-4eb5-a0e2-7564ae571238","7de7c687-be6f-4bd8-a729-6f2a3b09ed33","9c26a850-9c82-4cc4-9269-e606890850f0","6edc1da1-db55-4c99-8c4d-c0115dc16de5"],"dependents":[],"parameterHints":{"workflowName":{"value":"2bd9a8b9-319d-4637-bbb5-253afba855b7"},"workflowEntityId":{"value":"75f0958b-95b8-ee11-a569-6045bded17c6"},"6429560c-b0dd-4eb5-a0e2-7564ae571238":{"value":"shared_sharepointonline"},"7de7c687-be6f-4bd8-a729-6f2a3b09ed33":{"value":"shared_approvals"},"9c26a850-9c82-4cc4-9269-e606890850f0":{"value":"shared_office365"},"6edc1da1-db55-4c99-8c4d-c0115dc16de5":{"value":"shared_onedriveforbusiness"}},"parameterHintsV2":{"workflowName":{"value":"2bd9a8b9-319d-4637-bbb5-253afba855b7"},"workflowEntityId":{"value":"75f0958b-95b8-ee11-a569-6045bded17c6"},"shared_sharepointonline":{"value":"6429560c-b0dd-4eb5-a0e2-7564ae571238"},"shared_approvals":{"value":"7de7c687-be6f-4bd8-a729-6f2a3b09ed33"},"shared_office365":{"value":"9c26a850-9c82-4cc4-9269-e606890850f0"},"shared_onedriveforbusiness":{"value":"6edc1da1-db55-4c99-8c4d-c0115dc16de5"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":["Run"]},"24f6bb9d-5058-4e51-b757-0dc3ee208d5d":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["Crearpdfaprobaciónrequerimiento_1"],"dependencies":["6edc1da1-db55-4c99-8c4d-c0115dc16de5","7de7c687-be6f-4bd8-a729-6f2a3b09ed33","6429560c-b0dd-4eb5-a0e2-7564ae571238","9c26a850-9c82-4cc4-9269-e606890850f0"],"dependents":[],"parameterHints":{"workflowName":{"value":"2f356690-88db-4897-99ae-18cbd1d705cf"},"workflowEntityId":{"value":"127030f3-d7ac-ee11-a569-6045bded17c6"},"6edc1da1-db55-4c99-8c4d-c0115dc16de5":{"value":"shared_onedriveforbusiness"},"7de7c687-be6f-4bd8-a729-6f2a3b09ed33":{"value":"shared_approvals"},"6429560c-b0dd-4eb5-a0e2-7564ae571238":{"value":"shared_sharepointonline"},"9c26a850-9c82-4cc4-9269-e606890850f0":{"value":"shared_office365"}},"parameterHintsV2":{"workflowName":{"value":"2f356690-88db-4897-99ae-18cbd1d705cf"},"workflowEntityId":{"value":"127030f3-d7ac-ee11-a569-6045bded17c6"},"shared_onedriveforbusiness":{"value":"6edc1da1-db55-4c99-8c4d-c0115dc16de5"},"shared_approvals":{"value":"7de7c687-be6f-4bd8-a729-6f2a3b09ed33"},"shared_sharepointonline":{"value":"6429560c-b0dd-4eb5-a0e2-7564ae571238"},"shared_office365":{"value":"9c26a850-9c82-4cc4-9269-e606890850f0"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":["Run"]},"2f606207-93e3-4877-93ce-c7c0e7330b7d":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["Cambiarellíderdelpresupuesto"],"dependencies":["6429560c-b0dd-4eb5-a0e2-7564ae571238"],"dependents":[],"parameterHints":{"workflowName":{"value":"cda7c5ff-ce17-4279-90d2-8082a29824c2"},"workflowEntityId":{"value":"16a80745-5b78-ee11-8179-00224830eadd"},"6429560c-b0dd-4eb5-a0e2-7564ae571238":{"value":"shared_sharepointonline"}},"parameterHintsV2":{"workflowName":{"value":"cda7c5ff-ce17-4279-90d2-8082a29824c2"},"workflowEntityId":{"value":"16a80745-5b78-ee11-8179-00224830eadd"},"shared_sharepointonline":{"value":"6429560c-b0dd-4eb5-a0e2-7564ae571238"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard"},"cdd13a7e-964a-42b3-9bd7-ff847fb124b5":{"id":"/providers/microsoft.powerapps/apis/shared_logicflows","displayName":"Flujos lógicos","iconUri":"https://connectoricons-prod.azureedge.net/releases/v1.0.1664/1.0.1664.3477/logicflows/icon.png","dataSources":["ReciboSastifacción"],"dependencies":["9c26a850-9c82-4cc4-9269-e606890850f0"],"dependents":[],"parameterHints":{"workflowName":{"value":"3f616f28-0de5-4060-b861-eec1346bacee"},"workflowEntityId":{"value":"722f3034-c4ba-ee11-a569-6045bded17c6"},"9c26a850-9c82-4cc4-9269-e606890850f0":{"value":"shared_office365"}},"parameterHintsV2":{"workflowName":{"value":"3f616f28-0de5-4060-b861-eec1346bacee"},"workflowEntityId":{"value":"722f3034-c4ba-ee11-a569-6045bded17c6"},"shared_office365":{"value":"9c26a850-9c82-4cc4-9269-e606890850f0"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":["Run"]}}</ConnectionReferences>
+      <DatabaseReferences>{}</DatabaseReferences>
+      <AppComponents>[]</AppComponents>
+      <AppComponentDependencies>[]</AppComponentDependencies>
+      <CanConsumeAppPass>1</CanConsumeAppPass>
+      <CanvasAppType>0</CanvasAppType>
+      <BypassConsent>0</BypassConsent>
+      <AdminControlBypassConsent>0</AdminControlBypassConsent>
+      <EmbeddedApp xsi:nil="true"></EmbeddedApp>
+      <IntroducedVersion>1.0</IntroducedVersion>
+      <CdsDependencies>{"cdsdependencies":[{"dependencyid":"3105ae1d-bb33-ee11-bdf4-00224830eadd","componenttype":29,"componenttypeplatformname":"Workflow"},{"dependencyid":"3238547f-d446-ee11-be6d-00224830eadd","componenttype":29,"componenttypeplatformname":"Workflow"},{"dependencyid":"95b60def-3762-ee11-8def-00224830eadd","componenttype":29,"componenttypeplatformname":"Workflow"},{"dependencyid":"944efde8-f7ac-ee11-a569-6045bded17c6","componenttype":29,"componenttypeplatformname":"Workflow"},{"dependencyid":"934efde8-f7ac-ee11-a569-6045bded17c6","componenttype":29,"componenttypeplatformname":"Workflow"},{"dependencyid":"835cdc01-8044-ee11-bdf3-00224830eadd","componenttype":29,"componenttypeplatformname":"Workflow"},{"dependencyid":"75f0958b-95b8-ee11-a569-6045bded17c6","componenttype":29,"componenttypeplatformname":"Workflow"},{"dependencyid":"127030f3-d7ac-ee11-a569-6045bded17c6","componenttype":29,"componenttypeplatformname":"Workflow"},{"dependencyid":"16a80745-5b78-ee11-8179-00224830eadd","componenttype":29,"componenttypeplatformname":"Workflow"},{"dependencyid":"722f3034-c4ba-ee11-a569-6045bded17c6","componenttype":29,"componenttypeplatformname":"Workflow"}]}</CdsDependencies>
+      <IsCustomizable>1</IsCustomizable>
+      <BackgroundImageUri>/CanvasApps/cra5f_gestordecompras_c235a_BackgroundImageUri</BackgroundImageUri>
+      <DocumentUri>/CanvasApps/cra5f_gestordecompras_c235a_DocumentUri.msapp</DocumentUri>
+      <AdditionalUris>
+        <AdditionalUri>/CanvasApps/cra5f_gestordecompras_c235a_AdditionalUris0_identity.json</AdditionalUri>
+      </AdditionalUris>
+    </CanvasApp>
+  </CanvasApps>
+  <connectionreferences>
+    <connectionreference connectionreferencelogicalname="new_sharedapprovals_22f63">
+      <connectionreferencedisplayname>Aprobaciones Miscompras-22f63</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_approvals</connectorid>
+      <iscustomizable>1</iscustomizable>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="new_sharedexcelonlinebusiness_58523">
+      <connectionreferencedisplayname>Excel Online (Business) Miscompras-58523</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_excelonlinebusiness</connectorid>
+      <iscustomizable>1</iscustomizable>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="new_sharedoffice365_2dba1">
+      <connectionreferencedisplayname>Office 365 Outlook Miscompras-2dba1</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_office365</connectorid>
+      <iscustomizable>1</iscustomizable>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="new_sharedonedriveforbusiness_e97b9">
+      <connectionreferencedisplayname>OneDrive for Business Miscompras-e97b9</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness</connectorid>
+      <iscustomizable>1</iscustomizable>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="new_sharedsharepointonline_40a64">
+      <connectionreferencedisplayname>SharePoint Miscompras-40a64</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_sharepointonline</connectorid>
+      <iscustomizable>1</iscustomizable>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+  </connectionreferences>
+  <Languages>
+    <Language>3082</Language>
+  </Languages>
+</ImportExportXml>

@@ -1,0 +1,144 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "invoker",
+        "connection": {},
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "cbbcff2a-e881-4098-acba-3420b5badd27"
+          },
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "Idsdjunto",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Escribir entrada",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "file": {
+                  "title": "Contenido del archivo",
+                  "type": "object",
+                  "x-ms-dynamically-added": true,
+                  "description": "Seleccione un archivo o una imagen.",
+                  "x-ms-content-hint": "FILE",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "contentBytes": {
+                      "type": "string",
+                      "format": "byte"
+                    }
+                  }
+                },
+                "text_1": {
+                  "title": "Iddocumento",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Escribir entrada",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text",
+                "file",
+                "text_1"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Obtener_elementos": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "4f89fd45-f0f7-42c0-960c-b0b6bf088731"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems"
+            },
+            "parameters": {
+              "dataset": "https://museodeantioquia.sharepoint.com/sites/DocumentosdeOperaciones",
+              "table": "1008b85a-6668-46d7-9845-2ac72f9f08c6",
+              "$filter": "Estadodesolicitud eq 'Sin estado'  and N_x00fa_meroderequerimiento eq '@{triggerBody()['text_1']}'"
+            },
+            "authentication": {
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']",
+              "type": "Raw"
+            }
+          }
+        },
+        "Aplicar_a_cada_uno": {
+          "foreach": "@outputs('Obtener_elementos')?['body/value']",
+          "actions": {
+            "Agregar_datos_adjuntos": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "908557c7-9428-4d66-a856-9510aea93a3c"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "CreateAttachment"
+                },
+                "parameters": {
+                  "dataset": "https://museodeantioquia.sharepoint.com/sites/DocumentosdeOperaciones",
+                  "table": "1008b85a-6668-46d7-9845-2ac72f9f08c6",
+                  "itemId": "@items('Aplicar_a_cada_uno')?['ID']",
+                  "displayName": "@triggerBody()['file']['name']",
+                  "body": "@triggerBody()['file']['contentBytes']"
+                },
+                "authentication": {
+                  "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']",
+                  "type": "Raw"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Obtener_elementos": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7ff52f19-c74a-4690-bb19-36cb6b9bcb2c"
+          },
+          "type": "Foreach"
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

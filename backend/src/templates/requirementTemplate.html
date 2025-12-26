@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Arial', sans-serif; color: #333; line-height: 1.6; }
+        .header { text-align: center; border-bottom: 2px solid #000080; padding-bottom: 20px; margin-bottom: 30px; }
+        .logo { font-size: 24px; font-weight: bold; color: #000080; }
+        .title { font-size: 20px; margin-top: 10px; text-transform: uppercase; }
+        .section { margin-bottom: 25px; }
+        .section-title { font-weight: bold; background: #f0f4ff; padding: 5px 10px; border-radius: 4px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f9f9f9; }
+        .footer { margin-top: 50px; font-size: 12px; text-align: center; color: #777; border-top: 1px solid #eee; padding-top: 10px; }
+        .amount { font-size: 18px; font-weight: bold; color: #3b5bdb; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">MUSEO DE ANTIOQUIA</div>
+        <div class="title">REQUERIMIENTO DE COMPRA</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">DETALLES DEL REQUERIMIENTO</div>
+        <table>
+            <tr><th>No. Requerimiento</th><td>{{id}}</td></tr>
+            <tr><th>Título</th><td>{{title}}</td></tr>
+            <tr><th>Fecha</th><td>{{date}}</td></tr>
+            <tr><th>Estado</th><td>{{status}}</td></tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">INFORMACIÓN GENERAL</div>
+        <table>
+            <tr><th>Proyecto</th><td>{{project}}</td></tr>
+            <tr><th>Área</th><td>{{area}}</td></tr>
+            <tr><th>Proveedor Sugerido</th><td>{{supplier}}</td></tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">DESCRIPCIÓN Y COSTOS</div>
+        <p>{{description}}</p>
+        <p><strong>Total Estimado:</strong> <span class="amount">${{totalAmount}}</span></p>
+    </div>
+
+    <div class="section" style="margin-top: 40px;">
+        <table>
+            <tr>
+                <td style="height: 100px; vertical-align: bottom; text-align: center;">__________________________<br>Solicitante</td>
+                <td style="height: 100px; vertical-align: bottom; text-align: center;">__________________________<br>Aprobador</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        Este es un documento generado automáticamente por el sistema MIS COMPRAS - Museo de Antioquia.
+    </div>
+</body>
+</html>

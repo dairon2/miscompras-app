@@ -1,0 +1,132 @@
+<ImportExportXml version="9.2.23122.206" SolutionPackageVersion="9.2" languagecode="3082" generatedBy="CrmLive" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SolutionManifest>
+    <UniqueName>Miscompras</UniqueName>
+    <LocalizedNames>
+      <LocalizedName description="Mis compras" languagecode="3082" />
+    </LocalizedNames>
+    <Descriptions />
+    <Version>1.0.0.4</Version>
+    <Managed>1</Managed>
+    <Publisher>
+      <UniqueName>DefaultPublisherorg9bb388a6</UniqueName>
+      <LocalizedNames>
+        <LocalizedName description="Editor predeterminado para org9bb388a6" languagecode="3082" />
+      </LocalizedNames>
+      <Descriptions>
+        <Description description="Editor predeterminado para esta organización" languagecode="3082" />
+      </Descriptions>
+      <EMailAddress xsi:nil="true"></EMailAddress>
+      <SupportingWebsiteUrl xsi:nil="true"></SupportingWebsiteUrl>
+      <CustomizationPrefix>new</CustomizationPrefix>
+      <CustomizationOptionValuePrefix>10000</CustomizationOptionValuePrefix>
+      <Addresses>
+        <Address>
+          <AddressNumber>1</AddressNumber>
+          <AddressTypeCode xsi:nil="true"></AddressTypeCode>
+          <City xsi:nil="true"></City>
+          <County xsi:nil="true"></County>
+          <Country xsi:nil="true"></Country>
+          <Fax xsi:nil="true"></Fax>
+          <FreightTermsCode xsi:nil="true"></FreightTermsCode>
+          <ImportSequenceNumber xsi:nil="true"></ImportSequenceNumber>
+          <Latitude xsi:nil="true"></Latitude>
+          <Line1 xsi:nil="true"></Line1>
+          <Line2 xsi:nil="true"></Line2>
+          <Line3 xsi:nil="true"></Line3>
+          <Longitude xsi:nil="true"></Longitude>
+          <Name xsi:nil="true"></Name>
+          <PostalCode xsi:nil="true"></PostalCode>
+          <PostOfficeBox xsi:nil="true"></PostOfficeBox>
+          <PrimaryContactName xsi:nil="true"></PrimaryContactName>
+          <ShippingMethodCode xsi:nil="true"></ShippingMethodCode>
+          <StateOrProvince xsi:nil="true"></StateOrProvince>
+          <Telephone1 xsi:nil="true"></Telephone1>
+          <Telephone2 xsi:nil="true"></Telephone2>
+          <Telephone3 xsi:nil="true"></Telephone3>
+          <TimeZoneRuleVersionNumber xsi:nil="true"></TimeZoneRuleVersionNumber>
+          <UPSZone xsi:nil="true"></UPSZone>
+          <UTCOffset xsi:nil="true"></UTCOffset>
+          <UTCConversionTimeZoneCode xsi:nil="true"></UTCConversionTimeZoneCode>
+        </Address>
+        <Address>
+          <AddressNumber>2</AddressNumber>
+          <AddressTypeCode xsi:nil="true"></AddressTypeCode>
+          <City xsi:nil="true"></City>
+          <County xsi:nil="true"></County>
+          <Country xsi:nil="true"></Country>
+          <Fax xsi:nil="true"></Fax>
+          <FreightTermsCode xsi:nil="true"></FreightTermsCode>
+          <ImportSequenceNumber xsi:nil="true"></ImportSequenceNumber>
+          <Latitude xsi:nil="true"></Latitude>
+          <Line1 xsi:nil="true"></Line1>
+          <Line2 xsi:nil="true"></Line2>
+          <Line3 xsi:nil="true"></Line3>
+          <Longitude xsi:nil="true"></Longitude>
+          <Name xsi:nil="true"></Name>
+          <PostalCode xsi:nil="true"></PostalCode>
+          <PostOfficeBox xsi:nil="true"></PostOfficeBox>
+          <PrimaryContactName xsi:nil="true"></PrimaryContactName>
+          <ShippingMethodCode xsi:nil="true"></ShippingMethodCode>
+          <StateOrProvince xsi:nil="true"></StateOrProvince>
+          <Telephone1 xsi:nil="true"></Telephone1>
+          <Telephone2 xsi:nil="true"></Telephone2>
+          <Telephone3 xsi:nil="true"></Telephone3>
+          <TimeZoneRuleVersionNumber xsi:nil="true"></TimeZoneRuleVersionNumber>
+          <UPSZone xsi:nil="true"></UPSZone>
+          <UTCOffset xsi:nil="true"></UTCOffset>
+          <UTCConversionTimeZoneCode xsi:nil="true"></UTCConversionTimeZoneCode>
+        </Address>
+      </Addresses>
+    </Publisher>
+    <RootComponents>
+      <RootComponent type="1" schemaName="cra5f_cr5a8_requerimientos1s" behavior="1" />
+      <RootComponent type="29" id="{127030f3-d7ac-ee11-a569-6045bded17c6}" behavior="0" />
+      <RootComponent type="29" id="{3105ae1d-bb33-ee11-bdf4-00224830eadd}" behavior="0" />
+      <RootComponent type="29" id="{3238547f-d446-ee11-be6d-00224830eadd}" behavior="0" />
+      <RootComponent type="29" id="{75f0958b-95b8-ee11-a569-6045bded17c6}" behavior="0" />
+      <RootComponent type="29" id="{835cdc01-8044-ee11-bdf3-00224830eadd}" behavior="0" />
+      <RootComponent type="29" id="{934efde8-f7ac-ee11-a569-6045bded17c6}" behavior="0" />
+      <RootComponent type="29" id="{944efde8-f7ac-ee11-a569-6045bded17c6}" behavior="0" />
+      <RootComponent type="29" id="{95b60def-3762-ee11-8def-00224830eadd}" behavior="0" />
+      <RootComponent type="300" schemaName="cra5f_gestordecompras_c235a" behavior="0" />
+    </RootComponents>
+    <MissingDependencies>
+      <MissingDependency>
+        <Required type="1" schemaName="cra5f_cr5a8_requerimientos1s" displayName="cr5a8_requerimientos1s" solution="Active" />
+        <Dependent type="1" schemaName="cra5f_cr5a8_requerimientos1s" displayName="cr5a8_requerimientos1s" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="29" displayName="Cambiar el líder del presupuesto" solution="Active" id="{16a80745-5b78-ee11-8179-00224830eadd}" />
+        <Dependent type="300" schemaName="cra5f_gestordecompras_c235a" displayName="MIS  COMPRAS" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="29" displayName="ReciboSastifacción" solution="Active" id="{722f3034-c4ba-ee11-a569-6045bded17c6}" />
+        <Dependent type="300" schemaName="cra5f_gestordecompras_c235a" displayName="MIS  COMPRAS" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="connectionreference" displayName="cra5f_sharedapprovals_1cd14" solution="Active" id.connectionreferencelogicalname="cra5f_sharedapprovals_1cd14" />
+        <Dependent type="29" displayName="AprobarPresupuestos" id="{835cdc01-8044-ee11-bdf3-00224830eadd}" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="connectionreference" displayName="cra5f_sharedoffice365_25caf" solution="Active" id.connectionreferencelogicalname="cra5f_sharedoffice365_25caf" />
+        <Dependent type="29" displayName="AprobarPresupuestos" id="{835cdc01-8044-ee11-bdf3-00224830eadd}" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="connectionreference" displayName="cra5f_sharedsharepointonline_efa54" solution="Active" id.connectionreferencelogicalname="cra5f_sharedsharepointonline_efa54" />
+        <Dependent type="29" displayName="AprobarPresupuestos" id="{835cdc01-8044-ee11-bdf3-00224830eadd}" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="connectionreference" displayName="new_sharedonedriveforbusiness_6e267" solution="Active" id.connectionreferencelogicalname="new_sharedonedriveforbusiness_6e267" />
+        <Dependent type="29" displayName="AprobarPresupuestos" id="{835cdc01-8044-ee11-bdf3-00224830eadd}" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="connectionreference" displayName="new_sharedonedriveforbusiness_6e267" solution="Active" id.connectionreferencelogicalname="new_sharedonedriveforbusiness_6e267" />
+        <Dependent type="29" displayName="Descargar Excel Requerimiento" id="{934efde8-f7ac-ee11-a569-6045bded17c6}" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="connectionreference" displayName="new_sharedonedriveforbusiness_6e267" solution="Active" id.connectionreferencelogicalname="new_sharedonedriveforbusiness_6e267" />
+        <Dependent type="29" displayName="Descargar Excel Presupuestos" id="{944efde8-f7ac-ee11-a569-6045bded17c6}" />
+      </MissingDependency>
+    </MissingDependencies>
+  </SolutionManifest>
+</ImportExportXml>
