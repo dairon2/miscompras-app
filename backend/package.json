@@ -29,7 +29,7 @@
     "puppeteer": "^24.34.0",
     "resend": "^6.6.0",
     "zod": "^4.2.1",
-    "@prisma/client": "^7.2.0"
+    "@prisma/client": "6.2.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -41,7 +41,7 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^25.0.3",
     "@types/nodemailer": "^7.0.4",
-    "prisma": "^7.2.0",
+    "prisma": "6.2.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
