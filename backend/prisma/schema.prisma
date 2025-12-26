@@ -115,7 +115,7 @@ model Requirement {
   estimatedAmount Decimal? @db.Decimal(15, 2) // Renamed or made optional
   actualAmount    Decimal? @db.Decimal(15, 2) // New field for assistant
   
-  status      Status   @default(PENDING_COORDINATION)
+  status      Status   @default(PENDING_APPROVAL)
   procurementStatus ProcurementStatus @default(PENDIENTE)
 
   project     Project @relation(fields: [projectId], references: [id])
