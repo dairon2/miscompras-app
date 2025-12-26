@@ -120,7 +120,7 @@ export default function BudgetsPage() {
                 amount: parseFloat(formData.amount)
             });
             setShowCreateModal(false);
-            addToast({ type: 'success', message: 'Presupuesto creado exitosamente' });
+            addToast('Presupuesto creado exitosamente', 'success');
             fetchBudgets();
             setFormData({ id: '', amount: '', projectId: '', areaId: '', managerId: '', categoryId: '', executionDate: '' });
         } catch (err: any) {
