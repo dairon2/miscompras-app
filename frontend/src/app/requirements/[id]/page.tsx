@@ -46,8 +46,15 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     const [suppliers, setSuppliers] = useState([]);
 
     // Status Change State
+    interface StatusForm {
+        status: string;
+        procurementStatus: string;
+        remarks: string;
+        receivedAtSatisfaction: boolean;
+    }
+
     const [showStatusModal, setShowStatusModal] = useState(false);
-    const [statusForm, setStatusForm] = useState({ status: '', procurementStatus: '', remarks: '', receivedAtSatisfaction: false });
+    const [statusForm, setStatusForm] = useState<StatusForm>({ status: '', procurementStatus: '', remarks: '', receivedAtSatisfaction: false });
     const [formError, setFormError] = useState('');
     const [selectedFile, setSelectedFile] = useState<any>(null);
 
