@@ -8,7 +8,6 @@ import { authMiddleware, roleCheck } from './middlewares/auth';
 
 import authRoutes from './routes/authRoutes';
 import requirementRoutes from './routes/requirementRoutes';
-import catalogRoutes from './routes/catalogRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import reportRoutes from './routes/reportRoutes';
 
@@ -308,44 +307,54 @@ app.use(compression());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
-// Routes
+// Public Routes (No auth needed)
 app.use('/api/auth', authRoutes);
-app.use('/api/requirements', requirementRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api', catalogRoutes);
 
-// Categories
+// Catalog Routes (Public)
+app.get('/api/areas', async (req, res) => {
+    try {
+        const areas = await prisma.area.findMany();
+        res.json(areas.length > 0 ? areas : [
+            { id: 'area-1', name: 'Curaduría' },
+            { id: 'area-2', name: 'Tecnología' },
+            { id: 'area-3', name: 'Administración' }
+        ]);
+    } catch (e) {
+        res.json([
+            { id: 'area-1', name: 'Curaduría' },
+            { id: 'area-2', name: 'Tecnología' },
+            { id: 'area-3', name: 'Administración' }
+        ]);
+    }
+});
+
+app.get('/api/projects', async (req, res) => {
+    try {
+        const projects = await prisma.project.findMany();
+        res.json(projects.length > 0 ? projects : [
+            { id: 'proj-1', name: 'Exposición Botero' },
+            { id: 'proj-2', name: 'Modernización IT' }
+        ]);
+    } catch (e) {
+        res.json([
+            { id: 'proj-1', name: 'Exposición Botero' },
+            { id: 'proj-2', name: 'Modernización IT' }
+        ]);
+    }
+});
+
+// Protected Routes
+app.use('/api/requirements', authMiddleware, requirementRoutes);
+app.use('/api/notifications', authMiddleware, notificationRoutes);
+app.use('/api/reports', authMiddleware, reportRoutes);
+
+// Additional Public Routes
 app.get('/api/categories', (req, res) => {
     res.json(demoCategories);
 });
 
-// Projects
-app.get('/api/projects', (req, res) => {
-    res.json(demoProjects);
-});
-
-// Areas
-app.get('/api/areas', (req, res) => {
-    res.json(demoAreas);
-});
-
-// Suppliers
 app.get('/api/suppliers', (req, res) => {
     res.json(demoSuppliers);
-});
-
-app.post('/api/suppliers', (req, res) => {
-    const { name, taxId, contactEmail, contactPhone } = req.body;
-    const newSupplier = {
-        id: `supp-${Date.now()}`,
-        name,
-        taxId,
-        contactEmail,
-        contactPhone
-    };
-    demoSuppliers.push(newSupplier);
-    res.json(newSupplier);
 });
 
 // Budgets CRUD
