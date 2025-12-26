@@ -20,13 +20,27 @@ async function main() {
     });
 
     // 2. Create Projects
-    const proj1 = await prisma.project.create({
-        data: { name: 'Exposición Fernando Botero 2024', budget: 50000000 }
+    // 2. Create Projects
+    const proj1 = await prisma.project.upsert({
+        where: { code: 'P-BOTERO-2024' },
+        update: {},
+        create: {
+            name: 'Exposición Fernando Botero 2024',
+            code: 'P-BOTERO-2024',
+            description: 'Proyecto de exposición temporal'
+        }
     });
 
     // 3. Create Suppliers
-    const supp1 = await prisma.supplier.create({
-        data: { name: 'Papelería El Cid', contact: 'Juan Perez', email: 'ventas@elcid.com' }
+    // 3. Create Suppliers
+    const supp1 = await prisma.supplier.upsert({
+        where: { taxId: '900123456-7' },
+        update: {},
+        create: {
+            name: 'Papelería El Cid',
+            taxId: '900123456-7',
+            contactEmail: 'ventas@elcid.com'
+        }
     });
 
     // 4. Create Admin User
