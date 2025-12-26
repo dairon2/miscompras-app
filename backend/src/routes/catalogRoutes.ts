@@ -4,8 +4,6 @@ import { authMiddleware, roleCheck, AuthRequest } from '../middlewares/auth';
 
 const router = Router();
 
-router.use(authMiddleware);
-
 // Helper for Mock check
 const isDemoMode = !process.env.DATABASE_URL || process.env.DATABASE_URL.includes("mock");
 

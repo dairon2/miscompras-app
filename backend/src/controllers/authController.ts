@@ -68,7 +68,14 @@ export const login = async (req: Request, res: Response) => {
         const user = await prisma.user.findUnique({ where: { email } });
 
         if (!user) {
+            console.log(`User not found: ${email}`);
             return res.status(404).json({ error: 'User not found' });
+        }
+
+        const isMatch = await bcrypt.compare(password, (user as any).password || '');
+        if (!isMatch) {
+            console.log(`Password mismatch for ${email}`);
+            return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         const token = jwt.sign(
@@ -79,8 +86,9 @@ export const login = async (req: Request, res: Response) => {
 
         res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name } });
     } catch (error: any) {
+        console.error(`Login error: ${error.message}`);
         // Return 500 but still allow the user to know it's a DB issue
-        res.status(500).json({ error: 'Login failed', details: 'Database not connected. Use admin mock credentials.' });
+        res.status(500).json({ error: 'Login failed', details: 'Database connection error' });
     }
 };
 
