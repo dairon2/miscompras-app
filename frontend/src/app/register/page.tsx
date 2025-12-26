@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { UserPlus, Mail, Lock, User, Building2, Loader2, Check, X, Eye, EyeOff } from "lucide-react";
+import { useToastStore } from "@/store/toastStore";
 import api from "@/lib/api";
 
 export default function RegisterPage() {
@@ -21,6 +22,7 @@ export default function RegisterPage() {
     const [areas, setAreas] = useState([]);
     const [passwordStrength, setPasswordStrength] = useState(0);
     const router = useRouter();
+    const addToast = useToastStore((state) => state.addToast);
 
     useEffect(() => {
         fetchAreas();
@@ -107,10 +109,13 @@ export default function RegisterPage() {
                 areaId: formData.areaId
             });
 
+            addToast("¡Cuenta creada exitosamente!", "success");
             // Redirigir a login con mensaje de éxito
             router.push("/login?registered=true");
         } catch (err: any) {
-            setError(err.response?.data?.error || "Error al registrar usuario");
+            const errorMessage = err.response?.data?.error || "Error al registrar usuario";
+            setError(errorMessage);
+            addToast(errorMessage, "error");
         } finally {
             setLoading(false);
         }

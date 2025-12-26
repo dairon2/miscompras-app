@@ -6,29 +6,61 @@ import { prisma } from '../index';
 export const register = async (req: Request, res: Response) => {
     const { email, password, name, role, areaId } = req.body;
 
+    // Input validation
+    if (!email || !password || !name || !areaId) {
+        return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Email inválido' });
+    }
+
+    // Password length validation
+    if (password.length < 8) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    }
+
     try {
+        // Check if user already exists
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser) {
+            return res.status(400).json({ error: 'El email ya está registrado' });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await prisma.user.create({
             data: {
                 email,
                 name,
+                password: hashedPassword,
                 role: role || 'USER',
                 areaId,
-                // We'll need to store the hashed password in a new field if we want to keep it simple,
-                // but for this demo migration, we'll assume a 'password' field exists or use a mock.
-                // NOTE: In a real migration, adding 'password' to the schema is required.
-            } as any, // Typed as any because schema doesn't have password yet (Prisma 7 fix needed)
+            },
         });
 
-        res.status(201).json({ message: 'User created successfully', user: { id: user.id, email: user.email } });
+        res.status(201).json({
+            message: 'Usuario creado exitosamente',
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role
+            }
+        });
     } catch (error: any) {
-        res.status(400).json({ error: 'User registration failed', details: error.message });
+        res.status(500).json({ error: 'Error al registrar usuario', details: error.message });
     }
 };
 
 export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
-    console.log(`Login attempt for ${email}`);
+
+    // Input validation
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+    }
 
     // --- MOCK LOGIN FOR DEMO (Only if DB is not connected) ---
     const isDemoMode = !process.env.DATABASE_URL || process.env.DATABASE_URL.includes("mock");
@@ -65,6 +97,8 @@ export const login = async (req: Request, res: Response) => {
             );
             return res.json({ token, user: mockUser });
         }
+
+        // In demo mode, if credentials don't match, fall through to database check
     }
     // --- END MOCK LOGIN ---
 
@@ -72,36 +106,39 @@ export const login = async (req: Request, res: Response) => {
         const user = await prisma.user.findUnique({ where: { email } });
 
         if (!user) {
-            console.log(`User not found: ${email}`);
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
         const storedPassword = (user as any).password;
-        let isMatch = false;
 
-        if (storedPassword) {
-            isMatch = await bcrypt.compare(password, storedPassword);
-        } else if (password === 'admin123') {
-            // Fallback for mock users without stored password
-            isMatch = true;
+        if (!storedPassword) {
+            return res.status(500).json({ error: 'Error de configuración de usuario' });
         }
 
+        const isMatch = await bcrypt.compare(password, storedPassword);
+
         if (!isMatch) {
-            console.log(`Password mismatch for ${email}`);
-            return res.status(401).json({ error: 'Invalid credentials' });
+            return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
+            { id: user.id, email: user.email, role: user.role, areaId: user.areaId },
             process.env.JWT_SECRET || 'fallback_secret',
             { expiresIn: '8h' }
         );
 
-        res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name } });
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                name: user.name,
+                areaId: user.areaId
+            }
+        });
     } catch (error: any) {
-        console.error(`Login error: ${error.message}`);
-        // Return 500 but still allow the user to know it's a DB issue
-        res.status(500).json({ error: 'Login failed', details: 'Database connection error' });
+        res.status(500).json({ error: 'Error al iniciar sesión', details: error.message });
     }
 };
 

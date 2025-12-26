@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { useToastStore } from "@/store/toastStore";
 import api from "@/lib/api";
 
 export default function LoginPage() {
@@ -12,17 +13,19 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
     const router = useRouter();
     const setAuth = useAuthStore((state) => state.setAuth);
+    const addToast = useToastStore((state) => state.addToast);
 
     // Check for registration success message
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         if (params.get('registered') === 'true') {
-            setSuccessMessage("¡Registro exitoso! Por favor, inicia sesión.");
+            addToast("¡Registro exitoso! Por favor, inicia sesión.", "success");
+            // Clean up URL
+            window.history.replaceState({}, '', '/login');
         }
-    }, []);
+    }, [addToast]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,9 +36,12 @@ export default function LoginPage() {
             const response = await api.post("/auth/login", { email, password });
             const { user, token } = response.data;
             setAuth(user, token);
+            addToast(`¡Bienvenido, ${user.name || user.email}!`, "success");
             router.push("/");
         } catch (err: any) {
-            setError(err.response?.data?.error || "Error al iniciar sesión");
+            const errorMessage = err.response?.data?.error || "Error al iniciar sesión";
+            setError(errorMessage);
+            addToast(errorMessage, "error");
         } finally {
             setLoading(false);
         }
