@@ -35,6 +35,7 @@ export default function RequirementsPage() {
     const [areas, setAreas] = useState([]);
     const [users, setUsers] = useState([]);
     const [filters, setFilters] = useState({
+        status: '',
         procurementStatus: '',
         areaId: '',
         createdById: '',
