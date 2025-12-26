@@ -305,9 +305,17 @@ if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("mock")) {
 const PORT = process.env.PORT || 4000;
 
 // Middlewares
+const allowedOrigins = [
+    process.env.CORS_ORIGIN,
+    'https://miscompras-front-prod-g4akhtbsagfpefbk.canadacentral-01.azurewebsites.net',
+    'http://localhost:3000'
+].filter(Boolean) as string[];
+
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: true
+    origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(helmet());
 app.use(compression());
