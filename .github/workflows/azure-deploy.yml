@@ -39,7 +39,7 @@ jobs:
         file: ./frontend/Dockerfile
         push: true
         build-args: |
-          NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_API_URL=${{ secrets.PROD_API_URL }}
         tags: ${{ env.ACR_NAME }}.azurecr.io/frontend:latest,${{ env.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }}
 
   deploy:
