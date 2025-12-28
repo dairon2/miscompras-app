@@ -67,12 +67,16 @@ export default function NewAsientoPage() {
                 api.get('/projects'),
                 api.get('/areas'),
                 api.get('/suppliers'),
-                api.get('/budgets')
+                api.get('/budgets', { params: { status: 'APPROVED' } })
             ]);
             setProjects(p.data);
             setAreas(a.data);
             setSuppliers(s.data);
-            setBudgets(b.data);
+            // Filter only approved budgets with available funds
+            const approvedBudgets = b.data.filter((budget: any) =>
+                budget.status === 'APPROVED' && parseFloat(budget.available) > 0
+            );
+            setBudgets(approvedBudgets);
         } catch (err) {
             console.error("Error fetching catalogs", err);
         }
