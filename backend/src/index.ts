@@ -10,6 +10,11 @@ import authRoutes from './routes/authRoutes';
 import requirementRoutes from './routes/requirementRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import reportRoutes from './routes/reportRoutes';
+import paymentRoutes from './routes/paymentRoutes';
+import userRoutes from './routes/userRoutes';
+import adminRoutes from './routes/adminRoutes';
+import budgetRoutes from './routes/budgetRoutes';
+import adjustmentRoutes from './routes/adjustmentRoutes';
 
 dotenv.config();
 
@@ -362,6 +367,11 @@ app.get('/api/projects', async (req, res) => {
 app.use('/api/requirements', authMiddleware, requirementRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
+app.use('/api/payments', authMiddleware, paymentRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/budgets', budgetRoutes);
+app.use('/api/adjustments', adjustmentRoutes);
 
 // Additional Public Routes
 app.get('/api/categories', (req, res) => {

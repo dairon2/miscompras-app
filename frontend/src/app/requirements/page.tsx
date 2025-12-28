@@ -19,14 +19,18 @@ import {
     Package,
     Download,
     Calendar,
-    FileSpreadsheet
+    FileSpreadsheet,
+    User,
+    Trash2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { exportRequirements } from "@/lib/excelExport";
+import { useAuthStore } from "@/store/authStore";
 
 export default function RequirementsPage() {
     const router = useRouter();
+    const { user } = useAuthStore();
     const [requirements, setRequirements] = useState([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
@@ -34,6 +38,14 @@ export default function RequirementsPage() {
     const [projects, setProjects] = useState([]);
     const [areas, setAreas] = useState([]);
     const [users, setUsers] = useState([]);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [requirementToDelete, setRequirementToDelete] = useState<any>(null);
+
+    // Year filter - default to current year
+    const currentYear = new Date().getFullYear();
+    const [selectedYear, setSelectedYear] = useState(currentYear);
+    const availableYears = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
     const [filters, setFilters] = useState({
         status: '',
         procurementStatus: '',
@@ -44,14 +56,23 @@ export default function RequirementsPage() {
         endDate: ''
     });
 
+    // Role-based permissions
+    const userRole = user?.role || 'USER';
+    const isAdmin = ['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole);
+    const canDelete = ['ADMIN', 'DIRECTOR'].includes(userRole);
+
     useEffect(() => {
         fetchRequirements();
         fetchCatalogs();
-    }, []);
+    }, [userRole, selectedYear]);
 
     const fetchRequirements = async () => {
         try {
-            const response = await api.get("/requirements/me");
+            // Admins/Directors/Leaders see all requirements, Users see only their own
+            const endpoint = isAdmin ? "/requirements/all" : "/requirements/me";
+            const response = await api.get(endpoint, {
+                params: { year: selectedYear }
+            });
             setRequirements(response.data);
         } catch (err) {
             console.error("Error fetching requirements", err);
@@ -65,13 +86,31 @@ export default function RequirementsPage() {
             const [p, a, u] = await Promise.all([
                 api.get('/projects'),
                 api.get('/areas'),
-                api.get('/users') // Assuming this endpoint exists for leaders
+                api.get('/users')
             ]);
             setProjects(p.data);
             setAreas(a.data);
             setUsers(u.data);
         } catch (err) {
             console.error("Error fetching catalogs", err);
+        }
+    };
+
+    const handleDeleteClick = (req: any) => {
+        setRequirementToDelete(req);
+        setDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!requirementToDelete) return;
+        try {
+            await api.delete(`/requirements/${requirementToDelete.id}`);
+            setRequirements(requirements.filter((r: any) => r.id !== requirementToDelete.id));
+            setDeleteModalOpen(false);
+            setRequirementToDelete(null);
+        } catch (err) {
+            console.error("Error deleting requirement", err);
+            alert("Error al eliminar el requerimiento");
         }
     };
 
@@ -131,9 +170,30 @@ export default function RequirementsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12"
             >
-                <div>
-                    <h2 className="text-4xl font-black tracking-tight mb-2">Solicitudes de Compra</h2>
-                    <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.2em]">Gestión Institucional de Requerimientos</p>
+                <div className="flex items-center gap-6">
+                    <div>
+                        <h2 className="text-4xl font-black tracking-tight mb-2">Solicitudes de Compra</h2>
+                        <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.2em]">Gestión Institucional de Requerimientos</p>
+                    </div>
+
+                    {/* Year Selector */}
+                    <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                        <Calendar size={18} className="text-primary-600" />
+                        <select
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                            className="bg-transparent font-black text-lg appearance-none cursor-pointer pr-6 focus:outline-none"
+                        >
+                            {availableYears.map(year => (
+                                <option key={year} value={year}>{year}</option>
+                            ))}
+                        </select>
+                        {selectedYear !== currentYear && (
+                            <span className="text-[8px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                                Histórico
+                            </span>
+                        )}
+                    </div>
                 </div>
                 <div className="flex items-center gap-4">
                     <button
@@ -288,17 +348,18 @@ export default function RequirementsPage() {
                             <table className="w-full">
                                 <thead className="bg-gray-50/50 dark:bg-slate-900/50">
                                     <tr>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Solicitud</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Proyecto / Área</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Monto</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado Trámite</th>
-                                        <th className="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Ver</th>
+                                        <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Solicitud</th>
+                                        {isAdmin && <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Creado por</th>}
+                                        <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Proyecto / Área</th>
+                                        <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Monto</th>
+                                        <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado Trámite</th>
+                                        <th className="px-6 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                                     {filteredReqs.map((req: any) => (
                                         <tr key={req.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors group">
-                                            <td className="px-8 py-6">
+                                            <td className="px-6 py-6">
                                                 <div className="flex items-center gap-4 text-left">
                                                     <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600">
                                                         <FileText className="w-5 h-5" />
@@ -313,27 +374,55 @@ export default function RequirementsPage() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-6 text-left">
-                                                <p className="font-bold text-xs">{req.project.name}</p>
-                                                <p className="text-[10px] font-bold text-gray-400">{req.area.name}</p>
+                                            {isAdmin && (
+                                                <td className="px-6 py-6 text-left">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                                                            <User size={14} className="text-primary-600" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-xs">{req.createdBy?.name || 'N/A'}</p>
+                                                            <p className="text-[9px] text-gray-400">{req.createdBy?.email || ''}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            )}
+                                            <td className="px-6 py-6 text-left">
+                                                <p className="font-bold text-xs">{req.project?.name}</p>
+                                                <p className="text-[10px] font-bold text-gray-400">{req.area?.name}</p>
                                             </td>
-                                            <td className="px-8 py-6 text-left font-black text-sm">
+                                            <td className="px-6 py-6 text-left font-black text-sm">
                                                 {req.actualAmount && parseFloat(req.actualAmount) > 0
                                                     ? `$${parseFloat(req.actualAmount).toLocaleString()}`
                                                     : <span className="text-gray-400 font-medium">Por definir</span>}
                                             </td>
-                                            <td className="px-8 py-6 text-left">
+                                            <td className="px-6 py-6 text-left">
                                                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${getProcStatusStyle(req.procurementStatus)}`}>
                                                     {req.procurementStatus || 'PENDIENTE'}
                                                 </span>
                                             </td>
-                                            <td className="px-8 py-6 text-right">
-                                                <button
-                                                    onClick={() => router.push(`/requirements/${req.id}`)}
-                                                    className="p-3 bg-white dark:bg-slate-800 hover:bg-primary-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all"
-                                                >
-                                                    <ChevronRight size={16} />
-                                                </button>
+                                            <td className="px-6 py-6 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => router.push(`/requirements/${req.id}`)}
+                                                        className="p-3 bg-white dark:bg-slate-800 hover:bg-primary-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all"
+                                                        title="Ver detalle"
+                                                    >
+                                                        <ChevronRight size={16} />
+                                                    </button>
+                                                    {canDelete && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteClick(req);
+                                                            }}
+                                                            className="p-3 bg-white dark:bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-red-500"
+                                                            title="Eliminar requerimiento"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -355,6 +444,54 @@ export default function RequirementsPage() {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            <AnimatePresence>
+                {deleteModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+                        onClick={() => setDeleteModalOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Trash2 className="w-8 h-8 text-red-600" />
+                                </div>
+                                <h3 className="text-xl font-black mb-2">¿Eliminar requerimiento?</h3>
+                                <p className="text-gray-500 text-sm">
+                                    Esta acción no se puede deshacer. Se eliminará permanentemente el requerimiento:
+                                </p>
+                                <p className="font-bold text-primary-600 mt-2">
+                                    "{requirementToDelete?.title}"
+                                </p>
+                            </div>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setDeleteModalOpen(false)}
+                                    className="flex-1 py-3 px-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700 font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleConfirmDelete}
+                                    className="flex-1 py-3 px-6 rounded-2xl bg-red-600 text-white font-bold hover:bg-red-700 transition-all"
+                                >
+                                    Eliminar
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div >
     );
 }

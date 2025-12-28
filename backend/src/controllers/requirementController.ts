@@ -109,14 +109,21 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
 
 export const getMyRequirements = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
+    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const includeAsientos = req.query.includeAsientos === 'true';
 
     try {
         const requirements = await prisma.requirement.findMany({
-            where: { createdById: userId },
+            where: {
+                createdById: userId,
+                year: year,
+                isAsiento: includeAsientos ? undefined : false
+            },
             include: {
                 project: true,
                 area: true,
-                supplier: true
+                supplier: true,
+                payments: true
             },
             orderBy: { createdAt: 'desc' }
         });
@@ -282,5 +289,238 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
     } catch (error: any) {
         console.error("Update requirement error:", error);
         res.status(400).json({ error: 'Failed to update requirement', details: error.message });
+    }
+};
+
+// Get ALL requirements - for ADMIN, DIRECTOR, LEADER
+export const getAllRequirements = async (req: AuthRequest, res: Response) => {
+    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const includeAsientos = req.query.includeAsientos === 'true';
+
+    try {
+        const requirements = await prisma.requirement.findMany({
+            where: {
+                year: year,
+                isAsiento: includeAsientos ? undefined : false
+            },
+            include: {
+                project: true,
+                area: true,
+                supplier: true,
+                payments: true,
+                createdBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(requirements);
+    } catch (error: any) {
+        console.error("Error fetching all requirements:", error);
+        res.status(500).json({ error: 'Failed to fetch requirements' });
+    }
+};
+
+// Update ONLY observations field - for regular users on their own requirements
+export const updateObservations = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const { observations, satisfactionComments } = req.body;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    try {
+        const requirement = await prisma.requirement.findUnique({
+            where: { id }
+        });
+
+        if (!requirement) {
+            return res.status(404).json({ error: 'Requirement not found' });
+        }
+
+        // Users can only update observations on their own requirements
+        // Admins/Directors can update any
+        const isOwner = requirement.createdById === userId;
+        const isAdmin = ['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole || '');
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({ error: 'No tienes permiso para modificar este requerimiento' });
+        }
+
+        const updatedRequirement = await prisma.requirement.update({
+            where: { id },
+            data: {
+                satisfactionComments: satisfactionComments !== undefined ? satisfactionComments : undefined
+            },
+            include: {
+                project: true,
+                area: true,
+                supplier: true
+            }
+        });
+
+        // Log the change
+        await prisma.historyLog.create({
+            data: {
+                action: 'OBSERVATIONS_UPDATED',
+                requirementId: id,
+                details: `Observaciones actualizadas por ${req.user?.email}`
+            }
+        });
+
+        res.json(updatedRequirement);
+    } catch (error: any) {
+        console.error("Update observations error:", error);
+        res.status(400).json({ error: 'Failed to update observations' });
+    }
+};
+
+// Delete requirement - only ADMIN and DIRECTOR
+export const deleteRequirement = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    try {
+        const requirement = await prisma.requirement.findUnique({
+            where: { id },
+            include: { attachments: true }
+        });
+
+        if (!requirement) {
+            return res.status(404).json({ error: 'Requirement not found' });
+        }
+
+        // Delete related records first (cascade)
+        await prisma.historyLog.deleteMany({ where: { requirementId: id } });
+        await prisma.attachment.deleteMany({ where: { requirementId: id } });
+        await prisma.notification.deleteMany({ where: { requirementId: id } });
+
+        // Delete the requirement
+        await prisma.requirement.delete({ where: { id } });
+
+        // Log deletion
+        console.log(`Requirement ${id} deleted by ${req.user?.email}`);
+
+        res.json({ message: 'Requerimiento eliminado exitosamente' });
+    } catch (error: any) {
+        console.error("Delete requirement error:", error);
+        res.status(400).json({ error: 'Failed to delete requirement', details: error.message });
+    }
+};
+
+// Get all Asientos (pre-approved requirements) - for ADMIN, DIRECTOR, LEADER
+export const getAsientos = async (req: AuthRequest, res: Response) => {
+    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+
+    try {
+        const asientos = await prisma.requirement.findMany({
+            where: {
+                isAsiento: true,
+                year: year
+            },
+            include: {
+                project: true,
+                area: true,
+                supplier: true,
+                payments: true,
+                createdBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(asientos);
+    } catch (error: any) {
+        console.error("Error fetching asientos:", error);
+        res.status(500).json({ error: 'Failed to fetch asientos' });
+    }
+};
+
+// Create an Asiento (pre-approved requirement)
+export const createAsiento = async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    // Only ADMIN, DIRECTOR, LEADER can create asientos
+    if (!['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole || '')) {
+        return res.status(403).json({ error: 'No tienes permiso para crear asientos' });
+    }
+
+    const {
+        title,
+        description,
+        quantity,
+        totalAmount,
+        actualAmount,
+        projectId,
+        areaId,
+        supplierId,
+        manualSupplierName,
+        budgetId,
+        reqCategory,
+        purchaseOrderNumber,
+        invoiceNumber,
+        hasMultiplePayments
+    } = req.body;
+
+    try {
+        // Budget deduction for asientos (immediate)
+        if (budgetId && totalAmount) {
+            await prisma.budget.update({
+                where: { id: budgetId },
+                data: {
+                    available: { decrement: parseFloat(totalAmount) }
+                }
+            });
+        }
+
+        const asiento = await prisma.requirement.create({
+            data: {
+                title,
+                description,
+                quantity,
+                totalAmount: totalAmount ? parseFloat(totalAmount) : null,
+                actualAmount: actualAmount ? parseFloat(actualAmount) : null,
+                projectId,
+                areaId,
+                supplierId,
+                manualSupplierName,
+                budgetId,
+                reqCategory: reqCategory || 'COMPRA',
+                purchaseOrderNumber,
+                invoiceNumber,
+                createdById: userId!,
+                year: new Date().getFullYear(),
+                isAsiento: true,
+                hasMultiplePayments: hasMultiplePayments || false,
+                status: 'APPROVED',  // Auto-approved for asientos
+                procurementStatus: 'EN_TRAMITE'
+            },
+            include: {
+                project: true,
+                area: true,
+                supplier: true
+            }
+        });
+
+        // Log creation
+        await prisma.historyLog.create({
+            data: {
+                action: 'ASIENTO_CREATED',
+                requirementId: asiento.id,
+                details: `Asiento creado por ${req.user?.email} - Monto: $${totalAmount?.toLocaleString() || 0}`
+            }
+        });
+
+        res.status(201).json(asiento);
+    } catch (error: any) {
+        console.error("Error creating asiento:", error);
+        res.status(500).json({ error: 'Error al crear el asiento', details: error.message });
     }
 };

@@ -211,14 +211,23 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
     const isFinalState = requirement.status === 'PAID' || requirement.status === 'REJECTED';
     const isCreator = currentUser?.id === requirement.createdById || currentUser?.email === requirement.createdBy.email;
+    const userRole = currentUser?.role || 'USER';
+
+    // Role-based permissions
+    const isAdmin = ['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole);
+    const canDelete = ['ADMIN', 'DIRECTOR'].includes(userRole);
 
     const canApproveCoordination = requirement.status === 'PENDING_COORDINATION' && (currentUser?.role === 'ADMIN' || currentUser?.role === 'LEADER');
     const canApproveFinance = requirement.status === 'PENDING_FINANCE' && (currentUser?.role === 'ADMIN' || currentUser?.role === 'DIRECTOR');
     const canManageProcurement = requirement.status === 'APPROVED' && (requirement.procurementStatus === 'PENDIENTE' || requirement.procurementStatus === 'EN_TRAMITE' || requirement.procurementStatus === 'ENTREGADO');
     const canMarkReceived = requirement.procurementStatus === 'ENTREGADO' && isCreator && !requirement.receivedAtSatisfaction;
 
-    const canManage = currentUser?.role === 'ADMIN';
-    const canEdit = canManage || (isCreator && requirement.status === 'PENDING_COORDINATION');
+    const canManage = userRole === 'ADMIN';
+
+    // Full edit: ADMIN/DIRECTOR/LEADER can edit everything
+    // Users: Can ONLY edit observations on their own requirements
+    const canFullEdit = isAdmin;
+    const canEditObservationsOnly = !isAdmin && isCreator;
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -412,7 +421,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                         </motion.div>
                     )}
 
-                    {(canApproveCoordination || canApproveFinance || canManageProcurement || canMarkReceived || canManage || canEdit) && (
+                    {(canApproveCoordination || canApproveFinance || canManageProcurement || canMarkReceived || canManage || canFullEdit || canEditObservationsOnly) && (
                         <div className="mt-12 flex flex-wrap gap-4 pt-10 border-t border-gray-50 dark:border-gray-700">
                             {canApproveCoordination && (
                                 <>
@@ -484,12 +493,21 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                 </button>
                             )}
 
-                            {canEdit && (
+                            {canFullEdit && (
                                 <button
                                     onClick={() => setIsEditing(true)}
                                     className="flex-1 bg-primary-50 text-primary-600 py-4 rounded-2xl font-black border border-primary-100 hover:bg-primary-100 transition-all flex items-center justify-center gap-2"
                                 >
                                     <Edit3 size={20} /> Editar Detalles
+                                </button>
+                            )}
+
+                            {canEditObservationsOnly && (
+                                <button
+                                    onClick={() => setShowStatusModal(true)}
+                                    className="flex-1 bg-amber-50 text-amber-600 py-4 rounded-2xl font-black border border-amber-100 hover:bg-amber-100 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Edit3 size={20} /> Agregar Observaciones
                                 </button>
                             )}
                         </div>

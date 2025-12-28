@@ -19,6 +19,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // User profile fields
+  phone    String?
+  position String?   // Job title/position
+  isActive Boolean   @default(true)
+
   // Password reset fields
   passwordResetToken   String?
   passwordResetExpires DateTime?
@@ -37,6 +42,13 @@ model User {
   requirementsCreated Requirement[] @relation("CreatedBy")
   requirementsOwned   Requirement[] @relation("OwnedBy")
   managedBudgets      Budget[]      @relation("BudgetManager")
+  
+  // New relations for budget module v2.0
+  budgetsCreated      Budget[]          @relation("BudgetCreatedBy")
+  budgetsApproved     Budget[]          @relation("BudgetApprovedBy")
+  budgetSubLeader     BudgetSubLeader[]
+  adjustmentsRequested BudgetAdjustment[] @relation("AdjustmentRequestedBy")
+  adjustmentsReviewed  BudgetAdjustment[] @relation("AdjustmentReviewedBy")
 }
 
 enum Role {
@@ -95,12 +107,28 @@ model Category {
 
 model Budget {
   id          String   @id @default(uuid())
+  code        String?  @unique              // Código único ej: FA-4.5-01
+  title       String                        // Nombre del presupuesto
+  description String?                       // Descripción
+  
   amount      Decimal  @db.Decimal(15, 2)
   available   Decimal  @db.Decimal(15, 2)
   
-  // Relación con Categoría
-  category    Category @relation(fields: [categoryId], references: [id])
-  categoryId  String
+  year        Int      @default(2025)       // Año fiscal
+  version     Int      @default(1)          // Control de versiones
+  
+  // Estado de aprobación por el líder
+  status          BudgetStatus @default(PENDING)
+  approvedAt      DateTime?
+  approvedById    String?
+  approvedBy      User?    @relation("BudgetApprovedBy", fields: [approvedById], references: [id])
+  
+  // Documento PDF generado
+  documentUrl     String?
+  
+  // Relación con Categoría (Rubro)
+  category    Category? @relation(fields: [categoryId], references: [id])
+  categoryId  String?
 
   project     Project  @relation(fields: [projectId], references: [id])
   projectId   String
@@ -108,16 +136,103 @@ model Budget {
   area        Area     @relation(fields: [areaId], references: [id])
   areaId      String
 
+  // Líder gestor
   manager     User?    @relation("BudgetManager", fields: [managerId], references: [id])
   managerId   String?
+  
+  // Sublíderes (pueden visualizar)
+  subLeaders  BudgetSubLeader[]
+  
+  // Solicitudes de ajuste
+  adjustments BudgetAdjustment[]
+  adjustmentSources AdjustmentSource[]
 
   requirements Requirement[]
 
+  // Timestamps y creador
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation("BudgetCreatedBy", fields: [createdById], references: [id])
 
-  // Unicidad: No puede haber dos presupuestos para la misma Categoría en el mismo Proyecto/Área
-  @@unique([projectId, areaId, categoryId])
+  // Unicidad: No puede haber dos presupuestos para la misma Categoría en el mismo Proyecto/Área/Año
+  @@unique([projectId, areaId, categoryId, year])
+}
+
+enum BudgetStatus {
+  PENDING      // Pendiente de aprobación del líder
+  APPROVED     // Aprobado y activo
+  REJECTED     // Rechazado
+}
+
+// Sublíderes que pueden visualizar el presupuesto
+model BudgetSubLeader {
+  id        String   @id @default(uuid())
+  budgetId  String
+  budget    Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  
+  @@unique([budgetId, userId])
+}
+
+// Solicitudes de ajuste presupuestal (aumento o movimiento)
+model BudgetAdjustment {
+  id              String   @id @default(uuid())
+  code            String?  @unique           // Código del ajuste
+  type            AdjustmentType
+  
+  // Presupuesto destino (al que se aumenta)
+  budgetId        String
+  budget          Budget   @relation(fields: [budgetId], references: [id])
+  
+  // Monto solicitado
+  requestedAmount Decimal  @db.Decimal(15, 2)
+  
+  // Para movimientos: de dónde se descuenta
+  sources         AdjustmentSource[]
+  
+  // Motivo y descripción
+  reason          String
+  
+  // Estado
+  status          AdjustmentStatus @default(PENDING)
+  
+  // Documento PDF
+  documentUrl     String?
+  
+  // Quién solicita
+  requestedById   String
+  requestedBy     User     @relation("AdjustmentRequestedBy", fields: [requestedById], references: [id])
+  requestedAt     DateTime @default(now())
+  
+  // Quién aprueba/rechaza (DIRECTOR)
+  reviewedById    String?
+  reviewedBy      User?    @relation("AdjustmentReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime?
+  reviewComment   String?
+}
+
+// Origen de fondos para movimientos presupuestales
+model AdjustmentSource {
+  id           String           @id @default(uuid())
+  adjustmentId String
+  adjustment   BudgetAdjustment @relation(fields: [adjustmentId], references: [id], onDelete: Cascade)
+  budgetId     String
+  budget       Budget           @relation(fields: [budgetId], references: [id])
+  amount       Decimal          @db.Decimal(15, 2) // Monto a descontar de este presupuesto
+}
+
+enum AdjustmentType {
+  INCREASE  // Solo aumento (sin movimiento)
+  TRANSFER  // Movimiento entre presupuestos
+}
+
+enum AdjustmentStatus {
+  PENDING   // Pendiente de aprobación
+  APPROVED  // Aprobado
+  REJECTED  // Rechazado
 }
 
 model Requirement {
@@ -127,6 +242,13 @@ model Requirement {
   quantity    String?  // New field for quantity/units
   estimatedAmount Decimal? @db.Decimal(15, 2) // Renamed or made optional
   actualAmount    Decimal? @db.Decimal(15, 2) // New field for assistant
+  
+  // New fields
+  year            Int              @default(2025)           // Fiscal year
+  reqCategory     RequirementCategory @default(COMPRA)      // Requirement type
+  isAsiento       Boolean          @default(false)          // Pre-approved entry
+  totalAmount     Decimal?         @db.Decimal(15, 2)       // Total committed amount
+  hasMultiplePayments Boolean      @default(false)          // Enable partial payments
   
   status      Status   @default(PENDING_APPROVAL)
   procurementStatus ProcurementStatus @default(PENDIENTE)
@@ -149,6 +271,7 @@ model Requirement {
 
   attachments Attachment[]
   logs        HistoryLog[]
+  payments    Payment[]      // Relation to partial payments
 
   budget      Budget?  @relation(fields: [budgetId], references: [id])
   budgetId    String?
@@ -179,6 +302,17 @@ enum ProcurementStatus {
   POSTERGADO
 }
 
+enum RequirementCategory {
+  ANTICIPO
+  COMPRA
+  COMPRA_ONLINE
+  CONTRATO
+  ORDEN_COMPRA
+  ORDEN_SERVICIO
+  ORDEN_PRODUCCION
+  SERVICIO
+}
+
 model Attachment {
   id            String      @id @default(uuid())
   fileName      String
@@ -206,4 +340,20 @@ model Notification {
   userId        String
   requirementId String?
   createdAt     DateTime @default(now())
+}
+
+// Partial payments for requirements (optional, up to 12 payments)
+model Payment {
+  id              String      @id @default(uuid())
+  paymentNumber   Int                                       // Payment number (1-12)
+  amount          Decimal     @db.Decimal(15, 2)            // Payment amount
+  invoiceNumber   String?                                   // Invoice number for this payment
+  paymentDate     DateTime?                                 // Date of payment
+  observations    String?                                   // Payment notes/observations
+  
+  requirement     Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  requirementId   String
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 }

@@ -7,7 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, User as UserIcon, Bell, Package, LayoutDashboard, Database, Briefcase, FileText, Users, Building2, Settings, Shield, Mail, MapPin, X } from "lucide-react";
+import { LogOut, User as UserIcon, Bell, Package, LayoutDashboard, Database, Briefcase, FileText, Users, Building2, Settings, Shield, Mail, MapPin, X, BookOpen, UserCog } from "lucide-react";
 import ToastContainer from "@/components/ToastContainer";
 
 const outfit = Outfit({
@@ -122,9 +122,15 @@ export default function RootLayout({
 
                 <nav className="hidden lg:flex items-center gap-10 text-[11px] font-black uppercase tracking-widest text-gray-400">
                   <NavItem href="/" icon={<LayoutDashboard size={14} />} label="Inicio" active={pathname === "/"} />
-                  <NavItem icon={<FileText size={14} />} label="Requerimientos" href="/requirements" active={pathname === "/requirements"} />
+                  <NavItem icon={<FileText size={14} />} label="Requerimientos" href="/requirements" active={pathname === "/requirements" || pathname.startsWith("/requirements/")} />
+                  {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && (
+                    <NavItem icon={<BookOpen size={14} />} label="Asientos" href="/asientos" active={pathname === "/asientos" || pathname.startsWith("/asientos/")} />
+                  )}
                   <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers"} />
-                  <NavItem icon={<Building2 size={14} />} label="Presupuestos" href="/budget" active={pathname === "/budget"} />
+                  <NavItem icon={<Building2 size={14} />} label="Presupuestos" href="/budget" active={pathname === "/budget" && !pathname.includes("/adjustments")} />
+                  {user?.role === 'DIRECTOR' && (
+                    <NavItem icon={<FileText size={14} />} label="Ajustes" href="/budget/adjustments" active={pathname === "/budget/adjustments"} />
+                  )}
                 </nav>
 
                 <div className="flex items-center gap-6">
@@ -226,13 +232,27 @@ export default function RootLayout({
                               <Shield className="w-4 h-4" />
                               <span>Mi Cuenta</span>
                             </button>
-                            <button
-                              className="w-full flex items-center gap-3 p-4 text-xs font-bold text-gray-400 dark:text-gray-500 cursor-not-allowed rounded-2xl transition-all"
-                              title="Próximamente"
-                            >
-                              <Settings className="w-4 h-4" />
-                              <span>Configuración</span>
-                            </button>
+
+                            {user?.role === 'ADMIN' && (
+                              <>
+                                <a
+                                  href="/users"
+                                  onClick={() => setShowProfileMenu(false)}
+                                  className="w-full flex items-center gap-3 p-4 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 rounded-2xl transition-all"
+                                >
+                                  <UserCog className="w-4 h-4" />
+                                  <span>Usuarios</span>
+                                </a>
+                                <a
+                                  href="/admin"
+                                  onClick={() => setShowProfileMenu(false)}
+                                  className="w-full flex items-center gap-3 p-4 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 rounded-2xl transition-all"
+                                >
+                                  <Settings className="w-4 h-4" />
+                                  <span>Configuración</span>
+                                </a>
+                              </>
+                            )}
 
                             <div className="h-[1px] bg-gray-50 dark:bg-gray-700 my-1 mx-4"></div>
 
