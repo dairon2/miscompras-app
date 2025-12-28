@@ -24,6 +24,7 @@ interface Budget {
     available: number;
     year: number;
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    expirationDate?: string;
     project?: { id: string; name: string; code?: string };
     area?: { id: string; name: string };
     category?: { id: string; name: string; code: string };
@@ -314,7 +315,7 @@ export default function BudgetsPage() {
 
     const openCreateModal = () => {
         setSelectedBudget(null);
-        setFormData({ title: '', description: '', code: '', amount: '', projectId: '', areaId: '', categoryId: '', managerId: '', subLeaders: [] });
+        setFormData({ title: '', description: '', code: '', amount: '', projectId: '', areaId: '', categoryId: '', managerId: '', expirationDate: '', subLeaders: [] });
         setShowCreateModal(true);
     };
 
@@ -329,6 +330,7 @@ export default function BudgetsPage() {
             areaId: budget.area?.id || '',
             categoryId: budget.category?.id || '',
             managerId: budget.manager?.id || '',
+            expirationDate: budget.expirationDate ? new Date(budget.expirationDate).toISOString().split('T')[0] : '',
             subLeaders: budget.subLeaders?.map(sl => sl.user.id) || []
         });
         setShowCreateModal(true);
