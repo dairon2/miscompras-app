@@ -27,9 +27,9 @@ import { authMiddleware, roleCheck } from '../middlewares/auth';
 
 const router = Router();
 
-// All routes require authentication and ADMIN role
+// All routes require authentication and ADMIN or DIRECTOR role
 router.use(authMiddleware);
-router.use(roleCheck(['ADMIN']));
+router.use(roleCheck(['ADMIN', 'DIRECTOR']));
 
 // Dashboard stats
 router.get('/stats', getAdminStats);

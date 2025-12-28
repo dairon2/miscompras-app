@@ -187,6 +187,19 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
                 data: { documentUrl: pdfUrl }
             });
 
+            // Create notification for the assigned manager
+            if (budget.managerId) {
+                await prisma.notification.create({
+                    data: {
+                        title: 'Nuevo Presupuesto Asignado',
+                        message: `Se te ha asignado el presupuesto "${budget.title}" por ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(Number(budget.amount))} para el proyecto ${budget.project.name}. Revísalo y apruébalo.`,
+                        type: 'INFO',
+                        userId: budget.managerId,
+                        requirementId: null
+                    }
+                });
+            }
+
             // Send email to manager if assigned
             if (budget.manager?.email) {
                 await sendBudgetNotificationEmail({

@@ -59,17 +59,19 @@ export default function AdminPage() {
     // Search
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Only ADMIN can access
+    // ADMIN and DIRECTOR can access catalog management
     const isAdmin = user?.role === 'ADMIN';
+    const isDirector = user?.role === 'DIRECTOR';
+    const canManageCatalogs = isAdmin || isDirector;
 
     useEffect(() => {
-        if (isAdmin) {
+        if (canManageCatalogs) {
             fetchStats();
             if (activeTab !== 'general') {
                 fetchData(activeTab as TabType);
             }
         }
-    }, [isAdmin, activeTab]);
+    }, [canManageCatalogs, activeTab]);
 
     const fetchStats = async () => {
         try {
@@ -217,7 +219,7 @@ export default function AdminPage() {
                     </div>
                 </div>
 
-                {isAdmin && (
+                {canManageCatalogs && (
                     <button
                         onClick={openCreateModal}
                         className={`flex items-center gap-2 bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all whitespace-nowrap uppercase text-[10px] tracking-widest ${activeTab === 'general' ? 'opacity-0 pointer-events-none' : ''}`}
@@ -246,7 +248,7 @@ export default function AdminPage() {
                     <span className="uppercase text-[10px] tracking-widest">General</span>
                 </button>
 
-                {isAdmin && tabs.map((tab) => (
+                {canManageCatalogs && tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => { setActiveTab(tab.id as TabType); setSearchTerm(''); }}
