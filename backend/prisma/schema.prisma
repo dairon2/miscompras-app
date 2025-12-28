@@ -82,9 +82,14 @@ model Area {
 model Supplier {
   id           String        @id @default(uuid())
   name         String
-  taxId        String        @unique
+  nit          String?       @unique
+  taxId        String?       @unique
+  contactName  String?
+  email        String?
   contactEmail String?
+  phone        String?
   contactPhone String?
+  address      String?
   requirements Requirement[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt

@@ -239,3 +239,25 @@ export const notifyDirectors = async (subject: string, content: string) => {
         console.error('Error notifying directors:', error);
     }
 };
+
+// ==================== PASSWORD RESET EMAIL ====================
+
+export const sendPasswordResetEmail = async (email: string, resetToken: string) => {
+    const appUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
+
+    const subject = 'Restablecer Contraseña - MisCompras';
+    const content = `
+        <p style="color: #333; line-height: 1.6;">Has solicitado restablecer tu contraseña.</p>
+        <p style="color: #333; line-height: 1.6;">Haz clic en el siguiente enlace para crear una nueva contraseña:</p>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 14px;">
+                Restablecer Contraseña
+            </a>
+        </div>
+        <p style="color: #666; font-size: 12px;">Este enlace expirará en 1 hora.</p>
+        <p style="color: #666; font-size: 12px;">Si no solicitaste este cambio, puedes ignorar este correo.</p>
+    `;
+
+    await sendEmail(email, subject, getEmailTemplate(subject, content));
+};
