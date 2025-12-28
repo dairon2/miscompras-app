@@ -102,6 +102,7 @@ model Category {
   code        String   @unique 
   // El nombre descriptivo, ej: "Honorarios"
   name        String   @unique 
+  description String?
   
   // Relación: Una categoría puede estar en muchos presupuestos
   budgets     Budget[]
