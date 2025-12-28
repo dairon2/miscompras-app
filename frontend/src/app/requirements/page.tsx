@@ -182,10 +182,10 @@ export default function RequirementsPage() {
                         <select
                             value={selectedYear}
                             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                            className="bg-transparent font-black text-lg appearance-none cursor-pointer pr-6 focus:outline-none"
+                            className="bg-transparent font-black text-lg appearance-none cursor-pointer pr-8 focus:outline-none text-slate-800 dark:text-white"
                         >
                             {availableYears.map(year => (
-                                <option key={year} value={year}>{year}</option>
+                                <option key={year} value={year} className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white font-bold">{year}</option>
                             ))}
                         </select>
                         {selectedYear !== currentYear && (

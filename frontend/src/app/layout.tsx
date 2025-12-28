@@ -207,26 +207,26 @@ export default function RootLayout({
                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          className="absolute right-0 mt-4 w-64 bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-[60]"
+                          className="absolute right-0 mt-4 w-72 bg-[#0f172a] dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-800 overflow-hidden z-[60]"
                         >
-                          <div className="p-6 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-slate-900/50">
-                            <p className="text-[10px] font-black text-primary-600 uppercase tracking-[0.2em] mb-2 text-center">Sesión Activa</p>
-                            <div className="flex flex-col items-center pt-2">
-                              <div className="w-16 h-16 rounded-full bg-premium-gradient flex items-center justify-center mb-3 shadow-xl">
-                                <UserIcon className="w-8 h-8 text-white" />
+                          <div className="p-8 border-b border-slate-800 bg-[#1e293b]/30">
+                            <p className="text-[10px] font-black text-primary-400 uppercase tracking-[0.25em] mb-6 text-center">Sesión Activa</p>
+                            <div className="flex flex-col items-center">
+                              <div className="w-20 h-20 rounded-full bg-premium-gradient flex items-center justify-center mb-4 shadow-2xl ring-4 ring-slate-800/50">
+                                <UserIcon className="w-10 h-10 text-white" />
                               </div>
-                              <h4 className="text-sm font-black text-center">{user?.name}</h4>
-                              <p className="text-[10px] text-gray-400 font-bold mb-1">{user?.email}</p>
-                              <span className="px-3 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-600 rounded-full text-[9px] font-black uppercase">{user?.role}</span>
+                              <h4 className="text-base font-black text-white text-center mb-1">{user?.name}</h4>
+                              <p className="text-[11px] text-slate-400 font-bold mb-4">{user?.email}</p>
+                              <span className="px-4 py-1.5 bg-primary-500/10 text-primary-400 border border-primary-500/20 rounded-full text-[10px] font-black uppercase tracking-widest">{user?.role}</span>
                             </div>
                           </div>
 
-                          <div className="p-2">
+                          <div className="p-3 bg-[#0f172a]">
                             <button
                               onClick={() => { setShowAccountModal(true); setShowProfileMenu(false); }}
-                              className="w-full flex items-center gap-3 p-4 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 rounded-2xl transition-all"
+                              className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
                             >
-                              <Shield className="w-4 h-4" />
+                              <Shield className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
                               <span>Mi Cuenta</span>
                             </button>
 
@@ -235,29 +235,29 @@ export default function RootLayout({
                                 <a
                                   href="/users"
                                   onClick={() => setShowProfileMenu(false)}
-                                  className="w-full flex items-center gap-3 p-4 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 rounded-2xl transition-all"
+                                  className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
                                 >
-                                  <UserCog className="w-4 h-4" />
+                                  <Users className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
                                   <span>Usuarios</span>
                                 </a>
                                 <a
                                   href="/admin"
                                   onClick={() => setShowProfileMenu(false)}
-                                  className="w-full flex items-center gap-3 p-4 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 rounded-2xl transition-all"
+                                  className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
                                 >
-                                  <Settings className="w-4 h-4" />
+                                  <Settings className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
                                   <span>Configuración</span>
                                 </a>
                               </>
                             )}
 
-                            <div className="h-[1px] bg-gray-50 dark:bg-gray-700 my-1 mx-4"></div>
+                            <div className="h-[1px] bg-slate-800 my-2 mx-4"></div>
 
                             <button
                               onClick={handleLogout}
-                              className="w-full flex items-center gap-3 p-4 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-all"
+                              className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-rose-500 hover:bg-rose-500/10 rounded-2xl transition-all group"
                             >
-                              <LogOut className="w-4 h-4" />
+                              <LogOut className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                               <span>Cerrar Sesión</span>
                             </button>
                           </div>
