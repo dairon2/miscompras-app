@@ -8,6 +8,7 @@ import {
     Briefcase,
     Tag,
     Users,
+    User,
     Plus,
     Edit,
     Trash2,
