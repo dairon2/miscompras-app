@@ -329,9 +329,9 @@ export default function BudgetsPage() {
                     <div className="w-14 h-14 rounded-2xl bg-premium-gradient flex items-center justify-center text-white shadow-lg">
                         <Banknote size={28} />
                     </div>
-                    <div>
-                        <h2 className="text-4xl font-black tracking-tight">Presupuestos</h2>
-                        <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.2em]">Gestión Financiera {selectedYear}</p>
+                    <div className="flex flex-col">
+                        <h2 className="text-2xl md:text-4xl font-black tracking-tight">Presupuestos</h2>
+                        <p className="text-gray-500 font-bold uppercase text-[8px] md:text-[10px] tracking-[0.2em]">Gestión Financiera {selectedYear}</p>
                     </div>
                 </div>
 
@@ -377,35 +377,35 @@ export default function BudgetsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
+                className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
             >
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Presupuestado</span>
-                        <DollarSign className="text-primary-500" size={20} />
+                <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <div className="flex items-center justify-between mb-2 md:mb-3">
+                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-400">Presupuesto</span>
+                        <DollarSign className="text-primary-500" size={16} />
                     </div>
-                    <p className="text-2xl font-black">{formatCurrency(stats.totalBudget)}</p>
+                    <p className="text-sm md:text-2xl font-black truncate">{formatCurrency(stats.totalBudget)}</p>
                 </div>
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Disponible</span>
-                        <Banknote className="text-green-500" size={20} />
+                <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <div className="flex items-center justify-between mb-2 md:mb-3">
+                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-400">Disponible</span>
+                        <Banknote className="text-green-500" size={16} />
                     </div>
-                    <p className="text-2xl font-black text-green-600">{formatCurrency(stats.totalAvailable)}</p>
+                    <p className="text-sm md:text-2xl font-black text-green-600 truncate">{formatCurrency(stats.totalAvailable)}</p>
                 </div>
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Ejecutado</span>
-                        <TrendingUp className="text-amber-500" size={20} />
+                <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <div className="flex items-center justify-between mb-2 md:mb-3">
+                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-400">Ejecutado</span>
+                        <TrendingUp className="text-amber-500" size={16} />
                     </div>
-                    <p className="text-2xl font-black text-amber-600">{formatCurrency(stats.totalExecuted)}</p>
+                    <p className="text-sm md:text-2xl font-black text-amber-600 truncate">{formatCurrency(stats.totalExecuted)}</p>
                 </div>
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Críticos (&lt;10%)</span>
-                        <AlertTriangle className="text-red-500" size={20} />
+                <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <div className="flex items-center justify-between mb-2 md:mb-3">
+                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-400">Críticos</span>
+                        <AlertTriangle className="text-red-500" size={16} />
                     </div>
-                    <p className="text-2xl font-black text-red-600">{stats.criticalCount}</p>
+                    <p className="text-sm md:text-2xl font-black text-red-600 truncate">{stats.criticalCount}</p>
                 </div>
             </motion.div>
 
@@ -485,7 +485,7 @@ export default function BudgetsPage() {
                     transition={{ delay: 0.3 }}
                     className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden"
                 >
-                    <div className="overflow-x-auto">
+                    <div className="hidden lg:block overflow-x-auto">
                         <table className="w-full text-left">
                             <thead className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700">
                                 <tr>
@@ -574,6 +574,44 @@ export default function BudgetsPage() {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="lg:hidden p-4 space-y-4">
+                        {filteredBudgets.map((budget) => {
+                            const usedPct = ((Number(budget.amount) - Number(budget.available)) / Number(budget.amount)) * 100;
+                            const availablePct = 100 - usedPct;
+                            const isLow = availablePct < 10;
+                            return (
+                                <div key={budget.id} className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <span className="text-[10px] font-black text-primary-600">{budget.code || 'SIN CÓDIGO'}</span>
+                                            <h4 className="font-black text-slate-800 dark:text-white leading-tight">{budget.title}</h4>
+                                        </div>
+                                        {getStatusBadge(budget.status)}
+                                    </div>
+                                    <div className="space-y-3 mb-4">
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-gray-400 font-bold uppercase tracking-widest">Disponible</span>
+                                            <span className={`font-black ${isLow ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(Number(budget.available))}</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full">
+                                            <div className={`h-full rounded-full ${getProgressColor(budget)}`} style={{ width: `${Math.min(usedPct, 100)}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-3 border-t border-gray-50 dark:border-gray-700">
+                                        <span className="text-[10px] font-bold text-gray-400 truncate max-w-[150px]">{budget.project?.name}</span>
+                                        <button
+                                            onClick={() => openAdjustmentModal(budget)}
+                                            className="text-primary-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-1"
+                                        >
+                                            Ajustar <TrendingUp size={12} />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </motion.div>
             ) : (

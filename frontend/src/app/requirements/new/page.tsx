@@ -375,10 +375,10 @@ export default function NewRequirementPage() {
                         <button
                             type="submit"
                             disabled={loading || !!budgetError}
-                            className="w-full bg-premium-gradient text-white py-6 rounded-[1.8rem] font-black text-xl shadow-2xl hover:shadow-primary-500/20 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                            className="w-full bg-premium-gradient text-white py-6 rounded-[1.8rem] font-bold text-lg md:text-xl shadow-2xl hover:shadow-primary-500/20 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                         >
-                            <Save size={24} />
-                            {loading ? "Enviando..." : "Crear Solicitud"}
+                            <Save size={user ? 24 : 20} className="hidden md:block" />
+                            {loading ? "Enviando..." : "Crear Solicitud de Compra"}
                         </button>
                     </div>
 

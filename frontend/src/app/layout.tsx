@@ -11,6 +11,7 @@ import { LogOut, User as UserIcon, Bell, Package, LayoutDashboard, Database, Bri
 import ToastContainer from "@/components/ToastContainer";
 import Link from "next/link";
 import Image from "next/image";
+import { useThemeStore } from "@/store/themeStore";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -55,6 +56,20 @@ export default function RootLayout({
       console.error("Error fetching notifications", err);
     }
   }, [isAuthenticated]);
+
+  const { theme } = useThemeStore();
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+
+    if (theme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      root.classList.add(systemTheme);
+    } else {
+      root.classList.add(theme);
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -244,27 +259,24 @@ export default function RootLayout({
                             </button>
 
                             {user?.role === 'ADMIN' && (
-                              <>
-                                <Link
-                                  href="/users/"
-                                  onClick={() => setShowProfileMenu(false)}
-                                  className="flex items-center gap-3 w-full p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group"
-                                >
-                                  <div className="p-2 rounded-xl bg-gray-50 dark:bg-white/5">
-                                    <Users size={20} className="text-gray-400 group-hover:text-primary-600 transition-colors" />
-                                  </div>
-                                  <span className="font-bold text-gray-700 dark:text-gray-200">Gestionar Usuarios</span>
-                                </Link>
-                                <Link
-                                  href="/admin"
-                                  onClick={() => setShowProfileMenu(false)}
-                                  className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
-                                >
-                                  <Settings className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
-                                  <span>Configuración</span>
-                                </Link>
-                              </>
+                              <Link
+                                href="/users"
+                                onClick={() => setShowProfileMenu(false)}
+                                className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
+                              >
+                                <UserCog className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
+                                <span>Gestionar Usuarios</span>
+                              </Link>
                             )}
+
+                            <Link
+                              href="/admin"
+                              onClick={() => setShowProfileMenu(false)}
+                              className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
+                            >
+                              <Settings className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
+                              <span>Configuración</span>
+                            </Link>
 
                             <div className="h-[1px] bg-slate-800 my-2 mx-4"></div>
 
@@ -337,7 +349,7 @@ export default function RootLayout({
             )}
           </AnimatePresence>
 
-          <main className={`flex-1 ${isAuthPage ? "" : "pt-28 pb-20"}`}>
+          <main className={`flex-1 ${isAuthPage ? "" : "pt-28 pb-24 lg:pb-20"}`}>
             {children}
           </main>
 
@@ -357,6 +369,7 @@ export default function RootLayout({
               </div>
             </footer>
           )}
+          {!isAuthPage && <MobileNavbar pathname={pathname} userRole={user?.role || ''} />}
         </div>
         <ToastContainer />
       </body>
@@ -377,6 +390,44 @@ function NavItem({ href, icon, label, active }: any) {
       </div>
       <span>{label}</span>
     </button>
+  );
+}
+
+function MobileNavbar({ pathname, userRole }: { pathname: string, userRole: string }) {
+  const router = useRouter();
+
+  const navItems = [
+    { href: "/", icon: <LayoutDashboard size={20} />, label: "Inicio" },
+    { href: "/requirements", icon: <FileText size={20} />, label: "Reqs" },
+    { href: "/budget", icon: <Building2 size={20} />, label: "Presu" },
+    { href: "/suppliers", icon: <Package size={20} />, label: "Prov" },
+  ];
+
+  // If user is ADMIN/DIRECTOR/LEADER and there's space, add Asientos or keep it in the list
+  if (['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole)) {
+    // Replace Suppliers with Asientos for higher roles or just add it
+    navItems.splice(2, 0, { href: "/asientos", icon: <BookOpen size={20} />, label: "Asientos" });
+    if (navItems.length > 5) navItems.pop(); // Keep to 5 items max
+  }
+
+  return (
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-4 py-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-white/5 flex items-center justify-around pb-safe">
+      {navItems.map((item) => {
+        const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+        return (
+          <button
+            key={item.href}
+            onClick={() => router.push(item.href)}
+            className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-primary-600 scale-110' : 'text-gray-400'}`}
+          >
+            <div className={`p-2 rounded-xl transition-colors ${active ? 'bg-primary-50 dark:bg-primary-900/30' : 'bg-transparent'}`}>
+              {item.icon}
+            </div>
+            <span className="text-[8px] font-black uppercase tracking-tighter">{item.label}</span>
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 

@@ -24,15 +24,18 @@ import {
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import { useThemeStore } from "@/store/themeStore";
+import { Sun, Moon, Monitor } from "lucide-react";
 
 type TabType = 'areas' | 'projects' | 'categories' | 'suppliers';
 
 export default function AdminPage() {
     const router = useRouter();
     const { user } = useAuthStore();
-    const [activeTab, setActiveTab] = useState<TabType>('areas');
+    const [activeTab, setActiveTab] = useState<TabType | 'general'>('general');
     const [stats, setStats] = useState({ areas: 0, projects: 0, categories: 0, suppliers: 0 });
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const { theme, setTheme } = useThemeStore();
 
     // Data states
     const [areas, setAreas] = useState([]);
@@ -60,12 +63,12 @@ export default function AdminPage() {
     const isAdmin = user?.role === 'ADMIN';
 
     useEffect(() => {
-        if (!isAdmin) {
-            router.push('/');
-            return;
+        if (isAdmin) {
+            fetchStats();
+            if (activeTab !== 'general') {
+                fetchData(activeTab as TabType);
+            }
         }
-        fetchStats();
-        fetchData(activeTab);
     }, [isAdmin, activeTab]);
 
     const fetchStats = async () => {
@@ -127,7 +130,9 @@ export default function AdminPage() {
                 await api.put(`/admin/${activeTab}/${editingItem.id}`, formData);
             }
             setShowModal(false);
-            fetchData(activeTab);
+            if (activeTab !== 'general') {
+                fetchData(activeTab as TabType);
+            }
             fetchStats();
         } catch (err: any) {
             alert(err.response?.data?.error || 'Error al guardar');
@@ -147,7 +152,9 @@ export default function AdminPage() {
             await api.delete(`/admin/${activeTab}/${itemToDelete.id}`);
             setShowDeleteModal(false);
             setItemToDelete(null);
-            fetchData(activeTab);
+            if (activeTab !== 'general') {
+                fetchData(activeTab as TabType);
+            }
             fetchStats();
         } catch (err: any) {
             alert(err.response?.data?.error || 'Error al eliminar');
@@ -178,6 +185,8 @@ export default function AdminPage() {
             case 'projects': return 'Proyecto';
             case 'categories': return 'Categoría';
             case 'suppliers': return 'Proveedor';
+            case 'general': return 'Configuración';
+            default: return 'General';
         }
     };
 
@@ -188,9 +197,7 @@ export default function AdminPage() {
         { id: 'suppliers', label: 'Proveedores', icon: Users, count: stats.suppliers }
     ];
 
-    if (!isAdmin) {
-        return null;
-    }
+    // Simplified check - anyone can enter but content is restricted
 
     return (
         <div className="p-6 lg:p-12 max-w-7xl mx-auto">
@@ -210,13 +217,15 @@ export default function AdminPage() {
                     </div>
                 </div>
 
-                <button
-                    onClick={openCreateModal}
-                    className="flex items-center gap-2 bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all whitespace-nowrap uppercase text-[10px] tracking-widest"
-                >
-                    <Plus size={18} />
-                    <span>Nueva {getTabLabel()}</span>
-                </button>
+                {isAdmin && (
+                    <button
+                        onClick={openCreateModal}
+                        className={`flex items-center gap-2 bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all whitespace-nowrap uppercase text-[10px] tracking-widest ${activeTab === 'general' ? 'opacity-0 pointer-events-none' : ''}`}
+                    >
+                        <Plus size={18} />
+                        <span>Nueva {getTabLabel()}</span>
+                    </button>
+                )}
             </motion.div>
 
             {/* Tabs */}
@@ -226,20 +235,31 @@ export default function AdminPage() {
                 transition={{ delay: 0.1 }}
                 className="flex flex-wrap gap-3 mb-8"
             >
-                {tabs.map((tab) => (
+                <button
+                    onClick={() => { setActiveTab('general'); setSearchTerm(''); }}
+                    className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-black transition-all ${activeTab === 'general'
+                        ? 'bg-primary-600 text-white shadow-lg'
+                        : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-100 dark:border-gray-700'
+                        }`}
+                >
+                    <Monitor size={18} />
+                    <span className="uppercase text-[10px] tracking-widest">General</span>
+                </button>
+
+                {isAdmin && tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => { setActiveTab(tab.id as TabType); setSearchTerm(''); }}
                         className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-black transition-all ${activeTab === tab.id
-                                ? 'bg-primary-600 text-white shadow-lg'
-                                : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-100 dark:border-gray-700'
+                            ? 'bg-primary-600 text-white shadow-lg'
+                            : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-100 dark:border-gray-700'
                             }`}
                     >
                         <tab.icon size={18} />
                         <span className="uppercase text-[10px] tracking-widest">{tab.label}</span>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === tab.id
-                                ? 'bg-white/20 text-white'
-                                : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300'
+                            ? 'bg-white/20 text-white'
+                            : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300'
                             }`}>
                             {tab.count}
                         </span>
@@ -254,148 +274,197 @@ export default function AdminPage() {
                 transition={{ delay: 0.2 }}
                 className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden"
             >
-                {/* Search */}
-                <div className="p-6 border-b border-gray-50 dark:border-gray-700">
-                    <div className="relative max-w-md">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder={`Buscar ${activeTab}...`}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-slate-900 border-none rounded-xl font-bold outline-none focus:ring-2 ring-primary-500"
-                        />
-                    </div>
-                </div>
+                {activeTab === 'general' ? (
+                    <div className="p-8 lg:p-12">
+                        <div className="max-w-2xl">
+                            <h3 className="text-xl font-black mb-2">Preferencia de Tema</h3>
+                            <p className="text-gray-500 text-sm mb-8">Personaliza la apariencia de la aplicación para mayor comodidad visual.</p>
 
-                {/* Table */}
-                {loading ? (
-                    <div className="p-12 text-center">
-                        <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-gray-400 font-bold">Cargando...</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <button
+                                    onClick={() => setTheme('light')}
+                                    className={`flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-4 transition-all ${theme === 'light' ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/10' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}
+                                >
+                                    <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${theme === 'light' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
+                                        <Sun size={32} />
+                                    </div>
+                                    <span className="font-black uppercase text-[10px] tracking-widest">Modo Claro</span>
+                                </button>
+
+                                <button
+                                    onClick={() => setTheme('dark')}
+                                    className={`flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-4 transition-all ${theme === 'dark' ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/10' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}
+                                >
+                                    <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${theme === 'dark' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
+                                        <Moon size={32} />
+                                    </div>
+                                    <span className="font-black uppercase text-[10px] tracking-widest">Modo Oscuro</span>
+                                </button>
+
+                                <button
+                                    onClick={() => setTheme('system')}
+                                    className={`flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-4 transition-all ${theme === 'system' ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/10' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}
+                                >
+                                    <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${theme === 'system' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
+                                        <Monitor size={32} />
+                                    </div>
+                                    <span className="font-black uppercase text-[10px] tracking-widest">Sistema</span>
+                                </button>
+                            </div>
+
+                            <div className="mt-12 p-6 bg-amber-50 dark:bg-amber-900/10 rounded-3xl border border-amber-100 dark:border-amber-900/30 flex items-start gap-4">
+                                <AlertTriangle className="text-amber-500 shrink-0 mt-1" size={20} />
+                                <p className="text-xs text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
+                                    El modo oscuro ayuda a reducir la fatiga visual en entornos de poca luz y puede ahorrar batería en pantallas OLED. Esta preferencia se guardará en tu navegador.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700">
-                                <tr>
-                                    {activeTab === 'areas' && (
-                                        <>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Usuarios</th>
-                                        </>
-                                    )}
-                                    {activeTab === 'projects' && (
-                                        <>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Código</th>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Requerimientos</th>
-                                        </>
-                                    )}
-                                    {activeTab === 'categories' && (
-                                        <>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Código</th>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Presupuestos</th>
-                                        </>
-                                    )}
-                                    {activeTab === 'suppliers' && (
-                                        <>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">NIT</th>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Contacto</th>
-                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Requerimientos</th>
-                                        </>
-                                    )}
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {getCurrentData().length === 0 ? (
-                                    <tr>
-                                        <td colSpan={10} className="px-6 py-12 text-center">
-                                            <p className="text-gray-400 font-bold">No hay {activeTab}</p>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    getCurrentData().map((item: any) => (
-                                        <tr key={item.id} className="border-b border-gray-50 dark:border-gray-700 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-colors">
+                    <>
+                        <div className="p-6 border-b border-gray-50 dark:border-gray-700">
+                            <div className="relative max-w-md">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder={`Buscar ${activeTab}...`}
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-slate-900 border-none rounded-xl font-bold outline-none focus:ring-2 ring-primary-500"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Table */}
+                        {loading ? (
+                            <div className="p-12 text-center">
+                                <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
+                                <p className="text-gray-400 font-bold">Cargando...</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700">
+                                        <tr>
                                             {activeTab === 'areas' && (
                                                 <>
-                                                    <td className="px-6 py-4 font-bold">{item.name}</td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
-                                                            {item._count?.users || 0}
-                                                        </span>
-                                                    </td>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Usuarios</th>
                                                 </>
                                             )}
                                             {activeTab === 'projects' && (
                                                 <>
-                                                    <td className="px-6 py-4">
-                                                        <span className="px-2 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-600 rounded-lg text-[10px] font-black">
-                                                            {item.code || '-'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 font-bold">{item.name}</td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
-                                                            {item._count?.requirements || 0}
-                                                        </span>
-                                                    </td>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Código</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Requerimientos</th>
                                                 </>
                                             )}
                                             {activeTab === 'categories' && (
                                                 <>
-                                                    <td className="px-6 py-4">
-                                                        <span className="px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-600 rounded-lg text-[10px] font-black">
-                                                            {item.code}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 font-bold">{item.name}</td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
-                                                            {item._count?.budgets || 0}
-                                                        </span>
-                                                    </td>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Código</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Presupuestos</th>
                                                 </>
                                             )}
                                             {activeTab === 'suppliers' && (
                                                 <>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-[11px] font-bold text-gray-500">{item.nit || '-'}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4 font-bold">{item.name}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500">{item.contactName || '-'}</td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
-                                                            {item._count?.requirements || 0}
-                                                        </span>
-                                                    </td>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">NIT</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Contacto</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Requerimientos</th>
                                                 </>
                                             )}
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => openEditModal(item)}
-                                                        className="p-2 bg-white dark:bg-slate-800 hover:bg-primary-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-primary-600"
-                                                    >
-                                                        <Edit size={14} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteClick(item)}
-                                                        className="p-2 bg-white dark:bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-red-500"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
-                                            </td>
+                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Acciones</th>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    </thead>
+                                    <tbody>
+                                        {getCurrentData().length === 0 ? (
+                                            <tr>
+                                                <td colSpan={10} className="px-6 py-12 text-center">
+                                                    <p className="text-gray-400 font-bold">No hay {activeTab}</p>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            getCurrentData().map((item: any) => (
+                                                <tr key={item.id} className="border-b border-gray-50 dark:border-gray-700 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-colors">
+                                                    {activeTab === 'areas' && (
+                                                        <>
+                                                            <td className="px-6 py-4 font-bold">{item.name}</td>
+                                                            <td className="px-6 py-4">
+                                                                <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
+                                                                    {item._count?.users || 0}
+                                                                </span>
+                                                            </td>
+                                                        </>
+                                                    )}
+                                                    {activeTab === 'projects' && (
+                                                        <>
+                                                            <td className="px-6 py-4">
+                                                                <span className="px-2 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-600 rounded-lg text-[10px] font-black">
+                                                                    {item.code || '-'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-6 py-4 font-bold">{item.name}</td>
+                                                            <td className="px-6 py-4">
+                                                                <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
+                                                                    {item._count?.requirements || 0}
+                                                                </span>
+                                                            </td>
+                                                        </>
+                                                    )}
+                                                    {activeTab === 'categories' && (
+                                                        <>
+                                                            <td className="px-6 py-4">
+                                                                <span className="px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-600 rounded-lg text-[10px] font-black">
+                                                                    {item.code}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-6 py-4 font-bold">{item.name}</td>
+                                                            <td className="px-6 py-4">
+                                                                <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
+                                                                    {item._count?.budgets || 0}
+                                                                </span>
+                                                            </td>
+                                                        </>
+                                                    )}
+                                                    {activeTab === 'suppliers' && (
+                                                        <>
+                                                            <td className="px-6 py-4">
+                                                                <span className="text-[11px] font-bold text-gray-500">{item.nit || '-'}</span>
+                                                            </td>
+                                                            <td className="px-6 py-4 font-bold">{item.name}</td>
+                                                            <td className="px-6 py-4 text-sm text-gray-500">{item.contactName || '-'}</td>
+                                                            <td className="px-6 py-4">
+                                                                <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
+                                                                    {item._count?.requirements || 0}
+                                                                </span>
+                                                            </td>
+                                                        </>
+                                                    )}
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => openEditModal(item)}
+                                                                className="p-2 bg-white dark:bg-slate-800 hover:bg-primary-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-primary-600"
+                                                            >
+                                                                <Edit size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteClick(item)}
+                                                                className="p-2 bg-white dark:bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-red-500"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </>
                 )}
             </motion.div>
 

@@ -350,110 +350,121 @@ export default function RequirementsPage() {
                         <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-20 text-center font-black uppercase text-gray-400 tracking-widest text-[10px]">Cargando solicitudes...</motion.div>
                     ) : filteredReqs.length === 0 ? (
                         <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-20 text-center font-black uppercase text-gray-400 tracking-widest text-[10px]">No se encontraron solicitudes</motion.div>
-                    ) : viewMode === 'table' ? (
-                        <motion.div
-                            key="table"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="overflow-x-auto"
-                        >
-                            <table className="w-full">
-                                <thead className="bg-gray-50/50 dark:bg-slate-900/50">
-                                    <tr>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Solicitud</th>
-                                        {isAdmin && <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Creado por</th>}
-                                        <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Proyecto / Área</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Monto</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado Trámite</th>
-                                        <th className="px-6 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-                                    {filteredReqs.map((req: any) => (
-                                        <tr key={req.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors group">
-                                            <td className="px-6 py-6">
-                                                <div className="flex items-center gap-4 text-left">
-                                                    <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600">
-                                                        <FileText className="w-5 h-5" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-black text-gray-800 dark:text-gray-200 tracking-tight">{req.title}</p>
-                                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">ID: {req.id.substring(0, 8)}</p>
-                                                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-2 flex justify-between items-center">
-                                                            <span>Estado Solicitud:</span>
-                                                            <span className={`px-2 py-0.5 rounded-full border ${getStatusStyle(req.status)}`}>{getStatusLabel(req.status)}</span>
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            {isAdmin && (
-                                                <td className="px-6 py-6 text-left">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                                                            <User size={14} className="text-primary-600" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-bold text-xs">{req.createdBy?.name || 'N/A'}</p>
-                                                            <p className="text-[9px] text-gray-400">{req.createdBy?.email || ''}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            )}
-                                            <td className="px-6 py-6 text-left">
-                                                <p className="font-bold text-xs">{req.project?.name}</p>
-                                                <p className="text-[10px] font-bold text-gray-400">{req.area?.name}</p>
-                                            </td>
-                                            <td className="px-6 py-6 text-left font-black text-sm">
-                                                {req.actualAmount && parseFloat(req.actualAmount) > 0
-                                                    ? `$${parseFloat(req.actualAmount).toLocaleString()}`
-                                                    : <span className="text-gray-400 font-medium">Por definir</span>}
-                                            </td>
-                                            <td className="px-6 py-6 text-left">
-                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${getProcStatusStyle(req.procurementStatus)}`}>
-                                                    {req.procurementStatus || 'PENDIENTE'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-6 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => router.push(`/requirements/${req.id}`)}
-                                                        className="p-3 bg-white dark:bg-slate-800 hover:bg-primary-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all"
-                                                        title="Ver detalle"
-                                                    >
-                                                        <ChevronRight size={16} />
-                                                    </button>
-                                                    {canDelete && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDeleteClick(req);
-                                                            }}
-                                                            className="p-3 bg-white dark:bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-red-500"
-                                                            title="Eliminar requerimiento"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </motion.div>
                     ) : (
-                        <motion.div
-                            key="grid"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                        >
-                            {filteredReqs.map((req: any) => (
-                                <RequirementCard key={req.id} req={req} onClick={() => router.push(`/requirements/${req.id}`)} />
-                            ))}
-                        </motion.div>
+                        <>
+                            {viewMode === 'table' ? (
+                                <>
+                                    <motion.div
+                                        key="table"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        className="hidden lg:block overflow-x-auto"
+                                    >
+                                        <table className="w-full">
+                                            <thead className="bg-gray-50/50 dark:bg-slate-900/50">
+                                                <tr>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Solicitud</th>
+                                                    {isAdmin && <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Creado por</th>}
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Proyecto / Área</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Monto</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado Trámite</th>
+                                                    <th className="px-6 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                                                {filteredReqs.map((req: any) => (
+                                                    <tr key={req.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors group">
+                                                        <td className="px-6 py-6">
+                                                            <div className="flex items-center gap-4 text-left">
+                                                                <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600">
+                                                                    <FileText className="w-5 h-5" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-black text-gray-800 dark:text-gray-200 tracking-tight">{req.title}</p>
+                                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">ID: {req.id.substring(0, 8)}</p>
+                                                                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-2 flex justify-between items-center">
+                                                                        <span>Estado Solicitud:</span>
+                                                                        <span className={`px-2 py-0.5 rounded-full border ${getStatusStyle(req.status)}`}>{getStatusLabel(req.status)}</span>
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        {isAdmin && (
+                                                            <td className="px-6 py-6 text-left">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                                                                        <User size={14} className="text-primary-600" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-bold text-xs">{req.createdBy?.name || 'N/A'}</p>
+                                                                        <p className="text-[9px] text-gray-400">{req.createdBy?.email || ''}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        )}
+                                                        <td className="px-6 py-6 text-left">
+                                                            <p className="font-bold text-xs">{req.project?.name}</p>
+                                                            <p className="text-[10px] font-bold text-gray-400">{req.area?.name}</p>
+                                                        </td>
+                                                        <td className="px-6 py-6 text-left font-black text-sm">
+                                                            {req.actualAmount && parseFloat(req.actualAmount) > 0
+                                                                ? `$${parseFloat(req.actualAmount).toLocaleString()}`
+                                                                : <span className="text-gray-400 font-medium">Por definir</span>}
+                                                        </td>
+                                                        <td className="px-6 py-6 text-left">
+                                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${getProcStatusStyle(req.procurementStatus)}`}>
+                                                                {req.procurementStatus || 'PENDIENTE'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-6 text-right">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => router.push(`/requirements/${req.id}`)}
+                                                                    className="p-3 bg-white dark:bg-slate-800 hover:bg-primary-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all"
+                                                                    title="Ver detalle"
+                                                                >
+                                                                    <ChevronRight size={16} />
+                                                                </button>
+                                                                {canDelete && (
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDeleteClick(req);
+                                                                        }}
+                                                                        className="p-3 bg-white dark:bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-red-500"
+                                                                        title="Eliminar requerimiento"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </motion.div>
+                                    <div className="lg:hidden space-y-4 p-4">
+                                        {filteredReqs.map((req: any) => (
+                                            <RequirementCard key={req.id} req={req} onClick={() => router.push(`/requirements/${req.id}`)} />
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <motion.div
+                                    key="grid"
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                                >
+                                    {filteredReqs.map((req: any) => (
+                                        <RequirementCard key={req.id} req={req} onClick={() => router.push(`/requirements/${req.id}`)} />
+                                    ))}
+                                </motion.div>
+                            )}
+                        </>
                     )}
                 </AnimatePresence>
             </div>

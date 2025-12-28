@@ -185,8 +185,8 @@ export default function AsientosPage() {
                     </div>
                 </div>
 
-                {/* Asientos Table */}
-                <div className="overflow-x-auto">
+                {/* Asientos Table (Desktop) */}
+                <div className="hidden lg:block overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700">
                             <tr>
@@ -302,6 +302,49 @@ export default function AsientosPage() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Asientos Cards (Mobile) */}
+                <div className="lg:hidden p-4 space-y-4">
+                    {filteredAsientos.length === 0 ? (
+                        <div className="py-12 text-center">
+                            <BookOpen className="mx-auto mb-4 text-gray-300" size={48} />
+                            <p className="text-gray-400 font-bold">No hay asientos registrados</p>
+                        </div>
+                    ) : (
+                        filteredAsientos.map((asiento: any) => (
+                            <div
+                                key={asiento.id}
+                                onClick={() => router.push(`/requirements/${asiento.id}`)}
+                                className="bg-gray-50/50 dark:bg-slate-900/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm"
+                            >
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center text-primary-600">
+                                            <BookOpen size={18} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-sm">{asiento.title}</h4>
+                                            <p className="text-[10px] text-gray-400 font-bold">{new Date(asiento.createdAt).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <span className="px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                        {getCategoryLabel(asiento.reqCategory)}
+                                    </span>
+                                </div>
+                                <div className="space-y-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-gray-400 uppercase">Monto Total:</span>
+                                        <span className="font-black text-green-600">${parseFloat(asiento.totalAmount || asiento.actualAmount || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-gray-400 uppercase">Pagos:</span>
+                                        <span className="text-xs font-bold">{asiento.payments?.length || 0} recibo(s)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
             </motion.div>
 

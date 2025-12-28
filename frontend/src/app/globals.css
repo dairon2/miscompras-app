@@ -29,7 +29,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
     --background: #0f172a;
     --foreground: #f8fafc;
     --card: #1e293b;
@@ -38,6 +38,16 @@
     --input: #334155;
     --ring: var(--color-primary-400);
   }
+}
+
+.dark {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+  --border: #334155;
+  --input: #334155;
+  --ring: var(--color-primary-400);
 }
 
 body {
@@ -71,5 +81,6 @@ body {
 .text-gradient {
   background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-accent-gold) 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
