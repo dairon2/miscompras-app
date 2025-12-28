@@ -14,9 +14,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@azure/communication-email": "^1.1.0",
+    "@prisma/client": "6.2.1",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
@@ -28,8 +31,7 @@
     "nodemon": "^3.1.11",
     "puppeteer": "^24.34.0",
     "resend": "^6.6.0",
-    "zod": "^4.2.1",
-    "@prisma/client": "6.2.1"
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

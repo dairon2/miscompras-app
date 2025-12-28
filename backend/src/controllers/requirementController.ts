@@ -66,10 +66,10 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
 
         if (adminEmails) {
             try {
-                await sendEmail(
-                    adminEmails,
-                    'Nueva Solicitud de Compra Pendiente',
-                    `
+                await sendEmail({
+                    to: adminEmails,
+                    subject: 'Nueva Solicitud de Compra Pendiente',
+                    htmlContent: `
                     <div style="font-family: sans-serif; padding: 20px;">
                         <h2 style="color: #2563eb;">Nueva Solicitud de Compra</h2>
                         <p>Se ha creado una nueva solicitud que requiere su revisión:</p>
@@ -78,10 +78,10 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
                             <li><b>Solicitante:</b> ${req.user?.email}</li>
                         </ul>
                         <p>Por favor, ingrese al sistema para revisar los detalles y adjuntos.</p>
-                        <a href="http://localhost:3000/requirements/${requirement.id}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 20px;">Ver Solicitud</a>
+                        <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/requirements/${requirement.id}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 20px;">Ver Solicitud</a>
                     </div>
                     `
-                );
+                });
             } catch (emailError) {
                 console.error("Email notification failed but requirement was created:", emailError);
             }

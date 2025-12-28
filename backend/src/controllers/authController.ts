@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { prisma } from '../index';
+import { sendPasswordResetEmail } from '../services/emailService';
 
 export const register = async (req: Request, res: Response) => {
     const { email, password, name, role, areaId } = req.body;
@@ -55,7 +57,7 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
 
     // Input validation
     if (!email || !password) {
@@ -106,7 +108,8 @@ export const login = async (req: Request, res: Response) => {
         const user = await prisma.user.findUnique({ where: { email } });
 
         if (!user) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+            // Generic error message for security
+            return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
         const storedPassword = (user as any).password;
@@ -121,6 +124,159 @@ export const login = async (req: Request, res: Response) => {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
+        // Create access token
+        const tokenExpiry = rememberMe ? '30d' : '8h';
+        const token = jwt.sign(
+            { id: user.id, email: user.email, role: user.role, areaId: user.areaId },
+            process.env.JWT_SECRET || 'fallback_secret',
+            { expiresIn: tokenExpiry }
+        );
+
+        // Create refresh token if "remember me" is checked
+        let refreshToken = null;
+        if (rememberMe) {
+            refreshToken = crypto.randomBytes(64).toString('hex');
+            const refreshExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    refreshToken,
+                    refreshTokenExpires: refreshExpiry,
+                    lastLoginAt: new Date()
+                }
+            });
+        } else {
+            // Just update last login
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { lastLoginAt: new Date() }
+            });
+        }
+
+        res.json({
+            token,
+            refreshToken,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                name: user.name,
+                areaId: user.areaId
+            }
+        });
+    } catch (error: any) {
+        res.status(500).json({ error: 'Error al iniciar sesión', details: error.message });
+    }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ error: 'El email es requerido' });
+    }
+
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        // Always return success to prevent email enumeration attacks
+        if (!user) {
+            return res.json({ message: 'Si el email existe, recibirás un enlace de recuperación' });
+        }
+
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        // Save token to database
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                passwordResetToken: resetToken,
+                passwordResetExpires: resetExpires
+            }
+        });
+
+        // Send email
+        await sendPasswordResetEmail(email, resetToken);
+
+        res.json({ message: 'Si el email existe, recibirás un enlace de recuperación' });
+    } catch (error: any) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ error: 'Error al procesar la solicitud' });
+    }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+        return res.status(400).json({ error: 'Token y contraseña son requeridos' });
+    }
+
+    if (password.length < 8) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    }
+
+    try {
+        // Find user with valid reset token
+        const user = await prisma.user.findFirst({
+            where: {
+                passwordResetToken: token,
+                passwordResetExpires: {
+                    gt: new Date()
+                }
+            }
+        });
+
+        if (!user) {
+            return res.status(400).json({ error: 'El enlace es inválido o ha expirado' });
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Update password and clear reset token
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                passwordResetToken: null,
+                passwordResetExpires: null,
+                mustChangePassword: false
+            }
+        });
+
+        res.json({ message: 'Contraseña actualizada correctamente' });
+    } catch (error: any) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ error: 'Error al restablecer la contraseña' });
+    }
+};
+
+export const refreshToken = async (req: Request, res: Response) => {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+        return res.status(400).json({ error: 'Refresh token es requerido' });
+    }
+
+    try {
+        const user = await prisma.user.findFirst({
+            where: {
+                refreshToken,
+                refreshTokenExpires: {
+                    gt: new Date()
+                }
+            }
+        });
+
+        if (!user) {
+            return res.status(401).json({ error: 'Token inválido o expirado' });
+        }
+
+        // Create new access token
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role, areaId: user.areaId },
             process.env.JWT_SECRET || 'fallback_secret',
@@ -138,7 +294,7 @@ export const login = async (req: Request, res: Response) => {
             }
         });
     } catch (error: any) {
-        res.status(500).json({ error: 'Error al iniciar sesión', details: error.message });
+        res.status(500).json({ error: 'Error al renovar el token' });
     }
 };
 

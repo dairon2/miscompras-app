@@ -19,6 +19,18 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Password reset fields
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  
+  // Refresh token for "remember me"
+  refreshToken         String?
+  refreshTokenExpires  DateTime?
+  
+  // Track login activity
+  lastLoginAt          DateTime?
+  mustChangePassword   Boolean   @default(false)
+
   area      Area?    @relation(fields: [areaId], references: [id])
   areaId    String?
 

@@ -1,0 +1,15 @@
+==================================================
+GENERANDO HASH PARA PASSWORD: admin123
+==================================================
+
+Ô£ô Hash generado:
+$2b$10$23LqQIoigRd/QkVyCQY6jukQUdQ65Xf71rHCEUmvZIOxY.bEpXx.K
+
+Ô£ô Verificaci├│n: V├üLIDO Ô£ô
+Ô£ô Prueba con contrase├▒a incorrecta: CORRECTO (false) Ô£ô
+
+==================================================
+COMANDO SQL PARA ACTUALIZAR EN AZURE:
+==================================================
+UPDATE "User" SET password = '$2b$10$23LqQIoigRd/QkVyCQY6jukQUdQ65Xf71rHCEUmvZIOxY.bEpXx.K' WHERE email = 'admin@museodeantioquia.co';
+==================================================
