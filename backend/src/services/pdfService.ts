@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
+import { uploadToBlobStorage, isBlobStorageAvailable } from './blobStorageService';
 
 // Get the logo path
 const LOGO_PATH = path.join(__dirname, '../../assets/logo.png');
@@ -194,9 +195,22 @@ export const generateBudgetPDF = async (budget: BudgetData): Promise<string> => 
 
             doc.end();
 
-            stream.on('finish', () => {
-                resolve(`/uploads/pdfs/${fileName}`);
+            stream.on('finish', async () => {
+                const localUrl = `/uploads/pdfs/${fileName}`;
+                if (isBlobStorageAvailable()) {
+                    try {
+                        const blobUrl = await uploadToBlobStorage(filePath, `budgets/${fileName}`);
+                        if (blobUrl) {
+                            console.log('[PDF Service] Budget PDF uploaded to Blob:', blobUrl);
+                            resolve(blobUrl);
+                            return;
+                        }
+                    } catch (e) { console.error('[PDF Service] Blob upload failed:', e); }
+                }
+                console.log('[PDF Service] Budget PDF generated locally:', localUrl);
+                resolve(localUrl);
             });
+
 
             stream.on('error', reject);
         } catch (error) {
