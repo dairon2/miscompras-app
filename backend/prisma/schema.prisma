@@ -121,6 +121,7 @@ model Budget {
   available   Decimal  @db.Decimal(15, 2)
   
   year        Int      @default(2025)       // Año fiscal
+  expirationDate DateTime?                  // Fecha de vigencia - después de esta fecha no se pueden cargar compras
   version     Int      @default(1)          // Control de versiones
   
   // Estado de aprobación por el líder

@@ -72,10 +72,15 @@ export default function NewAsientoPage() {
             setProjects(p.data);
             setAreas(a.data);
             setSuppliers(s.data);
-            // Filter only approved budgets with available funds
-            const approvedBudgets = b.data.filter((budget: any) =>
-                budget.status === 'APPROVED' && parseFloat(budget.available) > 0
-            );
+            // Filter only approved budgets with available funds and not expired
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const approvedBudgets = b.data.filter((budget: any) => {
+                const isApproved = budget.status === 'APPROVED';
+                const hasFunds = parseFloat(budget.available) > 0;
+                const isNotExpired = !budget.expirationDate || new Date(budget.expirationDate) >= today;
+                return isApproved && hasFunds && isNotExpired;
+            });
             setBudgets(approvedBudgets);
         } catch (err) {
             console.error("Error fetching catalogs", err);

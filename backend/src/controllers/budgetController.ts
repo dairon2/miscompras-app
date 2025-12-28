@@ -165,7 +165,7 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
         const {
             title, description, code, amount,
             projectId, areaId, categoryId, managerId,
-            subLeaders, year
+            subLeaders, year, expirationDate
         } = req.body;
 
         if (!title || !amount || !projectId || !areaId) {
@@ -181,6 +181,7 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
                 amount: parseFloat(amount),
                 available: parseFloat(amount),
                 year: year || new Date().getFullYear(),
+                expirationDate: expirationDate ? new Date(expirationDate) : null,
                 status: 'PENDING',
                 projectId,
                 areaId,

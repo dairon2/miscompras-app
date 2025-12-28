@@ -35,6 +35,7 @@ interface BudgetDetail {
     year: number;
     version: number;
     status: string;
+    expirationDate?: string;
     documentUrl?: string;
     approvedAt?: string;
     createdAt: string;
@@ -359,6 +360,19 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                                 <p className="font-bold text-sm">{new Date(budget.createdAt).toLocaleDateString()}</p>
                             </div>
                         </div>
+
+                        {budget.expirationDate && (
+                            <div className="flex items-center gap-3">
+                                <Calendar size={18} className={new Date(budget.expirationDate) < new Date() ? 'text-red-500' : 'text-orange-400'} />
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-gray-400">Vigencia hasta</p>
+                                    <p className={`font-bold text-sm ${new Date(budget.expirationDate) < new Date() ? 'text-red-500' : ''}`}>
+                                        {new Date(budget.expirationDate).toLocaleDateString()}
+                                        {new Date(budget.expirationDate) < new Date() && ' (Vencido)'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         {budget.approvedAt && (
                             <div className="flex items-center gap-3">

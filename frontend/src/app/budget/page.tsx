@@ -96,6 +96,7 @@ export default function BudgetsPage() {
         areaId: '',
         categoryId: '',
         managerId: '',
+        expirationDate: '',
         subLeaders: [] as string[]
     });
 
@@ -845,6 +846,17 @@ export default function BudgetsPage() {
                                             Reintentar carga
                                         </button>
                                     )}
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-gray-600">Fecha de Vigencia</label>
+                                    <input
+                                        type="date"
+                                        value={formData.expirationDate}
+                                        onChange={(e) => setFormData({ ...formData, expirationDate: e.target.value })}
+                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold"
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                    <p className="text-[10px] text-gray-400">Después de esta fecha no se podrán cargar compras</p>
                                 </div>
                                 <div className="col-span-2 space-y-2">
                                     <label className="text-xs font-black text-gray-600">Descripción</label>
