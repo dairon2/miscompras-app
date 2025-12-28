@@ -226,7 +226,7 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
             }
         });
 
-        // Generate PDF
+        // Generate PDF (optional, don't fail if error)
         try {
             const pdfUrl = await generateBudgetPDF({
                 code: budget.code || undefined,
@@ -249,9 +249,14 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
                 where: { id: budget.id },
                 data: { documentUrl: pdfUrl }
             });
+        } catch (pdfError) {
+            console.error('Error generating PDF:', pdfError);
+            // Don't fail the request, PDF is optional
+        }
 
-            // Create notification for the assigned manager
-            if (budget.managerId) {
+        // Create notification for the assigned manager (ALWAYS, separate from PDF)
+        if (budget.managerId) {
+            try {
                 await prisma.notification.create({
                     data: {
                         title: 'Nuevo Presupuesto Asignado',
@@ -261,10 +266,15 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
                         requirementId: null
                     }
                 });
+                console.log(`Notification created for manager ${budget.managerId}`);
+            } catch (notifError) {
+                console.error('Error creating notification:', notifError);
             }
+        }
 
-            // Send email to manager if assigned
-            if (budget.manager?.email) {
+        // Send email to manager if assigned (separate try/catch)
+        if (budget.manager?.email) {
+            try {
                 await sendBudgetNotificationEmail({
                     to: budget.manager.email,
                     type: 'BUDGET_CREATED',
@@ -273,10 +283,9 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
                     amount: Number(budget.amount),
                     projectName: budget.project.name
                 });
+            } catch (emailError) {
+                console.error('Error sending email:', emailError);
             }
-        } catch (pdfError) {
-            console.error('Error generating PDF or sending email:', pdfError);
-            // Don't fail the request, PDF is optional
         }
 
         res.status(201).json(budget);

@@ -377,6 +377,15 @@ export default function BudgetsPage() {
                         <Calendar size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-500 pointer-events-none group-hover:scale-110 transition-transform" />
                     </div>
 
+                    {/* Pending approval button - for all users who might have assigned budgets */}
+                    <button
+                        onClick={() => router.push("/budget/pending")}
+                        className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:from-amber-600 hover:to-orange-600 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
+                    >
+                        <Clock size={18} />
+                        <span>Pendientes</span>
+                    </button>
+
                     {isDirector && (
                         <button
                             onClick={() => router.push("/budget/adjustments")}
