@@ -330,8 +330,8 @@ app.use('/uploads', express.static('uploads'));
 // Public Routes (No auth needed)
 app.use('/api/auth', authRoutes);
 
-// Catalog Routes (Public) - Real DB queries
-app.get('/api/areas', async (req, res) => {
+// Catalog Routes (Public for authenticated users) - Real DB queries
+app.get('/api/areas', authMiddleware, async (req, res) => {
     try {
         const areas = await prisma.area.findMany({ orderBy: { name: 'asc' } });
         res.json(areas);
@@ -341,7 +341,7 @@ app.get('/api/areas', async (req, res) => {
     }
 });
 
-app.get('/api/projects', async (req, res) => {
+app.get('/api/projects', authMiddleware, async (req, res) => {
     try {
         const projects = await prisma.project.findMany({ orderBy: { name: 'asc' } });
         res.json(projects);
@@ -351,13 +351,24 @@ app.get('/api/projects', async (req, res) => {
     }
 });
 
-app.get('/api/categories', async (req, res) => {
+app.get('/api/categories', authMiddleware, async (req, res) => {
     try {
         const categories = await prisma.category.findMany({ orderBy: { code: 'asc' } });
         res.json(categories);
     } catch (e) {
         console.error('Error fetching categories:', e);
         res.status(500).json({ error: 'Error fetching categories' });
+    }
+});
+
+// Suppliers route (real DB)
+app.get('/api/suppliers', authMiddleware, async (req, res) => {
+    try {
+        const suppliers = await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
+        res.json(suppliers);
+    } catch (e) {
+        console.error('Error fetching suppliers:', e);
+        res.status(500).json({ error: 'Error fetching suppliers' });
     }
 });
 
@@ -370,17 +381,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/adjustments', adjustmentRoutes);
-
-// Suppliers route (real DB)
-app.get('/api/suppliers', async (req, res) => {
-    try {
-        const suppliers = await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
-        res.json(suppliers);
-    } catch (e) {
-        console.error('Error fetching suppliers:', e);
-        res.status(500).json({ error: 'Error fetching suppliers' });
-    }
-});
 
 // NOTE: Budget CRUD is handled by budgetRoutes mounted at /api/budgets
 

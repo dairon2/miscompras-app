@@ -27,10 +27,14 @@ export default function HomePage() {
       const response = await api.get("/requirements/me");
       const requirements = response.data;
 
-      const pending = requirements.filter((r: any) => r.status.includes('PENDING')).length;
+      const pending = requirements.filter((r: any) => (r.status || '').includes('PENDING')).length;
       const approved = requirements.filter((r: any) => r.status === 'APPROVED').length;
       const rejected = requirements.filter((r: any) => r.status === 'REJECTED').length;
-      const totalAmount = requirements.reduce((acc: number, r: any) => acc + parseFloat(r.totalAmount), 0);
+      const totalAmount = requirements.reduce((acc: number, r: any) => {
+        const amount = r.totalAmount ? parseFloat(r.totalAmount.toString()) :
+          r.actualAmount ? parseFloat(r.actualAmount.toString()) : 0;
+        return acc + (isNaN(amount) ? 0 : amount);
+      }, 0);
 
       setStats({ pending, approved, rejected, totalAmount });
       setRecentRequirements(requirements.slice(0, 5));
@@ -102,8 +106,8 @@ export default function HomePage() {
                   </div>
                   <div className="text-right">
                     <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${req.status === 'APPROVED' ? 'bg-green-50 text-green-700 border-green-100' :
-                        req.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-100' :
-                          'bg-yellow-50 text-yellow-700 border-yellow-100'
+                      req.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-100' :
+                        'bg-yellow-50 text-yellow-700 border-yellow-100'
                       }`}>
                       {req.status.replace('_', ' ')}
                     </span>

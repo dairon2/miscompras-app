@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     PieChart, TrendingUp, DollarSign, Wallet, Target,
@@ -35,6 +36,7 @@ interface Budget {
 
 export default function BudgetsPage() {
     const { user } = useAuthStore();
+    const router = useRouter();
     const { addToast } = useToastStore();
     const [mounted, setMounted] = useState(false);
 
@@ -326,6 +328,16 @@ export default function BudgetsPage() {
                             <option key={y} value={y}>{y}</option>
                         ))}
                     </select>
+
+                    {isDirector && (
+                        <button
+                            onClick={() => router.push("/budget/adjustments")}
+                            className="flex items-center gap-2 bg-amber-500 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-amber-600 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
+                        >
+                            <FileText size={18} />
+                            <span>Ajustes Presupuestales</span>
+                        </button>
+                    )}
 
                     {canManageBudgets && (
                         <button

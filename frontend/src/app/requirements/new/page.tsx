@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Save, X, Info, Package, DollarSign, Building, Truck, Paperclip, FileText, AlertTriangle } from "lucide-react";
+import { Save, X, Info, Package, DollarSign, Building, Truck, Paperclip, FileText, AlertTriangle, PieChart } from "lucide-react";
 import api from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
 
 export default function NewRequirementPage() {
     const router = useRouter();
@@ -15,10 +16,12 @@ export default function NewRequirementPage() {
         quantity: "",
         projectId: "",
         areaId: "",
+        budgetId: "",
         supplierId: "",
         manualSupplierName: "",
         isManualSupplier: false
     });
+    const { user } = useAuthStore();
     const [attachments, setAttachments] = useState<File[]>([]);
 
     const [options, setOptions] = useState({
@@ -99,6 +102,7 @@ export default function NewRequirementPage() {
             data.append("quantity", formData.quantity);
             data.append("projectId", formData.projectId);
             data.append("areaId", formData.areaId);
+            data.append("budgetId", formData.budgetId);
             if (formData.isManualSupplier) {
                 data.append("manualSupplierName", formData.manualSupplierName);
             } else if (formData.supplierId) {
@@ -318,6 +322,32 @@ export default function NewRequirementPage() {
                                     <option value="">Seleccionar Área...</option>
                                     {options.areas.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
                                 </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 mb-2">Presupuesto Asignado</label>
+                                <div className="relative">
+                                    <PieChart className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                                    <select
+                                        name="budgetId"
+                                        value={formData.budgetId}
+                                        onChange={handleChange}
+                                        className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary-500 font-bold appearance-none cursor-pointer"
+                                        required
+                                    >
+                                        <option value="">Seleccionar Presupuesto...</option>
+                                        {options.budgets
+                                            .filter((b: any) => {
+                                                // If Director or Admin, show all. If Leader, show only managed.
+                                                if (user?.role === 'ADMIN' || user?.role === 'DIRECTOR') return true;
+                                                return b.managerId === user?.id;
+                                            })
+                                            .map((b: any) => (
+                                                <option key={b.id} value={b.id}>
+                                                    {b.category?.name || 'Genérico'} - ${parseFloat(b.amount).toLocaleString()}
+                                                </option>
+                                            ))}
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         {budgetError && (

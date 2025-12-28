@@ -48,6 +48,24 @@ const createPayment = async (req, res) => {
                 requirementId
             }
         });
+        // Update requirement status based on total paid
+        if (requirementTotal > 0) {
+            const isFullyPaid = newTotal >= requirementTotal;
+            const newProcStatus = isFullyPaid ? 'FINALIZADO' : 'EN_TRAMITE';
+            if (requirement.procurementStatus !== newProcStatus) {
+                await index_1.prisma.requirement.update({
+                    where: { id: requirementId },
+                    data: { procurementStatus: newProcStatus }
+                });
+                await index_1.prisma.historyLog.create({
+                    data: {
+                        action: 'STATUS_UPDATED',
+                        requirementId,
+                        details: `Estado de adquisición actualizado a ${newProcStatus} debido al registro de pago.`
+                    }
+                });
+            }
+        }
         // Log the action
         await index_1.prisma.historyLog.create({
             data: {

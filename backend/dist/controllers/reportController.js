@@ -26,7 +26,7 @@ const exportRequirements = async (req, res) => {
         const rows = requirements.map((r) => ({
             id: r.id.substring(0, 8).toUpperCase(),
             title: r.title,
-            totalAmount: parseFloat(r.totalAmount.toString()),
+            totalAmount: r.totalAmount ? parseFloat(r.totalAmount.toString()) : 0,
             procurementStatus: r.procurementStatus || 'PENDIENTE',
             projectName: r.project?.name || 'N/A',
             areaName: r.area?.name || 'N/A',
@@ -70,9 +70,9 @@ const exportBudgets = async (req, res) => {
             { header: 'LÍDER RESPONSABLE', key: 'managerName', width: 25 },
         ];
         const rows = budgets.map((b) => {
-            const amount = parseFloat(b.amount.toString());
-            const available = parseFloat(b.available.toString());
-            const percentage = ((amount - available) / amount * 100).toFixed(1);
+            const amount = b.amount ? parseFloat(b.amount.toString()) : 0;
+            const available = b.available ? parseFloat(b.available.toString()) : 0;
+            const percentage = amount > 0 ? ((amount - available) / amount * 100).toFixed(1) : "0.0";
             return {
                 projectName: b.project?.name || 'N/A',
                 areaName: b.area?.name || 'N/A',

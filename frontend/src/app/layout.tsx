@@ -110,7 +110,7 @@ export default function RootLayout({
                     <img
                       src="/images/logo-museo.png"
                       alt="Museo de Antioquia"
-                      className="h-12 w-auto object-contain hover:scale-105 transition-all duration-500"
+                      className="h-12 w-auto object-contain hover:scale-105 transition-all duration-500 dark:brightness-0 dark:invert"
                     />
                   </motion.div>
                   <div className="h-10 w-[2px] bg-gray-100 dark:bg-gray-800 hidden sm:block"></div>
@@ -127,10 +127,7 @@ export default function RootLayout({
                     <NavItem icon={<BookOpen size={14} />} label="Asientos" href="/asientos" active={pathname === "/asientos" || pathname.startsWith("/asientos/")} />
                   )}
                   <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers"} />
-                  <NavItem icon={<Building2 size={14} />} label="Presupuestos" href="/budget" active={pathname === "/budget" && !pathname.includes("/adjustments")} />
-                  {user?.role === 'DIRECTOR' && (
-                    <NavItem icon={<FileText size={14} />} label="Ajustes" href="/budget/adjustments" active={pathname === "/budget/adjustments"} />
-                  )}
+                  <NavItem icon={<Building2 size={14} />} label="Presupuestos" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
                 </nav>
 
                 <div className="flex items-center gap-6">
@@ -340,7 +337,7 @@ export default function RootLayout({
                   </div>
                 </div>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                  &copy; {new Date().getFullYear()} Museo de Antioquia - Departamento de Operaciones
+                  &copy; {new Date().getFullYear()} Museo de Antioquia - Coordinación de Compras
                 </p>
               </div>
             </footer>

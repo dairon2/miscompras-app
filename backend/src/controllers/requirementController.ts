@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../index';
 import { DateTime } from 'luxon';
+import fs from 'fs';
+import path from 'path';
 
 export const createRequirement = async (req: AuthRequest, res: Response) => {
     const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, budgetId } = req.body;
@@ -11,26 +13,18 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
     if (!userId) return res.status(401).json({ error: 'User not authenticated' });
 
     try {
-        // Automatically find budgetId based on projectId and areaId
-        let finalBudgetId = budgetId;
-        if (!finalBudgetId && projectId && areaId) {
-            const budget = await prisma.budget.findFirst({
-                where: { projectId, areaId }
-            });
-            if (budget) finalBudgetId = budget.id;
-        }
-
         const requirement = await prisma.requirement.create({
             data: {
                 title,
                 description,
-                quantity,
+                quantity: quantity || "1",
                 manualSupplierName: manualSupplierName || null,
                 projectId,
                 areaId,
-                budgetId: finalBudgetId || null,
+                budgetId: budgetId || null,
                 supplierId: supplierId || null,
                 createdById: userId,
+                year: new Date().getFullYear(),
                 status: 'PENDING_APPROVAL',
                 attachments: {
                     create: files?.map(file => ({
@@ -370,6 +364,19 @@ export const deleteRequirement = async (req: AuthRequest, res: Response) => {
 
         if (!requirement) {
             return res.status(404).json({ error: 'Requirement not found' });
+        }
+
+        // Delete physical files
+        if (requirement.attachments && requirement.attachments.length > 0) {
+            for (const attachment of requirement.attachments) {
+                try {
+                    if (fs.existsSync(attachment.fileUrl)) {
+                        fs.unlinkSync(attachment.fileUrl);
+                    }
+                } catch (err) {
+                    console.error(`Error deleting file ${attachment.fileUrl}:`, err);
+                }
+            }
         }
 
         // Delete related records first (cascade)

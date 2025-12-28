@@ -29,7 +29,7 @@ const getBudgets = async (req, res) => {
             // Also filter only approved budgets for regular users
             where.status = 'APPROVED';
         }
-        // ADMIN, DIRECTOR, LEADER can see all budgets
+        // ADMIN, DIRECTOR and LEADER can see all budgets by default
         const budgets = await index_1.prisma.budget.findMany({
             where,
             orderBy: [{ createdAt: 'desc' }],

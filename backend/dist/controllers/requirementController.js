@@ -1,7 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createAsiento = exports.getAsientos = exports.deleteRequirement = exports.updateObservations = exports.getAllRequirements = exports.updateRequirement = exports.updateRequirementStatus = exports.getRequirementById = exports.getMyRequirements = exports.createRequirement = void 0;
 const index_1 = require("../index");
+const fs_1 = __importDefault(require("fs"));
 const createRequirement = async (req, res) => {
     const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, budgetId } = req.body;
     const userId = req.user?.id;
@@ -9,26 +13,18 @@ const createRequirement = async (req, res) => {
     if (!userId)
         return res.status(401).json({ error: 'User not authenticated' });
     try {
-        // Automatically find budgetId based on projectId and areaId
-        let finalBudgetId = budgetId;
-        if (!finalBudgetId && projectId && areaId) {
-            const budget = await index_1.prisma.budget.findFirst({
-                where: { projectId, areaId }
-            });
-            if (budget)
-                finalBudgetId = budget.id;
-        }
         const requirement = await index_1.prisma.requirement.create({
             data: {
                 title,
                 description,
-                quantity,
+                quantity: quantity || "1",
                 manualSupplierName: manualSupplierName || null,
                 projectId,
                 areaId,
-                budgetId: finalBudgetId || null,
+                budgetId: budgetId || null,
                 supplierId: supplierId || null,
                 createdById: userId,
+                year: new Date().getFullYear(),
                 status: 'PENDING_APPROVAL',
                 attachments: {
                     create: files?.map(file => ({
@@ -337,6 +333,19 @@ const deleteRequirement = async (req, res) => {
         });
         if (!requirement) {
             return res.status(404).json({ error: 'Requirement not found' });
+        }
+        // Delete physical files
+        if (requirement.attachments && requirement.attachments.length > 0) {
+            for (const attachment of requirement.attachments) {
+                try {
+                    if (fs_1.default.existsSync(attachment.fileUrl)) {
+                        fs_1.default.unlinkSync(attachment.fileUrl);
+                    }
+                }
+                catch (err) {
+                    console.error(`Error deleting file ${attachment.fileUrl}:`, err);
+                }
+            }
         }
         // Delete related records first (cascade)
         await index_1.prisma.historyLog.deleteMany({ where: { requirementId: id } });

@@ -28,7 +28,7 @@ export const exportRequirements = async (req: AuthRequest, res: Response) => {
         const rows = requirements.map((r: any) => ({
             id: r.id.substring(0, 8).toUpperCase(),
             title: r.title,
-            totalAmount: parseFloat(r.totalAmount.toString()),
+            totalAmount: r.totalAmount ? parseFloat(r.totalAmount.toString()) : 0,
             procurementStatus: r.procurementStatus || 'PENDIENTE',
             projectName: r.project?.name || 'N/A',
             areaName: r.area?.name || 'N/A',
@@ -77,9 +77,9 @@ export const exportBudgets = async (req: AuthRequest, res: Response) => {
         ];
 
         const rows = budgets.map((b: any) => {
-            const amount = parseFloat(b.amount.toString());
-            const available = parseFloat(b.available.toString());
-            const percentage = ((amount - available) / amount * 100).toFixed(1);
+            const amount = b.amount ? parseFloat(b.amount.toString()) : 0;
+            const available = b.available ? parseFloat(b.available.toString()) : 0;
+            const percentage = amount > 0 ? ((amount - available) / amount * 100).toFixed(1) : "0.0";
 
             return {
                 projectName: b.project?.name || 'N/A',
