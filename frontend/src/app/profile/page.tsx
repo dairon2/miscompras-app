@@ -92,7 +92,7 @@ export default function ProfilePage() {
             });
 
             // Update the global user state
-            if (setUser) {
+            if (setUser && user) {
                 setUser({ ...user, name: response.data.name });
             }
 
@@ -264,8 +264,8 @@ export default function ProfilePage() {
                                     type="submit"
                                     disabled={savingProfile}
                                     className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm transition-all ${profileSuccess
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-primary-600 text-white hover:bg-primary-700'
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-primary-600 text-white hover:bg-primary-700'
                                         } disabled:opacity-50`}
                                 >
                                     {savingProfile ? (
@@ -352,8 +352,8 @@ export default function ProfilePage() {
                                     type="submit"
                                     disabled={changingPassword}
                                     className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm transition-all ${passwordSuccess
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-amber-500 text-white hover:bg-amber-600'
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-amber-500 text-white hover:bg-amber-600'
                                         } disabled:opacity-50`}
                                 >
                                     {changingPassword ? (

@@ -1,0 +1,44 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const index_1 = require("../index");
+const router = (0, express_1.Router)();
+// Helper for Mock check
+const isDemoMode = !process.env.DATABASE_URL || process.env.DATABASE_URL.includes("mock");
+// Projects
+router.get('/projects', async (req, res) => {
+    if (isDemoMode) {
+        return res.json([
+            { id: 'proj-1', name: 'Exposición Botero', code: 'BOT-2024' },
+            { id: 'proj-2', name: 'Modernización IT', code: 'IT-2024' },
+            { id: 'proj-3', name: 'Conservación Textil', code: 'CONS-2024' }
+        ]);
+    }
+    try {
+        const projects = await index_1.prisma.project.findMany();
+        res.json(projects);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to fetch projects' });
+    }
+});
+// Areas
+router.get('/areas', async (req, res) => {
+    if (isDemoMode) {
+        return res.json([
+            { id: 'area-1', name: 'Curaduría' },
+            { id: 'area-2', name: 'Tecnología' },
+            { id: 'area-3', name: 'Administración' }
+        ]);
+    }
+    try {
+        const areas = await index_1.prisma.area.findMany();
+        res.json(areas);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to fetch areas' });
+    }
+});
+// Suppliers route removed to avoid conflict with index.ts demo implementation
+// Budgets routes removed to avoid conflict with index.ts demo implementation
+exports.default = router;

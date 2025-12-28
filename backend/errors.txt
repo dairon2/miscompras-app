@@ -1,0 +1,2 @@
+src/controllers/adminController.ts(217,17): error TS2353: Object literal may only specify known properties, and 'description' does not exist in type '(Without<CategoryCreateInput, CategoryUncheckedCreateInput> & CategoryUncheckedCreateInput) | (Without<...> & CategoryCreateInput)'.
+src/controllers/adminController.ts(241,17): error TS2353: Object literal may only specify known properties, and 'description' does not exist in type '(Without<CategoryUpdateInput, CategoryUncheckedUpdateInput> & CategoryUncheckedUpdateInput) | (Without<...> & CategoryUpdateInput)'.
