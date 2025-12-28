@@ -3,10 +3,10 @@
 import React, { useMemo } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, Legend, AreaChart, Area,
+    PieChart, Pie, Cell,
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { AlertTriangle, TrendingUp, TrendingDown, Banknote, DollarSign, PieChart as PieIcon, BarChart3, Activity } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Banknote, DollarSign, PieChart as PieIcon, BarChart3, Activity } from 'lucide-react';
 
 interface Budget {
     id: string;
@@ -24,6 +24,43 @@ interface VisualDashboardProps {
 }
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+
+const formatCurrency = (val: number) =>
+    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', notation: 'compact' }).format(val);
+
+interface ChartEntry {
+    name: string;
+    value: number;
+    color?: string;
+}
+
+interface CustomTooltipProps {
+    active?: boolean;
+    payload?: Array<{
+        name: string;
+        value: number;
+        color: string;
+    }>;
+    label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-2xl backdrop-blur-md">
+                <p className="font-black text-white mb-2">{label}</p>
+                {payload.map((entry, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                        <span className="text-gray-400 capitalize">{entry.name}:</span>
+                        <span className="text-white font-bold">{formatCurrency(entry.value)}</span>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    return null;
+};
 
 export default function VisualDashboard({ budgets }: VisualDashboardProps) {
     // Data processing for charts
@@ -62,27 +99,6 @@ export default function VisualDashboard({ budgets }: VisualDashboardProps) {
         return { total, available, spent, executionPct, critical };
     }, [budgets]);
 
-    const formatCurrency = (val: number) =>
-        new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', notation: 'compact' }).format(val);
-
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-2xl backdrop-blur-md">
-                    <p className="font-black text-white mb-2">{label}</p>
-                    {payload.map((entry: any, index: number) => (
-                        <div key={index} className="flex items-center gap-2 text-sm">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                            <span className="text-gray-400 capitalize">{entry.name}:</span>
-                            <span className="text-white font-bold">{formatCurrency(entry.value)}</span>
-                        </div>
-                    ))}
-                </div>
-            );
-        }
-        return null;
-    };
-
     return (
         <div className="space-y-8 pb-12">
             {/* Top Dashboard Metrics */}
@@ -119,7 +135,7 @@ export default function VisualDashboard({ budgets }: VisualDashboardProps) {
                     <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-6 border border-gray-100 dark:border-white/5 shadow-xl">
                         <div className="flex items-center gap-4 mb-4">
                             <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                                <DollarSign size={20} />
+                                <Banknote size={20} />
                             </div>
                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Ejecutado (Hoy)</span>
                         </div>

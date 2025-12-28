@@ -28,10 +28,23 @@ import api from "@/lib/api";
 import { exportRequirements } from "@/lib/excelExport";
 import { useAuthStore } from "@/store/authStore";
 
+interface Requirement {
+    id: string;
+    title: string;
+    description?: string;
+    status: string;
+    actualAmount?: string;
+    project?: { name: string };
+    area?: { name: string };
+    supplier?: { name: string };
+    manualSupplierName?: string;
+    createdAt: string;
+}
+
 export default function RequirementsPage() {
     const router = useRouter();
     const { user } = useAuthStore();
-    const [requirements, setRequirements] = useState([]);
+    const [requirements, setRequirements] = useState<Requirement[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
     const [searchTerm, setSearchTerm] = useState('');
@@ -471,7 +484,7 @@ export default function RequirementsPage() {
                                     Esta acción no se puede deshacer. Se eliminará permanentemente el requerimiento:
                                 </p>
                                 <p className="font-bold text-primary-600 mt-2">
-                                    "{requirementToDelete?.title}"
+                                    &quot;{requirementToDelete?.title}&quot;
                                 </p>
                             </div>
                             <div className="flex gap-4">
@@ -496,7 +509,7 @@ export default function RequirementsPage() {
     );
 }
 
-function RequirementCard({ req, onClick }: any) {
+function RequirementCard({ req, onClick }: { req: Requirement, onClick: () => void }) {
     const getStatusStyle = (status: string) => {
         switch (status) {
             case 'RECEIVED_SATISFACTION':

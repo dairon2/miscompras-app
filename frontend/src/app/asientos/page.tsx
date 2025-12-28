@@ -19,14 +19,27 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 
+interface Asiento {
+    id: string;
+    title: string;
+    description?: string;
+    amount: number;
+    actualAmount?: number;
+    status: string;
+    project?: { name: string };
+    area?: { name: string };
+    category: string;
+    executor?: { name: string };
+}
+
 export default function AsientosPage() {
     const router = useRouter();
     const { user } = useAuthStore();
-    const [asientos, setAsientos] = useState([]);
+    const [asientos, setAsientos] = useState<Asiento[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [asientoToDelete, setAsientoToDelete] = useState<any>(null);
+    const [asientoToDelete, setAsientoToDelete] = useState<Asiento | null>(null);
 
     // Year filter
     const currentYear = new Date().getFullYear();
@@ -56,7 +69,7 @@ export default function AsientosPage() {
         }
     };
 
-    const handleDeleteClick = (asiento: any) => {
+    const handleDeleteClick = (asiento: Asiento) => {
         setAsientoToDelete(asiento);
         setDeleteModalOpen(true);
     };
@@ -74,7 +87,7 @@ export default function AsientosPage() {
     };
 
     // Filter by search term
-    const filteredAsientos = asientos.filter((a: any) => {
+    const filteredAsientos = asientos.filter((a) => {
         const matchesSearch = !searchTerm ||
             a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             a.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -318,7 +331,7 @@ export default function AsientosPage() {
                                     Esta acción no se puede deshacer. Se eliminará permanentemente el asiento:
                                 </p>
                                 <p className="font-bold text-primary-600 mt-2">
-                                    "{asientoToDelete?.title}"
+                                    &quot;{asientoToDelete?.title}&quot;
                                 </p>
                             </div>
                             <div className="flex gap-4">

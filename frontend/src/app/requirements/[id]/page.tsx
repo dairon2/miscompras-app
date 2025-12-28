@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import {
     ArrowLeft,
     Calendar,
@@ -30,11 +31,43 @@ import { useAuthStore } from "@/store/authStore";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+interface Attachment {
+    id: string;
+    fileName: string;
+    fileUrl: string;
+}
+
+interface Requirement {
+    id: string;
+    title: string;
+    description: string;
+    quantity?: string;
+    estimatedAmount?: number;
+    actualAmount?: number;
+    status: string;
+    procurementStatus: string;
+    projectId: string;
+    areaId: string;
+    supplierId?: string;
+    manualSupplierName?: string;
+    attachments: Attachment[];
+    purchaseOrderNumber?: string;
+    invoiceNumber?: string;
+    createdAt: string;
+    project: { name: string };
+    area: { name: string };
+    supplier?: { name: string };
+    createdBy: { id: string; name?: string; email: string };
+    createdById: string;
+    receivedAtSatisfaction: boolean;
+    logs: Array<{ id: string; action: string; details: string; createdAt: string }>;
+}
+
 export default function RequirementDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
     const { user: currentUser } = useAuthStore();
-    const [requirement, setRequirement] = useState<any>(null);
+    const [requirement, setRequirement] = useState<Requirement | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -56,7 +89,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     const [showStatusModal, setShowStatusModal] = useState(false);
     const [statusForm, setStatusForm] = useState<StatusForm>({ status: '', procurementStatus: '', remarks: '', receivedAtSatisfaction: false });
     const [formError, setFormError] = useState('');
-    const [selectedFile, setSelectedFile] = useState<any>(null);
+    const [selectedFile, setSelectedFile] = useState<Attachment | null>(null);
 
     const requestStatusOptions = [
         { value: 'PENDING_APPROVAL', label: 'En espera por aprobación' },
@@ -197,7 +230,9 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Requerimiento-${requirement.id}.pdf`);
+            if (requirement) {
+                pdf.save(`Requerimiento-${requirement.id}.pdf`);
+            }
         } catch (err) {
             console.error("Error generating PDF", err);
             alert("Error al generar el PDF");
@@ -319,8 +354,8 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             <InfoItem
                                 icon={<DollarSign />}
                                 label="Monto Real"
-                                value={requirement.actualAmount ? `$${parseFloat(requirement.actualAmount).toLocaleString()}` : "Pendiente"}
-                                highlight={!!requirement.actualAmount}
+                                value={requirement?.actualAmount ? `$${parseFloat(requirement.actualAmount.toString()).toLocaleString()}` : "Pendiente"}
+                                highlight={!!requirement?.actualAmount}
                             />
                             <InfoItem icon={<Package />} label="Proveedor" value={requirement.supplier?.name || requirement.manualSupplierName || "No especificado"} />
                             {requirement.invoiceNumber && (
@@ -340,7 +375,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                         <div className="mt-8">
                             <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Archivos Adjuntos ({requirement.attachments.length})</label>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {requirement.attachments.map((file: any) => (
+                                {requirement.attachments.map((file: Attachment) => (
                                     <div key={file.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 transition-all group cursor-pointer"
                                         onClick={() => setSelectedFile(file)}
                                     >
@@ -522,7 +557,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             <h3 className="text-xl font-black tracking-tight">Historial</h3>
                         </div>
                         <div className="space-y-8 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100 dark:before:bg-gray-700">
-                            {requirement.logs?.map((log: any) => (
+                            {requirement.logs?.map((log) => (
                                 <div key={log.id} className="relative pl-10">
                                     <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-white dark:bg-slate-800 border-2 border-primary-500 z-10 flex items-center justify-center">
                                         <div className="w-2 h-2 rounded-full bg-primary-500"></div>
@@ -758,11 +793,14 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                     title={selectedFile.fileName}
                                 />
                             ) : selectedFile.fileName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) ? (
-                                <img
-                                    src={`http://localhost:4000/${selectedFile.fileUrl}`}
-                                    alt={selectedFile.fileName}
-                                    className="max-w-full max-h-full object-contain rounded-2xl"
-                                />
+                                <div className="relative w-full h-full">
+                                    <Image
+                                        src={`http://localhost:4000/${selectedFile.fileUrl}`}
+                                        alt={selectedFile.fileName}
+                                        fill
+                                        className="object-contain rounded-2xl"
+                                    />
+                                </div>
                             ) : (
                                 <div className="text-center p-12">
                                     <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-6">

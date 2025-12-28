@@ -1,67 +1,79 @@
 "use client";
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Save, X, Info, Package, DollarSign, Building, Truck, Paperclip, FileText, AlertTriangle, PieChart } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import { useToastStore } from "@/store/toastStore";
+
+interface Project { id: string; name: string }
+interface Area { id: string; name: string }
+interface Category { id: string; name: string; code: string }
+interface Supplier { id: string; name: string }
+interface Budget { id: string; title: string; available: number; code: string; executionDate?: string; projectId: string; areaId: string }
 
 export default function NewRequirementPage() {
+    const { user } = useAuthStore();
+    const { addToast } = useToastStore();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({
-        title: "",
-        description: "",
-        quantity: "",
-        projectId: "",
-        areaId: "",
-        budgetId: "",
-        supplierId: "",
-        manualSupplierName: "",
-        isManualSupplier: false
-    });
-    const { user } = useAuthStore();
     const [attachments, setAttachments] = useState<File[]>([]);
 
+    // Form data
+    const [formData, setFormData] = useState({
+        title: '',
+        description: '',
+        quantity: '',
+        categoryId: '',
+        projectId: '',
+        areaId: '',
+        budgetId: '',
+        supplierId: '',
+        estimatedAmount: '',
+        manualSupplierName: '',
+        isManualSupplier: false
+    });
+
+    // Options for selects
     const [options, setOptions] = useState({
-        projects: [],
-        areas: [],
-        suppliers: [],
-        budgets: []
+        projects: [] as Project[],
+        areas: [] as Area[],
+        categories: [] as Category[],
+        suppliers: [] as Supplier[],
+        budgets: [] as Budget[]
     });
     const [budgetError, setBudgetError] = useState<string | null>(null);
 
-    useEffect(() => {
-        // Fetch options for the form
-        const fetchOptions = async () => {
-            try {
-                // In a real app, these would be API calls
-                // For now, if they fail, we use empty arrays
-                const [projRes, areaRes, suppRes, budRes] = await Promise.all([
-                    api.get('/projects').catch(() => ({ data: [] })),
-                    api.get('/areas').catch(() => ({ data: [] })),
-                    api.get('/suppliers').catch(() => ({ data: [] })),
-                    api.get('/budgets').catch(() => ({ data: [] }))
-                ]);
+    const fetchCatalogs = useCallback(async () => {
+        try {
+            const [p, a, c, s] = await Promise.all([
+                api.get('/projects'),
+                api.get('/areas'),
+                api.get('/categories'),
+                api.get('/suppliers')
+            ]);
 
-                setOptions({
-                    projects: projRes.data,
-                    areas: areaRes.data,
-                    suppliers: suppRes.data,
-                    budgets: budRes.data
-                });
-            } catch (err) {
-                console.error("Error fetching form options", err);
-            }
-        };
-        fetchOptions();
-        fetchOptions();
-    }, []);
+            setOptions(prev => ({
+                ...prev,
+                projects: p.data,
+                areas: a.data,
+                categories: c.data,
+                suppliers: s.data
+            }));
+        } catch (err) {
+            console.error("Error fetching catalogs:", err);
+            addToast('Error al cargar datos necesarios', 'error');
+        }
+    }, [addToast]);
+
+    useEffect(() => {
+        fetchCatalogs();
+    }, [fetchCatalogs]);
 
     useEffect(() => {
         if (formData.projectId && formData.areaId) {
-            const budget = (options as any).budgets.find((b: any) => b.projectId === formData.projectId && b.areaId === formData.areaId);
+            const budget = options.budgets.find(b => b.projectId === formData.projectId && b.areaId === formData.areaId);
             if (budget) {
                 if (budget.executionDate && new Date(budget.executionDate) < new Date()) {
                     setBudgetError(`El presupuesto asignado venció el ${new Date(budget.executionDate).toLocaleDateString()}. No se pueden crear nuevas solicitudes.`);
@@ -69,15 +81,14 @@ export default function NewRequirementPage() {
                     setBudgetError(null);
                 }
             } else {
-                // If no budget found, maybe warn or allow (depending on business rule). For now allowing but checking if we want to strict mode.
                 setBudgetError(null);
             }
         } else {
             setBudgetError(null);
         }
-    }, [formData.projectId, formData.areaId, (options as any).budgets]);
+    }, [formData.projectId, formData.areaId, options.budgets]);
 
-    const handleChange = (e: any) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
@@ -103,6 +114,8 @@ export default function NewRequirementPage() {
             data.append("projectId", formData.projectId);
             data.append("areaId", formData.areaId);
             data.append("budgetId", formData.budgetId);
+            data.append("categoryId", formData.categoryId);
+
             if (formData.isManualSupplier) {
                 data.append("manualSupplierName", formData.manualSupplierName);
             } else if (formData.supplierId) {
@@ -116,7 +129,7 @@ export default function NewRequirementPage() {
             await api.post("/requirements", data);
             router.push("/requirements");
         } catch (err: any) {
-            alert("Error al crear el requerimiento: " + (err.response?.data?.error || err.message));
+            addToast("Error al crear el requerimiento: " + (err.response?.data?.error || err.message), 'error');
         } finally {
             setLoading(false);
         }
@@ -237,7 +250,7 @@ export default function NewRequirementPage() {
                                             className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 pl-14 pr-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold appearance-none cursor-pointer"
                                         >
                                             <option value="">Selecciona un proveedor...</option>
-                                            {options.suppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                            {options.suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                                         </select>
                                     )}
                                 </div>

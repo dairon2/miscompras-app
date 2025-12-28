@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -35,6 +35,11 @@ interface Budget {
     createdAt: string;
 }
 
+interface Project { id: string; name: string }
+interface Area { id: string; name: string }
+interface Category { id: string; name: string; code: string }
+interface UserOption { id: string; name: string; role: string }
+
 export default function BudgetsPage() {
     const { user } = useAuthStore();
     const router = useRouter();
@@ -67,10 +72,10 @@ export default function BudgetsPage() {
     });
 
     // Catalogs
-    const [projects, setProjects] = useState([]);
-    const [areas, setAreas] = useState([]);
-    const [categories, setCategories] = useState([]);
-    const [users, setUsers] = useState([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [areas, setAreas] = useState<Area[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [users, setUsers] = useState<UserOption[]>([]);
 
     // Modals
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -101,29 +106,7 @@ export default function BudgetsPage() {
     });
     const [savingAdjustment, setSavingAdjustment] = useState(false);
 
-    useEffect(() => {
-        fetchYears();
-        fetchCatalogs();
-    }, []);
-
-    useEffect(() => {
-        fetchBudgets();
-    }, [selectedYear, filters]);
-
-    const fetchYears = async () => {
-        try {
-            const res = await api.get('/budgets/years');
-            if (res.data.length > 0) {
-                setYears(res.data);
-            } else {
-                setYears([new Date().getFullYear()]);
-            }
-        } catch (err) {
-            setYears([new Date().getFullYear()]);
-        }
-    };
-
-    const fetchBudgets = async () => {
+    const fetchBudgets = useCallback(async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
@@ -140,7 +123,29 @@ export default function BudgetsPage() {
         } finally {
             setLoading(false);
         }
+    }, [selectedYear, filters, addToast]);
+
+    useEffect(() => {
+        fetchBudgets();
+    }, [selectedYear, filters, fetchBudgets]);
+
+    const fetchYears = async () => {
+        try {
+            const res = await api.get('/budgets/years');
+            if (res.data.length > 0) {
+                setYears(res.data);
+            } else {
+                setYears([new Date().getFullYear()]);
+            }
+        } catch (err) {
+            setYears([new Date().getFullYear()]);
+        }
     };
+
+    useEffect(() => {
+        fetchYears();
+        fetchCatalogs();
+    }, []);
 
     const fetchCatalogs = async () => {
         try {
@@ -151,10 +156,14 @@ export default function BudgetsPage() {
                 api.get('/budgets/manager-options')
             ]);
 
-            if (results[0].status === 'fulfilled') setProjects((results[0] as any).value.data);
-            if (results[1].status === 'fulfilled') setAreas((results[1] as any).value.data);
-            if (results[2].status === 'fulfilled') setCategories((results[2] as any).value.data);
-            if (results[3].status === 'fulfilled') setUsers((results[3] as any).value.data);
+            if (results[0].status === 'fulfilled') setProjects((results[0] as PromiseFulfilledResult<{ data: Project[] }>).value.data);
+            if (results[1].status === 'fulfilled') setAreas((results[1] as PromiseFulfilledResult<{ data: Area[] }>).value.data);
+            if (results[2].status === 'fulfilled') setCategories((results[2] as PromiseFulfilledResult<{ data: Category[] }>).value.data);
+            if (results[3].status === 'fulfilled') {
+                const userData = (results[3] as PromiseFulfilledResult<{ data: UserOption[] }>).value.data;
+                console.log("Users loaded:", userData); // Debug info
+                setUsers(userData);
+            }
 
             // Log failures for debugging
             results.forEach((res, idx) => {
@@ -745,9 +754,13 @@ export default function BudgetsPage() {
                                         className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold"
                                     >
                                         <option value="">Seleccionar...</option>
-                                        {users.map((u: any) => (
-                                            <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-                                        ))}
+                                        {users.length > 0 ? (
+                                            users.map((u: any) => (
+                                                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                                            ))
+                                        ) : (
+                                            <option value="" disabled>Cargando líderes...</option>
+                                        )}
                                     </select>
                                 </div>
                                 <div className="col-span-2 space-y-2">

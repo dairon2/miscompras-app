@@ -2,18 +2,30 @@
 
 import { Outfit } from "next/font/google";
 import "./globals.css";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore, User as UserType } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, User as UserIcon, Bell, Package, LayoutDashboard, Database, Briefcase, FileText, Users, Building2, Settings, Shield, Mail, MapPin, X, BookOpen, UserCog } from "lucide-react";
 import ToastContainer from "@/components/ToastContainer";
+import Link from "next/link";
+import Image from "next/image";
 
 const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-outfit",
 });
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  type: string;
+  requirementId?: string;
+  createdAt: string;
+}
 
 export default function RootLayout({
   children,
@@ -24,7 +36,7 @@ export default function RootLayout({
   const router = useRouter();
   const pathname = usePathname();
 
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -34,7 +46,7 @@ export default function RootLayout({
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
       const res = await api.get('/notifications');
@@ -42,13 +54,15 @@ export default function RootLayout({
     } catch (err) {
       console.error("Error fetching notifications", err);
     }
-  };
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Polling every 30s
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
+    if (isAuthenticated) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 30000); // Polling every 30s
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, fetchNotifications]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -98,27 +112,21 @@ export default function RootLayout({
         <div className="min-h-screen flex flex-col">
           {!isAuthPage && (
             <header className="glass fixed top-0 left-0 right-0 z-50 border-b border-gray-100 dark:border-white/5 px-8 py-4">
-              <div className="max-w-7xl mx-auto flex justify-between items-center">
-                <div
-                  className="flex items-center gap-6 cursor-pointer group"
-                  onClick={() => router.push("/")}
-                >
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    className="relative"
-                  >
-                    <img
-                      src="/images/logo-museo.png"
-                      alt="Museo de Antioquia"
-                      className="h-12 w-auto object-contain hover:scale-105 transition-all duration-500 mix-blend-multiply dark:invert dark:mix-blend-screen"
+              <div className="max-w-[1600px] mx-auto flex items-center justify-between">
+                <Link href="/" className="flex items-center gap-4 group">
+                  <div className="relative w-10 h-10 overflow-hidden rounded-xl shadow-lg ring-1 ring-black/5">
+                    <Image
+                      src="/logo.png"
+                      alt="Logo"
+                      fill
+                      className="object-contain mix-blend-multiply dark:mix-blend-screen dark:invert"
                     />
-                  </motion.div>
-                  <div className="h-10 w-[2px] bg-gray-100 dark:bg-gray-800 hidden sm:block"></div>
+                  </div>
                   <div className="hidden sm:block">
                     <h1 className="text-xl font-black tracking-tighter leading-none mb-1 text-slate-900 dark:text-white">MIS COMPRAS</h1>
                     <p className="text-[9px] text-primary-600 uppercase tracking-[0.3em] font-black">Museo de Antioquia</p>
                   </div>
-                </div>
+                </Link>
 
                 <nav className="hidden lg:flex items-center gap-10 text-[11px] font-black uppercase tracking-widest text-gray-400">
                   <NavItem href="/" icon={<LayoutDashboard size={14} />} label="Inicio" active={pathname === "/"} />
@@ -156,24 +164,29 @@ export default function RootLayout({
                               <button onClick={markAllRead} className="text-[10px] font-black text-primary-600 hover:underline uppercase">Marcar todas</button>
                             )}
                           </div>
-                          <div className="max-h-96 overflow-y-auto">
+                          <div className="flex flex-col gap-1">
                             {notifications.length === 0 ? (
-                              <div className="p-10 text-center">
-                                <p className="text-xs text-gray-400 font-bold">No tienes notificaciones</p>
+                              <div className="py-12 text-center">
+                                <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                                  <Bell className="text-gray-300" size={32} />
+                                </div>
+                                <p className="text-gray-500 font-bold">No tienes notificaciones</p>
                               </div>
                             ) : (
-                              notifications.map((n) => (
+                              notifications.map((n: Notification) => (
                                 <div
                                   key={n.id}
                                   onClick={() => markRead(n.id, n.requirementId)}
-                                  className={`p-5 border-b border-gray-50 dark:border-gray-700 cursor-pointer transition-colors ${!n.isRead ? 'bg-primary-50/30 dark:bg-primary-900/10' : 'hover:bg-gray-50 dark:hover:bg-slate-700/50'}`}
+                                  className={`p-5 rounded-3xl cursor-pointer transition-all border-l-4 ${n.isRead ? 'bg-transparent border-transparent' : 'bg-primary-50/50 dark:bg-primary-500/10 border-primary-500'}`}
                                 >
-                                  <div className="flex gap-3">
-                                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.isRead ? 'bg-primary-500' : 'bg-transparent'}`}></div>
+                                  <div className="flex items-start gap-3">
+                                    <div className={`mt-1 p-2 rounded-xl ${n.type === 'APPROVAL' ? 'bg-green-100 text-green-600' : 'bg-primary-100 text-primary-600'}`}>
+                                      {n.type === 'APPROVAL' ? <Shield size={16} /> : <FileText size={16} />}
+                                    </div>
                                     <div>
-                                      <p className={`text-xs mb-1 ${!n.isRead ? 'font-black' : 'font-bold text-gray-500'}`}>{n.title}</p>
-                                      <p className="text-[11px] text-gray-400 font-medium leading-relaxed">{n.message}</p>
-                                      <p className="text-[9px] text-gray-300 font-bold uppercase mt-2">{new Date(n.createdAt).toLocaleTimeString()}</p>
+                                      <h4 className={`font-black text-sm ${n.isRead ? 'text-gray-600 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>{n.title}</h4>
+                                      <p className="text-xs text-gray-500 mt-1 leading-relaxed">{n.message}</p>
+                                      <span className="text-[10px] text-gray-400 mt-2 block font-bold">{new Date(n.createdAt).toLocaleDateString()}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -232,22 +245,24 @@ export default function RootLayout({
 
                             {user?.role === 'ADMIN' && (
                               <>
-                                <a
-                                  href="/users"
+                                <Link
+                                  href="/users/"
                                   onClick={() => setShowProfileMenu(false)}
-                                  className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
+                                  className="flex items-center gap-3 w-full p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group"
                                 >
-                                  <Users className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
-                                  <span>Usuarios</span>
-                                </a>
-                                <a
+                                  <div className="p-2 rounded-xl bg-gray-50 dark:bg-white/5">
+                                    <Users size={20} className="text-gray-400 group-hover:text-primary-600 transition-colors" />
+                                  </div>
+                                  <span className="font-bold text-gray-700 dark:text-gray-200">Gestionar Usuarios</span>
+                                </Link>
+                                <Link
                                   href="/admin"
                                   onClick={() => setShowProfileMenu(false)}
                                   className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
                                 >
                                   <Settings className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
                                   <span>Configuración</span>
-                                </a>
+                                </Link>
                               </>
                             )}
 
