@@ -320,6 +320,7 @@ const PORT = process.env.PORT || 4000;
 const allowedOrigins = [
     process.env.CORS_ORIGIN,
     'https://miscompras-front-prod-g4akhtbsagfpefbk.canadacentral-01.azurewebsites.net',
+    'https://miscompras-api-prod.azurewebsites.net',
     'http://localhost:3000'
 ].filter(Boolean) as string[];
 
