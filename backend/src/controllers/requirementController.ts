@@ -97,7 +97,21 @@ export const getMyRequirements = async (req: AuthRequest, res: Response) => {
                 project: true,
                 area: true,
                 supplier: true,
-                payments: true
+                payments: true,
+                budget: {
+                    select: {
+                        id: true,
+                        title: true,
+                        code: true,
+                        category: {
+                            select: {
+                                id: true,
+                                name: true,
+                                code: true
+                            }
+                        }
+                    }
+                }
             },
             orderBy: { createdAt: 'desc' }
         });
@@ -282,6 +296,20 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
                 area: true,
                 supplier: true,
                 payments: true,
+                budget: {
+                    select: {
+                        id: true,
+                        title: true,
+                        code: true,
+                        category: {
+                            select: {
+                                id: true,
+                                name: true,
+                                code: true
+                            }
+                        }
+                    }
+                },
                 createdBy: {
                     select: {
                         id: true,

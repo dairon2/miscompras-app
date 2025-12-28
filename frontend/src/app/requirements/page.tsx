@@ -36,6 +36,12 @@ interface Requirement {
     actualAmount?: string;
     project?: { name: string };
     area?: { name: string };
+    budget?: {
+        id: string;
+        title: string;
+        code?: string;
+        category?: { id: string; name: string; code?: string }
+    };
     supplier?: { name: string };
     manualSupplierName?: string;
     createdAt: string;
@@ -367,6 +373,7 @@ export default function RequirementsPage() {
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Solicitud</th>
                                                     {isAdmin && <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Creado por</th>}
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Proyecto / Área</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Presupuesto / Categoría</th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Monto</th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado Trámite</th>
                                                     <th className="px-6 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Acciones</th>
@@ -406,6 +413,10 @@ export default function RequirementsPage() {
                                                         <td className="px-6 py-6 text-left">
                                                             <p className="font-bold text-xs">{req.project?.name}</p>
                                                             <p className="text-[10px] font-bold text-gray-400">{req.area?.name}</p>
+                                                        </td>
+                                                        <td className="px-6 py-6 text-left">
+                                                            <p className="font-bold text-xs text-primary-600">{req.budget?.title || 'Sin presupuesto'}</p>
+                                                            <p className="text-[10px] font-bold text-gray-400">{req.budget?.category?.name || 'Sin categoría'}</p>
                                                         </td>
                                                         <td className="px-6 py-6 text-left font-black text-sm">
                                                             {req.actualAmount && parseFloat(req.actualAmount) > 0

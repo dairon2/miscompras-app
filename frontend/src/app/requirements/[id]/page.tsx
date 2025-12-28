@@ -389,7 +389,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                             </div>
                                         </div>
                                         <a
-                                            href={`http://localhost:4000/${file.fileUrl}`}
+                                            href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${file.fileUrl}`}
                                             download
                                             onClick={(e) => e.stopPropagation()}
                                             className="p-2 text-gray-400 hover:text-primary-500 transition-colors hover:bg-white dark:hover:bg-slate-800 rounded-lg"
