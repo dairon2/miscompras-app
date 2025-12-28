@@ -410,15 +410,25 @@ export const getBudgetYears = async (req: AuthRequest, res: Response) => {
 
 export const getManagerOptions = async (req: AuthRequest, res: Response) => {
     try {
-        const users = await prisma.user.findMany({
+        // First try to get active users
+        let users = await prisma.user.findMany({
             where: { isActive: true },
             select: { id: true, name: true, email: true, role: true, area: { select: { name: true } } },
             orderBy: { name: 'asc' }
         });
 
+        // If no active users, get all users as fallback
+        if (users.length === 0) {
+            users = await prisma.user.findMany({
+                select: { id: true, name: true, email: true, role: true, area: { select: { name: true } } },
+                orderBy: { name: 'asc' }
+            });
+        }
+
+        console.log(`Manager options: Found ${users.length} users`);
         res.json(users);
     } catch (error: any) {
-        console.error('Error fetching users:', error);
+        console.error('Error fetching users for manager options:', error);
         res.status(500).json({ error: 'Error al obtener usuarios' });
     }
 };

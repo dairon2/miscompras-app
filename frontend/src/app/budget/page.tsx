@@ -76,6 +76,8 @@ export default function BudgetsPage() {
     const [areas, setAreas] = useState<Area[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [users, setUsers] = useState<UserOption[]>([]);
+    const [usersLoading, setUsersLoading] = useState(true);
+    const [usersError, setUsersError] = useState(false);
 
     // Modals
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -148,6 +150,8 @@ export default function BudgetsPage() {
     }, []);
 
     const fetchCatalogs = async () => {
+        setUsersLoading(true);
+        setUsersError(false);
         try {
             const results = await Promise.allSettled([
                 api.get('/projects'),
@@ -161,8 +165,11 @@ export default function BudgetsPage() {
             if (results[2].status === 'fulfilled') setCategories((results[2] as PromiseFulfilledResult<{ data: Category[] }>).value.data);
             if (results[3].status === 'fulfilled') {
                 const userData = (results[3] as PromiseFulfilledResult<{ data: UserOption[] }>).value.data;
-                console.log("Users loaded:", userData); // Debug info
+                console.log("Users loaded:", userData);
                 setUsers(userData);
+            } else {
+                console.error('Error loading users:', results[3]);
+                setUsersError(true);
             }
 
             // Log failures for debugging
@@ -173,6 +180,9 @@ export default function BudgetsPage() {
             });
         } catch (err) {
             console.error("Critical error fetching catalogs:", err);
+            setUsersError(true);
+        } finally {
+            setUsersLoading(false);
         }
     };
 
@@ -790,16 +800,30 @@ export default function BudgetsPage() {
                                         value={formData.managerId}
                                         onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
                                         className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold"
+                                        disabled={usersLoading}
                                     >
                                         <option value="">Seleccionar...</option>
-                                        {users.length > 0 ? (
-                                            users.map((u: any) => (
-                                                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-                                            ))
+                                        {usersLoading ? (
+                                            <option value="" disabled>Cargando usuarios...</option>
+                                        ) : usersError ? (
+                                            <option value="" disabled>Error al cargar usuarios</option>
+                                        ) : users.length === 0 ? (
+                                            <option value="" disabled>No hay usuarios disponibles</option>
                                         ) : (
-                                            <option value="" disabled>Cargando líderes...</option>
+                                            users.map((u: UserOption) => (
+                                                <option key={u.id} value={u.id}>{u.name || u.email} ({u.role})</option>
+                                            ))
                                         )}
                                     </select>
+                                    {usersError && (
+                                        <button
+                                            type="button"
+                                            onClick={() => fetchCatalogs()}
+                                            className="text-xs text-primary-600 hover:underline"
+                                        >
+                                            Reintentar carga
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="col-span-2 space-y-2">
                                     <label className="text-xs font-black text-gray-600">Descripción</label>
