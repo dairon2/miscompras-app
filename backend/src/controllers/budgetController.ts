@@ -172,12 +172,37 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'Título, monto, proyecto y área son requeridos' });
         }
 
+        // Generate or validate unique code
+        let budgetCode = code;
+        if (budgetCode) {
+            // Check if code already exists
+            const existingBudget = await prisma.budget.findUnique({ where: { code: budgetCode } });
+            if (existingBudget) {
+                // Append a unique suffix to make it unique
+                const timestamp = Date.now().toString(36).slice(-4);
+                budgetCode = `${budgetCode}-${timestamp}`;
+            }
+        } else {
+            // Generate automatic code: PRJ-CAT-YYYY-NNN
+            const budgetCount = await prisma.budget.count({
+                where: { year: year || new Date().getFullYear() }
+            });
+            const sequenceNum = (budgetCount + 1).toString().padStart(3, '0');
+            budgetCode = `BUD-${year || new Date().getFullYear()}-${sequenceNum}`;
+
+            // Ensure uniqueness
+            const existingAuto = await prisma.budget.findUnique({ where: { code: budgetCode } });
+            if (existingAuto) {
+                budgetCode = `BUD-${year || new Date().getFullYear()}-${Date.now().toString(36).slice(-6)}`;
+            }
+        }
+
         // Create budget with PENDING status
         const budget = await prisma.budget.create({
             data: {
                 title,
                 description,
-                code,
+                code: budgetCode,
                 amount: parseFloat(amount),
                 available: parseFloat(amount),
                 year: year || new Date().getFullYear(),
