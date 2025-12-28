@@ -330,36 +330,34 @@ app.use('/uploads', express.static('uploads'));
 // Public Routes (No auth needed)
 app.use('/api/auth', authRoutes);
 
-// Catalog Routes (Public)
+// Catalog Routes (Public) - Real DB queries
 app.get('/api/areas', async (req, res) => {
     try {
-        const areas = await prisma.area.findMany();
-        res.json(areas.length > 0 ? areas : [
-            { id: 'area-1', name: 'Curaduría' },
-            { id: 'area-2', name: 'Tecnología' },
-            { id: 'area-3', name: 'Administración' }
-        ]);
+        const areas = await prisma.area.findMany({ orderBy: { name: 'asc' } });
+        res.json(areas);
     } catch (e) {
-        res.json([
-            { id: 'area-1', name: 'Curaduría' },
-            { id: 'area-2', name: 'Tecnología' },
-            { id: 'area-3', name: 'Administración' }
-        ]);
+        console.error('Error fetching areas:', e);
+        res.status(500).json({ error: 'Error fetching areas' });
     }
 });
 
 app.get('/api/projects', async (req, res) => {
     try {
-        const projects = await prisma.project.findMany();
-        res.json(projects.length > 0 ? projects : [
-            { id: 'proj-1', name: 'Exposición Botero' },
-            { id: 'proj-2', name: 'Modernización IT' }
-        ]);
+        const projects = await prisma.project.findMany({ orderBy: { name: 'asc' } });
+        res.json(projects);
     } catch (e) {
-        res.json([
-            { id: 'proj-1', name: 'Exposición Botero' },
-            { id: 'proj-2', name: 'Modernización IT' }
-        ]);
+        console.error('Error fetching projects:', e);
+        res.status(500).json({ error: 'Error fetching projects' });
+    }
+});
+
+app.get('/api/categories', async (req, res) => {
+    try {
+        const categories = await prisma.category.findMany({ orderBy: { code: 'asc' } });
+        res.json(categories);
+    } catch (e) {
+        console.error('Error fetching categories:', e);
+        res.status(500).json({ error: 'Error fetching categories' });
     }
 });
 
@@ -373,90 +371,18 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/adjustments', adjustmentRoutes);
 
-// Additional Public Routes
-app.get('/api/categories', (req, res) => {
-    res.json(demoCategories);
-});
-
-app.get('/api/suppliers', (req, res) => {
-    res.json(demoSuppliers);
-});
-
-// Budgets CRUD
-app.get('/api/budgets', authMiddleware, (req, res) => {
-    res.json(demoBudgets);
-});
-
-app.post('/api/budgets', authMiddleware, roleCheck(['ADMIN', 'DIRECTOR']), (req, res) => {
-    const { amount, projectId, areaId, managerId, categoryId, executionDate } = req.body;
-
-    // Find relations
-    const project = demoProjects.find(p => p.id === projectId);
-    const area = demoAreas.find(a => a.id === areaId);
-    // Mock user lookup 
-    const manager = { id: managerId, name: 'Assigned Manager', email: 'manager@example.com' };
-    const category = demoCategories.find(c => c.id === categoryId);
-
-    const newBudget = {
-        id: `bud-${Date.now()}`,
-        amount,
-        available: amount,
-        projectId,
-        project,
-        areaId,
-        area,
-        managerId,
-        manager,
-        categoryId,
-        category,
-        executionDate // Add execution date
-    };
-    // @ts-ignore
-    demoBudgets.push(newBudget);
-    res.json(newBudget);
-});
-
-app.put('/api/budgets/:id', authMiddleware, roleCheck(['ADMIN', 'DIRECTOR']), (req, res) => {
-    const { id } = req.params;
-    const { amount, projectId, areaId, managerId, categoryId, executionDate } = req.body;
-
-    const index = demoBudgets.findIndex(b => b.id === id);
-    if (index !== -1) {
-        const project = demoProjects.find(p => p.id === projectId);
-        const area = demoAreas.find(a => a.id === areaId);
-        // Mock user lookup
-        const manager = { id: managerId, name: 'Updated Manager', email: 'manager@example.com' };
-        const category = demoCategories.find(c => c.id === categoryId);
-
-        demoBudgets[index] = {
-            ...demoBudgets[index],
-            amount,
-            projectId,
-            project: project || demoBudgets[index].project,
-            areaId,
-            area: area || demoBudgets[index].area,
-            managerId,
-            manager: manager || demoBudgets[index].manager,
-            categoryId,
-            category: category || (demoBudgets[index] as any).category,
-            executionDate: executionDate || (demoBudgets[index] as any).executionDate
-        };
-        res.json(demoBudgets[index]);
-    } else {
-        res.status(404).json({ error: 'Presupuesto no encontrado' });
+// Suppliers route (real DB)
+app.get('/api/suppliers', async (req, res) => {
+    try {
+        const suppliers = await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
+        res.json(suppliers);
+    } catch (e) {
+        console.error('Error fetching suppliers:', e);
+        res.status(500).json({ error: 'Error fetching suppliers' });
     }
 });
 
-app.delete('/api/budgets/:id', authMiddleware, roleCheck(['ADMIN', 'DIRECTOR']), (req, res) => {
-    const { id } = req.params;
-    const index = demoBudgets.findIndex(b => b.id === id);
-    if (index !== -1) {
-        const deleted = demoBudgets.splice(index, 1)[0];
-        res.json(deleted);
-    } else {
-        res.status(404).json({ error: 'Presupuesto no encontrado' });
-    }
-});
+// NOTE: Budget CRUD is handled by budgetRoutes mounted at /api/budgets
 
 app.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'OK', message: 'API Miscompras en ejecución' });
