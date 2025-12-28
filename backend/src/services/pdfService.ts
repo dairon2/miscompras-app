@@ -6,10 +6,22 @@ import path from 'path';
 const LOGO_PATH = path.join(__dirname, '../../assets/logo.png');
 const UPLOADS_DIR = path.join(__dirname, '../../uploads/pdfs');
 
-// Ensure uploads directory exists
-if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
+// Ensure uploads directory exists with better error handling
+const ensureUploadDir = () => {
+    try {
+        if (!fs.existsSync(UPLOADS_DIR)) {
+            fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+            console.log('[PDF Service] Created uploads directory:', UPLOADS_DIR);
+        }
+        return true;
+    } catch (error) {
+        console.error('[PDF Service] Failed to create uploads directory:', error);
+        return false;
+    }
+};
+
+// Initialize on load
+ensureUploadDir();
 
 // Format currency
 const formatCurrency = (amount: number | string): string => {
@@ -52,10 +64,20 @@ interface BudgetData {
 }
 
 export const generateBudgetPDF = async (budget: BudgetData): Promise<string> => {
+    console.log('[PDF Service] Starting budget PDF generation for:', budget.code || budget.title);
+
     return new Promise((resolve, reject) => {
         try {
+            // Ensure directory exists before creating file
+            if (!ensureUploadDir()) {
+                console.error('[PDF Service] Upload directory not available, skipping PDF generation');
+                reject(new Error('Upload directory not available'));
+                return;
+            }
+
             const fileName = `presupuesto_${budget.code || budget.title.replace(/\s/g, '_')}_${Date.now()}.pdf`;
             const filePath = path.join(UPLOADS_DIR, fileName);
+            console.log('[PDF Service] Creating PDF at:', filePath);
 
             const doc = new PDFDocument({ margin: 50, size: 'LETTER' });
             const stream = fs.createWriteStream(filePath);
