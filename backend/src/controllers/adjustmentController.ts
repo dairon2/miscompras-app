@@ -8,7 +8,7 @@ import { sendAdjustmentNotificationEmail, notifyDirectors } from '../services/em
 
 export const createAdjustment = async (req: AuthRequest, res: Response) => {
     try {
-        const userId = req.user?.userId;
+        const userId = req.user?.id;
         const {
             budgetId,
             type,  // 'INCREASE' or 'TRANSFER'
@@ -152,7 +152,7 @@ export const createAdjustment = async (req: AuthRequest, res: Response) => {
 
 export const getMyAdjustments = async (req: AuthRequest, res: Response) => {
     try {
-        const userId = req.user?.userId;
+        const userId = req.user?.id;
 
         const adjustments = await prisma.budgetAdjustment.findMany({
             where: { requestedById: userId },
@@ -261,7 +261,7 @@ export const getAllAdjustments = async (req: AuthRequest, res: Response) => {
 export const approveAdjustment = async (req: AuthRequest, res: Response) => {
     try {
         const userRole = req.user?.role;
-        const userId = req.user?.userId;
+        const userId = req.user?.id;
         const { id } = req.params;
 
         // Only DIRECTOR can approve
@@ -389,7 +389,7 @@ export const approveAdjustment = async (req: AuthRequest, res: Response) => {
 export const rejectAdjustment = async (req: AuthRequest, res: Response) => {
     try {
         const userRole = req.user?.role;
-        const userId = req.user?.userId;
+        const userId = req.user?.id;
         const { id } = req.params;
         const { comment } = req.body;
 

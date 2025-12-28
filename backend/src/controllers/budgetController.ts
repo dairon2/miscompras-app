@@ -8,7 +8,7 @@ import { sendBudgetNotificationEmail, sendAdjustmentNotificationEmail } from '..
 
 export const getBudgets = async (req: AuthRequest, res: Response) => {
     try {
-        const userId = req.user?.userId;
+        const userId = req.user?.id;
         const userRole = req.user?.role;
         const { year, projectId, areaId, status } = req.query;
 
@@ -62,7 +62,7 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
 export const getBudgetById = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = req.user?.userId;
+        const userId = req.user?.id;
         const userRole = req.user?.role;
 
         const budget = await prisma.budget.findUnique({
@@ -118,7 +118,7 @@ export const getBudgetById = async (req: AuthRequest, res: Response) => {
 export const createBudget = async (req: AuthRequest, res: Response) => {
     try {
         const userRole = req.user?.role;
-        const userId = req.user?.userId;
+        const userId = req.user?.id;
 
         // Only DIRECTOR can create budgets
         if (userRole !== 'DIRECTOR') {
@@ -305,7 +305,7 @@ export const deleteBudget = async (req: AuthRequest, res: Response) => {
 
 export const approveBudget = async (req: AuthRequest, res: Response) => {
     try {
-        const userId = req.user?.userId;
+        const userId = req.user?.id;
         const { id } = req.params;
         const { approve } = req.body; // true = approve, false = reject
 
