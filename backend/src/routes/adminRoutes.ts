@@ -20,6 +20,10 @@ import {
     createSupplier,
     updateSupplier,
     deleteSupplier,
+    // Users
+    getUsers,
+    toggleUserStatus,
+    deleteUser,
     // Stats
     getAdminStats
 } from '../controllers/adminController';
@@ -57,5 +61,10 @@ router.get('/suppliers', getSuppliers);
 router.post('/suppliers', createSupplier);
 router.put('/suppliers/:id', updateSupplier);
 router.delete('/suppliers/:id', deleteSupplier);
+
+// Users Management
+router.get('/users', getUsers);
+router.patch('/users/toggle/:id', toggleUserStatus);
+router.delete('/users/:id', deleteUser);
 
 export default router;

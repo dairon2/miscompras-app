@@ -27,13 +27,13 @@ import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
 import { Sun, Moon, Monitor } from "lucide-react";
 
-type TabType = 'areas' | 'projects' | 'categories' | 'suppliers';
+type TabType = 'areas' | 'projects' | 'categories' | 'suppliers' | 'users' | 'account' | 'general';
 
 export default function AdminPage() {
     const router = useRouter();
     const { user } = useAuthStore();
-    const [activeTab, setActiveTab] = useState<TabType | 'general'>('general');
-    const [stats, setStats] = useState({ areas: 0, projects: 0, categories: 0, suppliers: 0 });
+    const [activeTab, setActiveTab] = useState<TabType>('general');
+    const [stats, setStats] = useState({ areas: 0, projects: 0, categories: 0, suppliers: 0, users: 0 });
     const [loading, setLoading] = useState(false);
     const { theme, setTheme } = useThemeStore();
 
@@ -42,6 +42,7 @@ export default function AdminPage() {
     const [projects, setProjects] = useState([]);
     const [categories, setCategories] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
+    const [usersList, setUsersList] = useState([]); // Renamed to avoid collision with 'user' from auth
 
     // Modal states
     const [showModal, setShowModal] = useState(false);
@@ -91,6 +92,7 @@ export default function AdminPage() {
                 case 'projects': setProjects(res.data); break;
                 case 'categories': setCategories(res.data); break;
                 case 'suppliers': setSuppliers(res.data); break;
+                case 'users' as any: setUsersList(res.data); break;
             }
         } catch (err) {
             console.error(`Error fetching ${tab}`, err);
@@ -170,10 +172,12 @@ export default function AdminPage() {
             case 'projects': data = projects; break;
             case 'categories': data = categories; break;
             case 'suppliers': data = suppliers; break;
+            case 'users': data = usersList; break;
         }
         if (searchTerm) {
             return data.filter((item: any) =>
                 item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 item.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 item.nit?.toLowerCase().includes(searchTerm.toLowerCase())
             );
@@ -187,6 +191,8 @@ export default function AdminPage() {
             case 'projects': return 'Proyecto';
             case 'categories': return 'Categoría';
             case 'suppliers': return 'Proveedor';
+            case 'users': return 'Usuario';
+            case 'account': return 'Cuenta';
             case 'general': return 'Configuración';
             default: return 'General';
         }
@@ -196,7 +202,10 @@ export default function AdminPage() {
         { id: 'areas', label: 'Áreas', icon: Building2, count: stats.areas },
         { id: 'projects', label: 'Proyectos', icon: Briefcase, count: stats.projects },
         { id: 'categories', label: 'Categorías', icon: Tag, count: stats.categories },
-        { id: 'suppliers', label: 'Proveedores', icon: Users, count: stats.suppliers }
+        { id: 'suppliers', label: 'Proveedores', icon: Users, count: stats.suppliers },
+        ...(isAdmin ? [{ id: 'users', label: 'Usuarios', icon: Users, count: stats.users }] : []),
+        { id: 'account', label: 'Mi Cuenta', icon: User, count: null },
+        { id: 'general', label: 'Configuración', icon: Monitor, count: null }
     ];
 
     // Simplified check - anyone can enter but content is restricted
@@ -221,8 +230,8 @@ export default function AdminPage() {
 
                 {canManageCatalogs && (
                     <button
-                        onClick={openCreateModal}
-                        className={`flex items-center gap-2 bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all whitespace-nowrap uppercase text-[10px] tracking-widest ${activeTab === 'general' ? 'opacity-0 pointer-events-none' : ''}`}
+                        onClick={() => activeTab === 'users' ? router.push('/users/new') : openCreateModal()}
+                        className={`flex items-center gap-2 bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all whitespace-nowrap uppercase text-[10px] tracking-widest ${['general', 'account'].includes(activeTab) ? 'opacity-0 pointer-events-none' : ''}`}
                     >
                         <Plus size={18} />
                         <span>Nueva {getTabLabel()}</span>
@@ -322,6 +331,47 @@ export default function AdminPage() {
                             </div>
                         </div>
                     </div>
+                ) : activeTab === 'account' ? (
+                    <div className="p-8 lg:p-12">
+                        <div className="max-w-4xl">
+                            <h3 className="text-2xl font-black mb-2">Detalles de la Cuenta</h3>
+                            <p className="text-gray-500 text-sm mb-8">Información de tu perfil institucional y accesos en el sistema.</p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-6">
+                                    <div className="p-6 bg-gray-50 dark:bg-slate-900/50 rounded-3xl border border-gray-100 dark:border-gray-700">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Nombre Completo</p>
+                                        <p className="font-bold text-lg">{user?.name || 'No definido'}</p>
+                                    </div>
+                                    <div className="p-6 bg-gray-50 dark:bg-slate-900/50 rounded-3xl border border-gray-100 dark:border-gray-700">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Correo Electrónico</p>
+                                        <p className="font-bold text-lg">{user?.email || 'No definido'}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-6">
+                                    <div className="p-6 bg-primary-50 dark:bg-primary-900/10 rounded-3xl border border-primary-100 dark:border-primary-900/30">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-primary-600 mb-1">Rol del Sistema</p>
+                                        <span className="inline-block px-3 py-1 bg-primary-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest mt-1">
+                                            {user?.role || 'No definido'}
+                                        </span>
+                                    </div>
+                                    <div className="p-6 bg-gray-50 dark:bg-slate-900/50 rounded-3xl border border-gray-100 dark:border-gray-700">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">ID de Usuario</p>
+                                        <p className="font-mono text-sm text-gray-500">{user?.id}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-12 pt-8 border-t border-gray-100 dark:border-gray-700">
+                                <button
+                                    onClick={() => router.push('/profile')}
+                                    className="px-8 py-4 bg-primary-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all"
+                                >
+                                    Editar Perfil Completo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 ) : (
                     <>
                         <div className="p-6 border-b border-gray-50 dark:border-gray-700">
@@ -352,6 +402,14 @@ export default function AdminPage() {
                                                 <>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Usuarios</th>
+                                                </>
+                                            )}
+                                            {activeTab === 'users' && (
+                                                <>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Usuario</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Rol</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Área</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Estado</th>
                                                 </>
                                             )}
                                             {activeTab === 'projects' && (
@@ -395,6 +453,34 @@ export default function AdminPage() {
                                                             <td className="px-6 py-4">
                                                                 <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
                                                                     {item._count?.users || 0}
+                                                                </span>
+                                                            </td>
+                                                        </>
+                                                    )}
+                                                    {activeTab === 'users' && (
+                                                        <>
+                                                            <td className="px-6 py-4">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 font-black text-xs">
+                                                                        {item.name?.charAt(0)?.toUpperCase()}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-bold text-sm tracking-tight">{item.name}</p>
+                                                                        <p className="text-[10px] text-gray-500 font-medium">{item.email}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-lg text-[9px] font-black uppercase tracking-widest">
+                                                                    {item.role}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-6 py-4 text-sm font-bold text-gray-500">
+                                                                {item.area?.name || '-'}
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${item.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                                    {item.isActive !== false ? 'Activo' : 'Inactivo'}
                                                                 </span>
                                                             </td>
                                                         </>
@@ -446,14 +532,32 @@ export default function AdminPage() {
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-2">
                                                             <button
-                                                                onClick={() => openEditModal(item)}
+                                                                onClick={() => activeTab === 'users' ? router.push(`/users/${item.id}`) : openEditModal(item)}
                                                                 className="p-2 bg-white dark:bg-slate-800 hover:bg-primary-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-primary-600"
+                                                                title="Editar"
                                                             >
                                                                 <Edit size={14} />
                                                             </button>
+                                                            {activeTab === 'users' && (
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        try {
+                                                                            await api.patch(`/admin/users/toggle/${item.id}`);
+                                                                            fetchData('users' as any);
+                                                                        } catch (err) {
+                                                                            alert('Error al cambiar estado');
+                                                                        }
+                                                                    }}
+                                                                    className={`p-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all ${item.isActive !== false ? 'text-amber-600 hover:bg-amber-600' : 'text-green-600 hover:bg-green-600'} hover:text-white bg-white dark:bg-slate-800`}
+                                                                    title={item.isActive !== false ? 'Desactivar' : 'Activar'}
+                                                                >
+                                                                    <Hash size={14} />
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={() => handleDeleteClick(item)}
-                                                                className="p-2 bg-white dark:bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-red-500"
+                                                                className="p-2 bg-white dark:bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-red-600"
+                                                                title="Eliminar"
                                                             >
                                                                 <Trash2 size={14} />
                                                             </button>

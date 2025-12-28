@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../index';
+import bcrypt from 'bcryptjs';
 
 // ==================== AREAS ====================
 
@@ -360,22 +361,73 @@ export const deleteSupplier = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// ==================== USERS ====================
+
+export const getUsers = async (req: AuthRequest, res: Response) => {
+    try {
+        const users = await prisma.user.findMany({
+            orderBy: { name: 'asc' },
+            include: {
+                area: { select: { name: true } }
+            }
+        });
+        res.json(users);
+    } catch (error: any) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ error: 'Error al obtener usuarios' });
+    }
+};
+
+export const toggleUserStatus = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    try {
+        const user = await prisma.user.findUnique({ where: { id } });
+        if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        const updated = await prisma.user.update({
+            where: { id },
+            data: { isActive: !user.isActive }
+        });
+        res.json(updated);
+    } catch (error: any) {
+        console.error('Error toggling user status:', error);
+        res.status(500).json({ error: 'Error al cambiar estado' });
+    }
+};
+
+export const deleteUser = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    try {
+        // Can't delete self
+        if (id === req.user?.id) {
+            return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta desde aquí' });
+        }
+        await prisma.user.delete({ where: { id } });
+        res.json({ message: 'Usuario eliminado' });
+    } catch (error: any) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ error: 'Error al eliminar usuario' });
+    }
+};
+
 // ==================== STATS ====================
 
 export const getAdminStats = async (req: AuthRequest, res: Response) => {
     try {
-        const [areasCount, projectsCount, categoriesCount, suppliersCount] = await Promise.all([
+        const [areasCount, projectsCount, categoriesCount, suppliersCount, usersCount] = await Promise.all([
             prisma.area.count(),
             prisma.project.count(),
             prisma.category.count(),
-            prisma.supplier.count()
+            prisma.supplier.count(),
+            prisma.user.count()
         ]);
 
         res.json({
             areas: areasCount,
             projects: projectsCount,
             categories: categoriesCount,
-            suppliers: suppliersCount
+            suppliers: suppliersCount,
+            users: usersCount
         });
     } catch (error: any) {
         console.error('Error fetching admin stats:', error);
