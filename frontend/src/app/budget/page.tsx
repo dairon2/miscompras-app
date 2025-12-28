@@ -13,6 +13,7 @@ import {
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
+import VisualDashboard from "./VisualDashboard";
 
 interface Budget {
     id: string;
@@ -51,7 +52,7 @@ export default function BudgetsPage() {
 
     const [budgets, setBudgets] = useState<Budget[]>([]);
     const [loading, setLoading] = useState(true);
-    const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+    const [viewMode, setViewMode] = useState<'grid' | 'table' | 'visual'>('visual');
     const [searchTerm, setSearchTerm] = useState('');
 
     // Year filter
@@ -143,18 +144,26 @@ export default function BudgetsPage() {
 
     const fetchCatalogs = async () => {
         try {
-            const [p, a, c, u] = await Promise.all([
+            const results = await Promise.allSettled([
                 api.get('/projects'),
                 api.get('/areas'),
                 api.get('/categories'),
                 api.get('/budgets/manager-options')
             ]);
-            setProjects(p.data);
-            setAreas(a.data);
-            setCategories(c.data);
-            setUsers(u.data);
+
+            if (results[0].status === 'fulfilled') setProjects((results[0] as any).value.data);
+            if (results[1].status === 'fulfilled') setAreas((results[1] as any).value.data);
+            if (results[2].status === 'fulfilled') setCategories((results[2] as any).value.data);
+            if (results[3].status === 'fulfilled') setUsers((results[3] as any).value.data);
+
+            // Log failures for debugging
+            results.forEach((res, idx) => {
+                if (res.status === 'rejected') {
+                    console.error(`Error loading catalog ${idx}:`, res.reason);
+                }
+            });
         } catch (err) {
-            console.error("Error fetching catalogs:", err);
+            console.error("Critical error fetching catalogs:", err);
         }
     };
 
@@ -430,14 +439,22 @@ export default function BudgetsPage() {
                 </select>
                 <div className="flex gap-2">
                     <button
+                        onClick={() => setViewMode('visual')}
+                        className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all font-black text-[10px] uppercase tracking-widest ${viewMode === 'visual' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-gray-700 text-gray-400'}`}
+                    >
+                        <PieChart size={14} /> Dashboard
+                    </button>
+                    <button
                         onClick={() => setViewMode('grid')}
                         className={`p-3 rounded-xl border transition-all ${viewMode === 'grid' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-gray-700'}`}
+                        title="Vista Cuadrícula"
                     >
                         <LayoutGrid size={18} />
                     </button>
                     <button
                         onClick={() => setViewMode('table')}
                         className={`p-3 rounded-xl border transition-all ${viewMode === 'table' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-gray-700'}`}
+                        title="Vista Tabla"
                     >
                         <List size={18} />
                     </button>
@@ -450,6 +467,8 @@ export default function BudgetsPage() {
                     <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
                     <p className="text-gray-400 font-bold">Cargando presupuestos...</p>
                 </div>
+            ) : viewMode === 'visual' ? (
+                <VisualDashboard budgets={filteredBudgets} />
             ) : viewMode === 'table' ? (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

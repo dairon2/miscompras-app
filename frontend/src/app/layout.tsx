@@ -110,7 +110,7 @@ export default function RootLayout({
                     <img
                       src="/images/logo-museo.png"
                       alt="Museo de Antioquia"
-                      className="h-12 w-auto object-contain hover:scale-105 transition-all duration-500 dark:brightness-0 dark:invert"
+                      className="h-12 w-auto object-contain hover:scale-105 transition-all duration-500 mix-blend-multiply dark:invert dark:mix-blend-screen"
                     />
                   </motion.div>
                   <div className="h-10 w-[2px] bg-gray-100 dark:bg-gray-800 hidden sm:block"></div>
@@ -330,7 +330,7 @@ export default function RootLayout({
             <footer className="py-12 border-t border-gray-100 dark:border-gray-800">
               <div className="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="flex items-center gap-4 opacity-70 group cursor-pointer" onClick={() => router.push("/")}>
-                  <img src="/images/logo-museo.png" alt="Museo de Antioquia" className="h-10 w-auto grayscale group-hover:grayscale-0 transition-all" />
+                  <img src="/images/logo-museo.png" alt="Museo de Antioquia" className="h-10 w-auto grayscale group-hover:grayscale-0 transition-all mix-blend-multiply dark:invert dark:mix-blend-screen" />
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Mis Compras</span>
                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Versión 1.0</span>

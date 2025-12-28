@@ -254,6 +254,9 @@ const prismaMock: any = {
             { id: 'area-5', name: 'Comunicaciones' }
         ]
     },
+    category: {
+        findMany: async () => demoCategories
+    },
     supplier: {
         findMany: async (args?: any) => {
             return demoSuppliers;
@@ -264,6 +267,10 @@ const prismaMock: any = {
             let filtered = [...demoBudgets];
             if (args?.where?.areaId) {
                 filtered = filtered.filter(b => b.areaId === args.where.areaId);
+            }
+            if (args?.distinct?.includes('year')) {
+                const years = Array.from(new Set(demoBudgets.map(b => b.executionDate ? new Date(b.executionDate).getFullYear() : 2025)));
+                return years.map(y => ({ year: y }));
             }
             return filtered;
         },
