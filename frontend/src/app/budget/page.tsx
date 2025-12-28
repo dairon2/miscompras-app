@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    PieChart, TrendingUp, DollarSign, Wallet, Target,
+    PieChart, TrendingUp, DollarSign, Banknote, Target,
     ArrowUpRight, List, LayoutGrid, Plus, Search,
     ChevronRight, X, User, Briefcase, Building2, Package,
     ArrowRightCircle, FileText, Download, FileSpreadsheet, Edit, Trash2, AlertTriangle, Calendar,
@@ -318,7 +318,7 @@ export default function BudgetsPage() {
             >
                 <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-premium-gradient flex items-center justify-center text-white shadow-lg">
-                        <Wallet size={28} />
+                        <Banknote size={28} />
                     </div>
                     <div>
                         <h2 className="text-4xl font-black tracking-tight">Presupuestos</h2>
@@ -380,7 +380,7 @@ export default function BudgetsPage() {
                 <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Disponible</span>
-                        <Wallet className="text-green-500" size={20} />
+                        <Banknote className="text-green-500" size={20} />
                     </div>
                     <p className="text-2xl font-black text-green-600">{formatCurrency(stats.totalAvailable)}</p>
                 </div>

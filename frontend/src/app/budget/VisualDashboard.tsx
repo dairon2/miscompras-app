@@ -6,7 +6,7 @@ import {
     PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { AlertTriangle, TrendingUp, TrendingDown, Wallet, DollarSign, PieChart as PieIcon, BarChart3, Activity } from 'lucide-react';
+import { AlertTriangle, TrendingUp, TrendingDown, Banknote, DollarSign, PieChart as PieIcon, BarChart3, Activity } from 'lucide-react';
 
 interface Budget {
     id: string;
