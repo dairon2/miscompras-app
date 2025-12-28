@@ -1,8 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../index';
-import { generatePDF } from '../services/pdfService';
-import { sendEmail } from '../services/emailService';
 import { DateTime } from 'luxon';
 
 export const createRequirement = async (req: AuthRequest, res: Response) => {
@@ -64,28 +62,10 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
 
         const adminEmails = admins.map((admin: { email: string }) => admin.email).join(',');
 
-        if (adminEmails) {
-            try {
-                await sendEmail({
-                    to: adminEmails,
-                    subject: 'Nueva Solicitud de Compra Pendiente',
-                    htmlContent: `
-                    <div style="font-family: sans-serif; padding: 20px;">
-                        <h2 style="color: #2563eb;">Nueva Solicitud de Compra</h2>
-                        <p>Se ha creado una nueva solicitud que requiere su revisión:</p>
-                        <ul style="background: #f3f4f6; padding: 20px; border-radius: 10px; list-style: none;">
-                            <li><b>Título:</b> ${title}</li>
-                            <li><b>Solicitante:</b> ${req.user?.email}</li>
-                        </ul>
-                        <p>Por favor, ingrese al sistema para revisar los detalles y adjuntos.</p>
-                        <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/requirements/${requirement.id}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 20px;">Ver Solicitud</a>
-                    </div>
-                    `
-                });
-            } catch (emailError) {
-                console.error("Email notification failed but requirement was created:", emailError);
-            }
-        }
+        // TODO: Re-enable email notification with Azure Communication Services
+        // Email notification temporarily disabled
+        console.log(`[INFO] New requirement created. Would notify: ${adminEmails}`);
+
 
         // --- IN-APP NOTIFICATION FOR ADMINS ---
         for (const admin of admins) {
