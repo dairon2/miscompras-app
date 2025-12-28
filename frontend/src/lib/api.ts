@@ -16,21 +16,48 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+// Flag to prevent multiple redirects
+let isRedirecting = false;
+
 // Response interceptor to handle authentication errors
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            const errorMessage = error.response.data?.error || '';
-            if (errorMessage === 'Invalid token' || errorMessage === 'No token provided') {
-                if (typeof window !== 'undefined') {
-                    // Clear local storage and redirect to login
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    window.location.href = '/login?expired=true';
+    async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+
+            // Try to refresh the token first
+            const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+
+            if (refreshToken && !isRedirecting) {
+                try {
+                    const response = await axios.post(
+                        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/auth/refresh-token`,
+                        { refreshToken }
+                    );
+
+                    const { token } = response.data;
+                    localStorage.setItem('token', token);
+                    originalRequest.headers.Authorization = `Bearer ${token}`;
+
+                    return api(originalRequest);
+                } catch (refreshError) {
+                    // Refresh failed, redirect to login
                 }
             }
+
+            // No refresh token or refresh failed - redirect to login
+            if (typeof window !== 'undefined' && !isRedirecting) {
+                isRedirecting = true;
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                localStorage.removeItem('refreshToken');
+                window.location.href = '/login?expired=true';
+            }
         }
+
         return Promise.reject(error);
     }
 );
