@@ -566,6 +566,13 @@ export default function BudgetsPage() {
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-2">
                                                         <button
+                                                            onClick={() => router.push(`/budget/${budget.id}`)}
+                                                            className="p-2 bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-primary-100 hover:text-primary-600 rounded-xl transition-all"
+                                                            title="Ver detalle"
+                                                        >
+                                                            <ChevronRight size={14} />
+                                                        </button>
+                                                        <button
                                                             onClick={() => openAdjustmentModal(budget)}
                                                             className="p-2 bg-amber-50 dark:bg-amber-900/30 text-amber-600 hover:bg-amber-100 rounded-xl transition-all"
                                                             title="Solicitar ajuste"

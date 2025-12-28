@@ -113,6 +113,43 @@ export const getBudgetById = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// ==================== GET PENDING BUDGETS FOR MANAGER ====================
+
+export const getPendingBudgetsForManager = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        const userRole = req.user?.role;
+
+        // Build where clause based on role
+        const where: any = {
+            status: 'PENDING'
+        };
+
+        // For LEADER and USER, only show budgets where they are the manager
+        if (userRole === 'LEADER' || userRole === 'USER') {
+            where.managerId = userId;
+        }
+        // ADMIN and DIRECTOR can see all pending budgets
+
+        const pendingBudgets = await prisma.budget.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                project: { select: { id: true, name: true, code: true } },
+                area: { select: { id: true, name: true } },
+                category: { select: { id: true, name: true, code: true } },
+                manager: { select: { id: true, name: true, email: true } },
+                createdBy: { select: { id: true, name: true, email: true } }
+            }
+        });
+
+        res.json(pendingBudgets);
+    } catch (error: any) {
+        console.error('Error fetching pending budgets:', error);
+        res.status(500).json({ error: 'Error al obtener presupuestos pendientes' });
+    }
+};
+
 // ==================== CREATE BUDGET (DIRECTOR only) ====================
 
 export const createBudget = async (req: AuthRequest, res: Response) => {

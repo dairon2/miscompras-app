@@ -7,7 +7,8 @@ import {
     deleteBudget,
     approveBudget,
     getBudgetYears,
-    getManagerOptions
+    getManagerOptions,
+    getPendingBudgetsForManager
 } from '../controllers/budgetController';
 import { authMiddleware, roleCheck } from '../middlewares/auth';
 
@@ -21,6 +22,9 @@ router.get('/years', getBudgetYears);
 
 // Get users for manager select (used in budget form)
 router.get('/manager-options', getManagerOptions);
+
+// Get pending budgets for current user (manager)
+router.get('/pending-approval', getPendingBudgetsForManager);
 
 // Get all budgets (with role-based filtering in controller)
 router.get('/', getBudgets);
