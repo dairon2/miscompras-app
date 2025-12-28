@@ -38,7 +38,7 @@ interface Budget {
 interface Project { id: string; name: string }
 interface Area { id: string; name: string }
 interface Category { id: string; name: string; code: string }
-interface UserOption { id: string; name: string; role: string }
+interface UserOption { id: string; name: string; email?: string; role: string }
 
 export default function BudgetsPage() {
     const { user } = useAuthStore();
@@ -186,22 +186,36 @@ export default function BudgetsPage() {
         }
     };
 
-    // Calculate stats
+    // Calculate stats with safe number conversion
+    const safeNumber = (val: number | string | undefined | null): number => {
+        if (val == null) return 0;
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    };
+
     const stats = {
-        totalBudget: budgets.reduce((sum, b) => sum + Number(b.amount), 0),
-        totalAvailable: budgets.reduce((sum, b) => sum + Number(b.available), 0),
-        totalExecuted: budgets.reduce((sum, b) => sum + (Number(b.amount) - Number(b.available)), 0),
+        totalBudget: budgets.reduce((sum, b) => sum + safeNumber(b.amount), 0),
+        totalAvailable: budgets.reduce((sum, b) => sum + safeNumber(b.available), 0),
+        totalExecuted: budgets.reduce((sum, b) => sum + (safeNumber(b.amount) - safeNumber(b.available)), 0),
         criticalCount: budgets.filter(b => {
-            const pct = (Number(b.available) / Number(b.amount)) * 100;
+            const amount = safeNumber(b.amount);
+            const available = safeNumber(b.available);
+            if (amount === 0) return false;
+            const pct = (available / amount) * 100;
             return pct < 10;
         }).length
     };
 
-    const formatCurrency = (val: number) =>
-        new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(val);
+    const formatCurrency = (val: number | undefined | null) => {
+        const safeVal = val != null && !isNaN(Number(val)) ? Number(val) : 0;
+        return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(safeVal);
+    };
 
     const getProgressColor = (budget: Budget) => {
-        const pct = (Number(budget.available) / Number(budget.amount)) * 100;
+        const amount = safeNumber(budget.amount);
+        const available = safeNumber(budget.available);
+        if (amount === 0) return 'bg-gray-500';
+        const pct = (available / amount) * 100;
         if (pct <= 10) return 'bg-red-500';
         if (pct <= 30) return 'bg-amber-500';
         return 'bg-green-500';
