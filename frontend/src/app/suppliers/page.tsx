@@ -9,8 +9,10 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { exportSuppliers } from "@/lib/excelExport";
+import { useAuthStore } from "@/store/authStore";
 
 export default function SuppliersPage() {
+    const { user } = useAuthStore();
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -23,6 +25,11 @@ export default function SuppliersPage() {
         contactEmail: "",
         contactPhone: ""
     });
+
+    // Role-based permissions for supplier management
+    const userRole = user?.role || 'USER';
+    const canManageSuppliers = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole);
+
 
     useEffect(() => {
         fetchSuppliers();
@@ -104,10 +111,12 @@ export default function SuppliersPage() {
                         <span>EXPORTAR XLSX</span>
                     </button>
 
-                    <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 bg-slate-900 dark:bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-xl hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap">
-                        <Plus className="w-5 h-5" />
-                        Registrar Proveedor
-                    </button>
+                    {canManageSuppliers && (
+                        <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 bg-slate-900 dark:bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-xl hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap">
+                            <Plus className="w-5 h-5" />
+                            Registrar Proveedor
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -123,6 +132,7 @@ export default function SuppliersPage() {
                 <>
                     {viewMode === 'grid' ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
                             {suppliers.map((supp: any, index) => (
                                 <SupplierCard key={supp.id} supplier={supp} index={index} onClick={() => fetchSupplierDetails(supp)} />
                             ))}

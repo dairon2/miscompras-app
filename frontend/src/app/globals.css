@@ -84,3 +84,79 @@ body {
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* ========================================
+   LIGHT MODE CONTRAST FIXES
+   ======================================== */
+
+/* Improve gray text contrast in light mode */
+.light .text-gray-400,
+:root:not(.dark) .text-gray-400 {
+  color: #64748b;
+}
+
+.light .text-gray-500,
+:root:not(.dark) .text-gray-500 {
+  color: #475569;
+}
+
+/* Fix dark backgrounds that should be light in light mode */
+.light .bg-slate-800,
+:root:not(.dark) .bg-slate-800 {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.light .bg-slate-900\/50,
+:root:not(.dark) .bg-slate-900\/50 {
+  background-color: #f8fafc;
+}
+
+/* Fix input and select styling in light mode */
+.light input,
+.light select,
+.light textarea,
+:root:not(.dark) input,
+:root:not(.dark) select,
+:root:not(.dark) textarea {
+  color: #1e293b;
+}
+
+.light input::placeholder,
+.light select::placeholder,
+.light textarea::placeholder,
+:root:not(.dark) input::placeholder,
+:root:not(.dark) select::placeholder,
+:root:not(.dark) textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* Fix select options */
+.light select option,
+:root:not(.dark) select option {
+  background-color: #ffffff;
+  color: #1e293b;
+}
+
+/* Fix table headers and content */
+.light th,
+:root:not(.dark) th {
+  color: #475569;
+}
+
+.light td,
+:root:not(.dark) td {
+  color: #1e293b;
+}
+
+/* Ensure proper contrast on cards */
+.light .border-gray-100,
+:root:not(.dark) .border-gray-100 {
+  border-color: #e2e8f0;
+}
+
+/* Fix filter/search containers */
+.light .bg-gray-50\/30,
+:root:not(.dark) .bg-gray-50\/30 {
+  background-color: #f8fafc;
+}

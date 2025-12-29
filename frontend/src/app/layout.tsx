@@ -129,12 +129,12 @@ export default function RootLayout({
             <header className="glass fixed top-0 left-0 right-0 z-50 border-b border-gray-100 dark:border-white/5 px-8 py-4">
               <div className="max-w-[1600px] mx-auto flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-4 group">
-                  <div className="relative w-10 h-10 overflow-hidden rounded-xl shadow-lg ring-1 ring-black/5">
+                  <div className="relative w-10 h-10 overflow-hidden rounded-xl shadow-lg ring-1 ring-black/5 bg-white dark:bg-slate-800">
                     <Image
-                      src="/logo.png"
+                      src="/images/logo-museo.png"
                       alt="Logo"
                       fill
-                      className="object-contain mix-blend-multiply dark:mix-blend-screen dark:invert"
+                      className="object-contain p-1"
                     />
                   </div>
                   <div className="hidden sm:block">

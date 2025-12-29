@@ -503,6 +503,32 @@ export default function BudgetsPage() {
                     >
                         <List size={18} />
                     </button>
+                    <button
+                        onClick={() => {
+                            const csvContent = [
+                                ['Código', 'Título', 'Rubro', 'Proyecto', 'Líder', 'Presupuesto', 'Disponible', 'Estado'].join(','),
+                                ...filteredBudgets.map(b => [
+                                    b.code || '',
+                                    `"${b.title}"`,
+                                    `"${b.category?.name || ''}"`,
+                                    `"${b.project?.name || ''}"`,
+                                    `"${b.manager?.name || ''}"`,
+                                    b.amount,
+                                    b.available,
+                                    b.status
+                                ].join(','))
+                            ].join('\n');
+                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(blob);
+                            link.download = `presupuestos_${selectedYear}.csv`;
+                            link.click();
+                        }}
+                        className="p-3 rounded-xl border bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-600 hover:bg-green-100 transition-all"
+                        title="Exportar a Excel"
+                    >
+                        <FileSpreadsheet size={18} />
+                    </button>
                 </div>
             </motion.div>
 
@@ -550,7 +576,11 @@ export default function BudgetsPage() {
                                         const isLow = availablePct < 10;
 
                                         return (
-                                            <tr key={budget.id} className="border-b border-gray-50 dark:border-gray-700 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-colors">
+                                            <tr
+                                                key={budget.id}
+                                                onClick={() => router.push(`/budget/${budget.id}`)}
+                                                className="border-b border-gray-50 dark:border-gray-700 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-colors cursor-pointer"
+                                            >
                                                 <td className="px-6 py-4">
                                                     <span className="px-2 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-600 rounded-lg text-[10px] font-black">
                                                         {budget.code || '-'}
@@ -576,7 +606,7 @@ export default function BudgetsPage() {
                                                 </td>
                                                 <td className="px-6 py-4">{getStatusBadge(budget.status)}</td>
                                                 <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                                         <button
                                                             onClick={() => router.push(`/budget/${budget.id}`)}
                                                             className="p-2 bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-primary-100 hover:text-primary-600 rounded-xl transition-all"
