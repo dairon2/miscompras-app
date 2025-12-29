@@ -16,17 +16,20 @@ import {
     Save,
     Loader2,
     Search,
-    AlertTriangle,
-    Hash,
     Mail,
     Phone,
-    MapPin
+    MapPin,
+    Shield,
+    Sun,
+    Moon,
+    Monitor,
+    AlertTriangle,
+    Hash
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
-import { Sun, Moon, Monitor } from "lucide-react";
 
 type TabType = 'areas' | 'projects' | 'categories' | 'suppliers' | 'users' | 'account' | 'general';
 
