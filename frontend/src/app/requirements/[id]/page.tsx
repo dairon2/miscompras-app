@@ -249,20 +249,32 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     const userRole = currentUser?.role || 'USER';
 
     // Role-based permissions
-    const isAdmin = ['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole);
+    // isAdmin: Can edit details (includes COORDINATOR now)
+    const isAdmin = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
+    // isApprover: Can approve/reject PENDING_APPROVAL requests (Director and Coordinator, NOT Leader)
+    const isApprover = ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole);
     const canDelete = ['ADMIN', 'DIRECTOR'].includes(userRole);
 
-    const canApproveCoordination = requirement.status === 'PENDING_COORDINATION' && (currentUser?.role === 'ADMIN' || currentUser?.role === 'LEADER');
-    const canApproveFinance = requirement.status === 'PENDING_FINANCE' && (currentUser?.role === 'ADMIN' || currentUser?.role === 'DIRECTOR');
+    // Approval permissions for different stages
+    const canApproveCoordination = requirement.status === 'PENDING_COORDINATION' && ['ADMIN', 'LEADER', 'COORDINATOR'].includes(userRole);
+    const canApproveFinance = requirement.status === 'PENDING_FINANCE' && ['ADMIN', 'DIRECTOR'].includes(userRole);
+
+    // Generic approve for PENDING_APPROVAL - Director and Coordinator can approve
+    const canApprovePending = requirement.status === 'PENDING_APPROVAL' && isApprover;
+
     const canManageProcurement = requirement.status === 'APPROVED' && (requirement.procurementStatus === 'PENDIENTE' || requirement.procurementStatus === 'EN_TRAMITE' || requirement.procurementStatus === 'ENTREGADO');
     const canMarkReceived = requirement.procurementStatus === 'ENTREGADO' && isCreator && !requirement.receivedAtSatisfaction;
 
     const canManage = userRole === 'ADMIN';
 
     // Full edit: ADMIN/DIRECTOR/LEADER can edit everything
-    // Users: Can ONLY edit observations on their own requirements
+    // Regular users can ONLY mark received at satisfaction on their own requests
     const canFullEdit = isAdmin;
     const canEditObservationsOnly = !isAdmin && isCreator;
+
+    // User who created can only see their request status and mark satisfaction
+    const isUserOnly = userRole === 'USER';
+
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -456,8 +468,35 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                         </motion.div>
                     )}
 
-                    {(canApproveCoordination || canApproveFinance || canManageProcurement || canMarkReceived || canManage || canFullEdit || canEditObservationsOnly) && (
+                    {(canApprovePending || canApproveCoordination || canApproveFinance || canManageProcurement || canMarkReceived || canManage || canFullEdit || canEditObservationsOnly) && (
                         <div className="mt-12 flex flex-wrap gap-4 pt-10 border-t border-gray-50 dark:border-gray-700">
+                            {/* Approve button for PENDING_APPROVAL status - Director/Coordinator */}
+                            {canApprovePending && (
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            setFormError('');
+                                            setStatusForm({ ...statusForm, status: 'APPROVED', remarks: '' });
+                                            setShowStatusModal(true);
+                                        }}
+                                        disabled={actionLoading}
+                                        className="flex-1 bg-green-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <CheckCircle size={20} /> Aprobar Solicitud
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setFormError('');
+                                            setStatusForm({ ...statusForm, status: 'REJECTED', remarks: '' });
+                                            setShowStatusModal(true);
+                                        }}
+                                        disabled={actionLoading}
+                                        className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-red-600 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <XCircle size={20} /> Rechazar
+                                    </button>
+                                </>
+                            )}
                             {canApproveCoordination && (
                                 <>
                                     <button
@@ -473,6 +512,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                     </button>
                                 </>
                             )}
+
                             {canApproveFinance && (
                                 <>
                                     <button

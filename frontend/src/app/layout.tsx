@@ -92,13 +92,19 @@ export default function RootLayout({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const markRead = async (id: string, reqId?: string) => {
+  const markRead = async (id: string, reqId?: string, title?: string, type?: string) => {
     try {
       await api.patch(`/notifications/${id}/read`);
       setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
-      if (reqId) {
-        setShowNotifs(false);
+      setShowNotifs(false);
+
+      // Smart navigation based on notification type/content
+      if (title?.includes('Solicitud Múltiple') || title?.includes('agrupada') || type === 'APPROVAL') {
+        router.push('/approvals');
+      } else if (reqId) {
         router.push(`/requirements/${reqId}`);
+      } else if (title?.includes('Presupuesto') || title?.includes('Ajuste')) {
+        router.push('/budget');
       }
     } catch (err) {
       console.error(err);
@@ -197,8 +203,8 @@ export default function RootLayout({
                               notifications.map((n: Notification) => (
                                 <div
                                   key={n.id}
-                                  onClick={() => markRead(n.id, n.requirementId)}
-                                  className={`p-5 rounded-3xl cursor-pointer transition-all border-l-4 ${n.isRead ? 'bg-transparent border-transparent' : 'bg-primary-50/50 dark:bg-primary-500/10 border-primary-500'}`}
+                                  onClick={() => markRead(n.id, n.requirementId, n.title, n.type)}
+                                  className={`p-5 rounded-3xl cursor-pointer transition-all border-l-4 ${n.isRead ? 'bg-transparent border-transparent' : 'bg-primary-50/50 dark:bg-primary-500/10 border-primary-500'} hover:bg-gray-50 dark:hover:bg-slate-700`}
                                 >
                                   <div className="flex items-start gap-3">
                                     <div className={`mt-1 p-2 rounded-xl ${n.type === 'APPROVAL' ? 'bg-green-100 text-green-600' : 'bg-primary-100 text-primary-600'}`}>

@@ -27,6 +27,7 @@ interface RequirementItem {
     projectName: string;
     areaName: string;
     budgetName: string;
+    attachments?: File[];
 }
 
 export default function NewRequirementPage() {
@@ -37,6 +38,9 @@ export default function NewRequirementPage() {
 
     // List of items to submit
     const [items, setItems] = useState<RequirementItem[]>([]);
+
+    // Attachments for current item
+    const [currentAttachments, setCurrentAttachments] = useState<File[]>([]);
 
     // Current form data (for the item being added)
     const [formData, setFormData] = useState({
@@ -59,6 +63,11 @@ export default function NewRequirementPage() {
         budgets: [] as Budget[]
     });
     const [budgetError, setBudgetError] = useState<string | null>(null);
+
+    // Role-based permissions - Users with role USER only see their assigned area
+    const userRole = user?.role || 'USER';
+    const isAdminRole = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
+    const userAreaId = user?.areaId || null;
 
     const fetchCatalogs = useCallback(async () => {
         try {
@@ -85,6 +94,13 @@ export default function NewRequirementPage() {
         fetchCatalogs();
     }, [fetchCatalogs]);
 
+    // Auto-select user's area if they are a regular user
+    useEffect(() => {
+        if (!isAdminRole && userAreaId && formData.areaId === '') {
+            setFormData(prev => ({ ...prev, areaId: userAreaId }));
+        }
+    }, [isAdminRole, userAreaId, formData.areaId]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -105,7 +121,8 @@ export default function NewRequirementPage() {
             id: Math.random().toString(36).substr(2, 9),
             projectName: project?.name || '',
             areaName: area?.name || '',
-            budgetName: budget?.category?.name ? `${budget.category.name} ($${parseFloat(budget.amount).toLocaleString()})` : 'Presupuesto'
+            budgetName: budget?.category?.name ? `${budget.category.name} ($${parseFloat(budget.amount).toLocaleString()})` : 'Presupuesto',
+            attachments: currentAttachments.length > 0 ? currentAttachments : undefined
         };
 
         setItems(prev => [...prev, newItem]);
@@ -118,6 +135,8 @@ export default function NewRequirementPage() {
             supplierId: '',
             manualSupplierName: ''
         }));
+        // Clear attachments for next item
+        setCurrentAttachments([]);
         addToast('Ítem agregado a la lista', 'success');
     };
 
@@ -217,11 +236,19 @@ export default function NewRequirementPage() {
                                         value={formData.areaId}
                                         onChange={handleChange}
                                         className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold"
+                                        disabled={!isAdminRole && userAreaId !== null}
                                     >
                                         <option value="">Selecciona un área...</option>
-                                        {options.areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                        {/* Filter areas: regular users only see their assigned area */}
+                                        {options.areas
+                                            .filter(a => isAdminRole || a.id === userAreaId)
+                                            .map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                     </select>
+                                    {!isAdminRole && userAreaId && (
+                                        <p className="text-[10px] text-gray-400 mt-1 ml-1">Solo puedes solicitar para tu área asignada</p>
+                                    )}
                                 </div>
+
                             </div>
 
                             <div>
@@ -314,6 +341,54 @@ export default function NewRequirementPage() {
                                 />
                             </div>
 
+                            {/* Attachments Field */}
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">
+                                    <Paperclip size={12} className="inline mr-1" />
+                                    Adjuntos (opcional)
+                                </label>
+                                <div className="bg-gray-50 dark:bg-slate-900 rounded-2xl p-4">
+                                    <input
+                                        type="file"
+                                        multiple
+                                        onChange={(e) => {
+                                            const files = Array.from(e.target.files || []);
+                                            setCurrentAttachments(prev => [...prev, ...files]);
+                                        }}
+                                        className="hidden"
+                                        id="attachmentInput"
+                                    />
+                                    <label
+                                        htmlFor="attachmentInput"
+                                        className="cursor-pointer flex items-center justify-center gap-2 py-3 px-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-gray-400 hover:text-primary-600 hover:border-primary-300 transition-all"
+                                    >
+                                        <Paperclip size={16} />
+                                        <span className="text-sm font-bold">Haz clic para agregar archivos</span>
+                                    </label>
+
+                                    {currentAttachments.length > 0 && (
+                                        <div className="mt-3 space-y-2">
+                                            {currentAttachments.map((file, idx) => (
+                                                <div key={idx} className="flex items-center justify-between bg-white dark:bg-slate-800 px-3 py-2 rounded-lg">
+                                                    <div className="flex items-center gap-2">
+                                                        <FileText size={14} className="text-primary-500" />
+                                                        <span className="text-xs font-bold truncate max-w-[200px]">{file.name}</span>
+                                                        <span className="text-[10px] text-gray-400">({(file.size / 1024).toFixed(1)} KB)</span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCurrentAttachments(prev => prev.filter((_, i) => i !== idx))}
+                                                        className="text-red-400 hover:text-red-600"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             <button
                                 type="button"
                                 onClick={addItem}
@@ -321,6 +396,7 @@ export default function NewRequirementPage() {
                             >
                                 <Plus size={18} /> Agregar a la lista
                             </button>
+
                         </div>
                     </div>
                 </div>

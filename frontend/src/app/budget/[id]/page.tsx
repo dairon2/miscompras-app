@@ -379,14 +379,21 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
 
                         {budget.approvedAt && (
                             <div className="flex items-center gap-3">
-                                <CheckCircle size={18} className="text-green-500" />
+                                {budget.status === 'REJECTED' ? (
+                                    <XCircle size={18} className="text-red-500" />
+                                ) : (
+                                    <CheckCircle size={18} className="text-green-500" />
+                                )}
                                 <div>
-                                    <p className="text-[10px] font-black uppercase text-gray-400">Aprobado</p>
+                                    <p className="text-[10px] font-black uppercase text-gray-400">
+                                        {budget.status === 'REJECTED' ? 'Rechazado' : 'Aprobado'}
+                                    </p>
                                     <p className="font-bold text-sm">{new Date(budget.approvedAt).toLocaleDateString()}</p>
                                     {budget.approvedBy && <p className="text-xs text-gray-400">Por: {budget.approvedBy.name}</p>}
                                 </div>
                             </div>
                         )}
+
                     </motion.div>
 
                     {/* Sub-leaders */}
