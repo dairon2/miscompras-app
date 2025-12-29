@@ -19,12 +19,12 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #1a1a1a;
-  --card: #f9f9f9;
-  --card-foreground: #1a1a1a;
-  --border: #e2e2e2;
-  --input: #e2e2e2;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: #f1f5f9;
+  --input: #ffffff;
   --ring: var(--color-primary-500);
 }
 

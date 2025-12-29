@@ -44,6 +44,7 @@ interface Requirement {
     };
     supplier?: { name: string };
     manualSupplierName?: string;
+    reqCategory: string;
     createdAt: string;
 }
 
@@ -71,6 +72,7 @@ export default function RequirementsPage() {
         areaId: '',
         createdById: '',
         projectId: '',
+        reqCategory: '',
         startDate: '',
         endDate: ''
     });
@@ -169,6 +171,7 @@ export default function RequirementsPage() {
         const matchesArea = !filters.areaId || r.areaId === filters.areaId;
         const matchesUser = !filters.createdById || r.createdById === filters.createdById;
         const matchesProject = !filters.projectId || r.projectId === filters.projectId;
+        const matchesCategory = !filters.reqCategory || r.reqCategory === filters.reqCategory;
 
         // Date range filter
         const createdAt = new Date(r.createdAt);
@@ -179,7 +182,7 @@ export default function RequirementsPage() {
 
         const matchesDate = (!start || createdAt >= start) && (!end || createdAt <= end);
 
-        return matchesSearch && matchesProc && matchesArea && matchesUser && matchesProject && matchesDate;
+        return matchesSearch && matchesProc && matchesArea && matchesUser && matchesProject && matchesCategory && matchesDate;
     });
 
     return (
@@ -294,12 +297,19 @@ export default function RequirementsPage() {
                         </select>
 
                         <select
-                            value={filters.areaId}
-                            onChange={(e) => setFilters({ ...filters, areaId: e.target.value })}
+                            value={filters.reqCategory}
+                            onChange={(e) => setFilters({ ...filters, reqCategory: e.target.value })}
                             className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-xl py-2 px-4 outline-none focus:ring-2 focus:ring-primary-500 font-bold text-xs"
                         >
-                            <option value="">Todas las Categorías (Áreas)</option>
-                            {areas.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                            <option value="">Tipo de Requerimiento (Todos)</option>
+                            <option value="ORDEN_COMPRA">Orden de Compra</option>
+                            <option value="COMPRA">Compra</option>
+                            <option value="ANTICIPO">Anticipo</option>
+                            <option value="SERVICIO">Servicio</option>
+                            <option value="ORDEN_SERVICIO">Orden de Servicio</option>
+                            <option value="CONTRATO">Contrato</option>
+                            <option value="ORDEN_PRODUCCION">Orden de Producción</option>
+                            <option value="COMPRA_ONLINE">Compra Online</option>
                         </select>
 
                         <select
@@ -372,7 +382,7 @@ export default function RequirementsPage() {
                                                 <tr>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Solicitud</th>
                                                     {isAdmin && <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Creado por</th>}
-                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Proyecto / Área</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Tipo / Área</th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Presupuesto / Categoría</th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Monto</th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado Trámite</th>
@@ -411,7 +421,9 @@ export default function RequirementsPage() {
                                                             </td>
                                                         )}
                                                         <td className="px-6 py-6 text-left">
-                                                            <p className="font-bold text-xs">{req.project?.name}</p>
+                                                            <p className="font-bold text-xs text-primary-600">
+                                                                {req.reqCategory?.replace('_', ' ') || 'REQUERIMIENTO'}
+                                                            </p>
                                                             <p className="text-[10px] font-bold text-gray-400">{req.area?.name}</p>
                                                         </td>
                                                         <td className="px-6 py-6 text-left">

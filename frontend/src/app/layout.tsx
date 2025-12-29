@@ -151,6 +151,9 @@ export default function RootLayout({
                   )}
                   <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers"} />
                   <NavItem icon={<Building2 size={14} />} label="Presupuestos" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
+                  {['ADMIN', 'DIRECTOR'].includes(user?.role || '') && (
+                    <NavItem icon={<Settings size={14} />} label="Administración" href="/admin" active={pathname === "/admin" || pathname.startsWith("/admin")} />
+                  )}
                 </nav>
 
                 <div className="flex items-center gap-6">
