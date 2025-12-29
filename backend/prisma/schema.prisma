@@ -299,6 +299,15 @@ enum ProcurementStatus {
   POSTERGADO
 }
 
+model SystemConfig {
+  id                    String   @id @default("main")
+  activeYear            Int      @default(2025)
+  appName               String   @default("MisCompras")
+  isRegistrationEnabled Boolean  @default(true)
+  maintenanceMode       Boolean  @default(false)
+  updatedAt             DateTime @updatedAt
+}
+
 enum RequirementCategory {
   ANTICIPO
   COMPRA

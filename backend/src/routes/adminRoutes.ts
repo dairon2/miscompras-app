@@ -22,8 +22,12 @@ import {
     deleteSupplier,
     // Users
     getUsers,
+    updateUser,
     toggleUserStatus,
     deleteUser,
+    // Config
+    getSystemConfig,
+    updateSystemConfig,
     // Stats
     getAdminStats
 } from '../controllers/adminController';
@@ -64,7 +68,12 @@ router.delete('/suppliers/:id', deleteSupplier);
 
 // Users Management
 router.get('/users', getUsers);
+router.put('/users/:id', updateUser);
 router.patch('/users/toggle/:id', toggleUserStatus);
 router.delete('/users/:id', deleteUser);
+
+// System Config
+router.get('/config', getSystemConfig);
+router.patch('/config', updateSystemConfig);
 
 export default router;

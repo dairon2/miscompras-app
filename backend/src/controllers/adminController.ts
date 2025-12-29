@@ -410,6 +410,68 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
     }
 };
 
+export const updateUser = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const { name, role, areaId, isActive } = req.body;
+
+    try {
+        const user = await prisma.user.update({
+            where: { id },
+            data: {
+                name,
+                role,
+                areaId,
+                isActive
+            }
+        });
+        res.json(user);
+    } catch (error: any) {
+        console.error('Error updating user:', error);
+        res.status(500).json({ error: 'Error al actualizar usuario' });
+    }
+};
+
+// ==================== SYSTEM CONFIG ====================
+
+export const getSystemConfig = async (req: AuthRequest, res: Response) => {
+    try {
+        let config = await prisma.systemConfig.findFirst({
+            where: { id: 'main' }
+        });
+
+        if (!config) {
+            config = await prisma.systemConfig.create({
+                data: { id: 'main' }
+            });
+        }
+
+        res.json(config);
+    } catch (error: any) {
+        console.error('Error fetching system config:', error);
+        res.status(500).json({ error: 'Error al obtener configuración' });
+    }
+};
+
+export const updateSystemConfig = async (req: AuthRequest, res: Response) => {
+    const { activeYear, appName, isRegistrationEnabled, maintenanceMode } = req.body;
+
+    try {
+        const config = await prisma.systemConfig.update({
+            where: { id: 'main' },
+            data: {
+                activeYear,
+                appName,
+                isRegistrationEnabled,
+                maintenanceMode
+            }
+        });
+        res.json(config);
+    } catch (error: any) {
+        console.error('Error updating system config:', error);
+        res.status(500).json({ error: 'Error al actualizar configuración' });
+    }
+};
+
 // ==================== STATS ====================
 
 export const getAdminStats = async (req: AuthRequest, res: Response) => {

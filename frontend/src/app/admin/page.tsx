@@ -46,7 +46,14 @@ export default function AdminPage() {
     const [projects, setProjects] = useState([]);
     const [categories, setCategories] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
-    const [usersList, setUsersList] = useState([]); // Renamed to avoid collision with 'user' from auth
+    const [usersList, setUsersList] = useState([]);
+    const [systemConfig, setSystemConfig] = useState<any>({
+        activeYear: 2025,
+        appName: 'MisCompras',
+        isRegistrationEnabled: true,
+        maintenanceMode: false
+    });
+    const [savingConfig, setSavingConfig] = useState(false);
 
     // Modal states
     const [showModal, setShowModal] = useState(false);
@@ -97,6 +104,7 @@ export default function AdminPage() {
                 case 'categories': setCategories(res.data); break;
                 case 'suppliers': setSuppliers(res.data); break;
                 case 'users' as any: setUsersList(res.data); break;
+                case 'general': setSystemConfig(res.data); break;
             }
         } catch (err) {
             console.error(`Error fetching ${tab}`, err);
@@ -292,50 +300,133 @@ export default function AdminPage() {
                 className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden"
             >
                 {activeTab === 'general' ? (
-                    <div className="p-8 lg:p-12">
-                        <div className="max-w-2xl">
-                            <h3 className="text-xl font-black mb-2">Preferencia de Tema</h3>
-                            <p className="text-gray-500 text-sm mb-8">Personaliza la apariencia de la aplicación para mayor comodidad visual.</p>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <button
-                                    onClick={() => setTheme('light')}
-                                    className={`flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-4 transition-all ${theme === 'light' ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/10' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}
-                                >
-                                    <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${theme === 'light' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
-                                        <Sun size={32} />
+                    <div className="p-8 lg:p-12 space-y-12">
+                        {/* System Configuration Section */}
+                        {isAdmin && (
+                            <section>
+                                <div className="flex items-center gap-3 mb-8">
+                                    <div className="p-3 bg-primary-100 dark:bg-primary-900/30 text-primary-600 rounded-2xl">
+                                        <Settings size={24} />
                                     </div>
-                                    <span className="font-black uppercase text-[10px] tracking-widest">Modo Claro</span>
-                                </button>
-
-                                <button
-                                    onClick={() => setTheme('dark')}
-                                    className={`flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-4 transition-all ${theme === 'dark' ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/10' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}
-                                >
-                                    <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${theme === 'dark' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
-                                        <Moon size={32} />
+                                    <div>
+                                        <h3 className="text-xl font-black">Configuración del Sistema</h3>
+                                        <p className="text-gray-500 text-sm">Ajustes globales de la aplicación</p>
                                     </div>
-                                    <span className="font-black uppercase text-[10px] tracking-widest">Modo Oscuro</span>
-                                </button>
+                                </div>
 
-                                <button
-                                    onClick={() => setTheme('system')}
-                                    className={`flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-4 transition-all ${theme === 'system' ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/10' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}
-                                >
-                                    <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${theme === 'system' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
-                                        <Monitor size={32} />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-black text-gray-600 uppercase tracking-widest">Nombre de la Aplicación</label>
+                                        <input
+                                            type="text"
+                                            value={systemConfig.appName}
+                                            onChange={(e) => setSystemConfig({ ...systemConfig, appName: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                            placeholder="MisCompras"
+                                        />
                                     </div>
-                                    <span className="font-black uppercase text-[10px] tracking-widest">Sistema</span>
-                                </button>
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-black text-gray-600 uppercase tracking-widest">Año Fiscal Activo</label>
+                                        <input
+                                            type="number"
+                                            value={systemConfig.activeYear}
+                                            onChange={(e) => setSystemConfig({ ...systemConfig, activeYear: parseInt(e.target.value) })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                            placeholder="2025"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-6 bg-gray-50 dark:bg-slate-900 rounded-[2rem] border border-gray-100 dark:border-gray-700">
+                                        <div>
+                                            <h4 className="font-black text-sm">Habilitar Registro Público</h4>
+                                            <p className="text-xs text-gray-500 font-bold">Permitir que nuevos usuarios se registren</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setSystemConfig({ ...systemConfig, isRegistrationEnabled: !systemConfig.isRegistrationEnabled })}
+                                            className={`w-14 h-8 rounded-full transition-all relative ${systemConfig.isRegistrationEnabled ? 'bg-primary-600' : 'bg-gray-300'}`}
+                                        >
+                                            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow transition-all ${systemConfig.isRegistrationEnabled ? 'left-7' : 'left-1'}`} />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-6 bg-amber-50 dark:bg-amber-900/10 rounded-[2rem] border border-amber-200 dark:border-amber-900/30">
+                                        <div>
+                                            <h4 className="font-black text-sm text-amber-700 dark:text-amber-400">Modo Mantenimiento</h4>
+                                            <p className="text-xs text-amber-600 dark:text-amber-500 font-bold">Restringir acceso solo a administradores</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setSystemConfig({ ...systemConfig, maintenanceMode: !systemConfig.maintenanceMode })}
+                                            className={`w-14 h-8 rounded-full transition-all relative ${systemConfig.maintenanceMode ? 'bg-amber-600' : 'bg-gray-300'}`}
+                                        >
+                                            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow transition-all ${systemConfig.maintenanceMode ? 'left-7' : 'left-1'}`} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="mt-8 flex justify-end">
+                                    <button
+                                        onClick={async () => {
+                                            setSavingConfig(true);
+                                            try {
+                                                await api.patch('/admin/config', systemConfig);
+                                                alert('Configuración guardada exitosamente');
+                                            } catch (err: any) {
+                                                alert(err.response?.data?.error || 'Error al guardar');
+                                            } finally {
+                                                setSavingConfig(false);
+                                            }
+                                        }}
+                                        disabled={savingConfig}
+                                        className="flex items-center gap-2 bg-primary-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 transition-all disabled:opacity-50"
+                                    >
+                                        {savingConfig ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                                        Guardar Configuración
+                                    </button>
+                                </div>
+                            </section>
+                        )}
+
+                        {isAdmin && <div className="h-px bg-gray-100 dark:bg-gray-700" />}
+
+                        {/* Theme Preferences */}
+                        <section>
+                            <div className="max-w-2xl">
+                                <h3 className="text-xl font-black mb-2">Preferencia de Tema</h3>
+                                <p className="text-gray-500 text-sm mb-8">Personaliza la apariencia de la aplicación.</p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <button
+                                        onClick={() => setTheme('light')}
+                                        className={`flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-4 transition-all ${theme === 'light' ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/10' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}
+                                    >
+                                        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${theme === 'light' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
+                                            <Sun size={32} />
+                                        </div>
+                                        <span className="font-black uppercase text-[10px] tracking-widest">Modo Claro</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setTheme('dark')}
+                                        className={`flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-4 transition-all ${theme === 'dark' ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/10' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}
+                                    >
+                                        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${theme === 'dark' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
+                                            <Moon size={32} />
+                                        </div>
+                                        <span className="font-black uppercase text-[10px] tracking-widest">Modo Oscuro</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setTheme('system')}
+                                        className={`flex flex-col items-center gap-4 p-8 rounded-[2.5rem] border-4 transition-all ${theme === 'system' ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/10' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}
+                                    >
+                                        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${theme === 'system' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
+                                            <Monitor size={32} />
+                                        </div>
+                                        <span className="font-black uppercase text-[10px] tracking-widest">Sistema</span>
+                                    </button>
+                                </div>
                             </div>
-
-                            <div className="mt-12 p-6 bg-amber-50 dark:bg-amber-900/10 rounded-3xl border border-amber-100 dark:border-amber-900/30 flex items-start gap-4">
-                                <AlertTriangle className="text-amber-500 shrink-0 mt-1" size={20} />
-                                <p className="text-xs text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
-                                    El modo oscuro ayuda a reducir la fatiga visual en entornos de poca luz y puede ahorrar batería en pantallas OLED. Esta preferencia se guardará en tu navegador.
-                                </p>
-                            </div>
-                        </div>
+                        </section>
                     </div>
                 ) : activeTab === 'account' ? (
                     <div className="p-8 lg:p-12">

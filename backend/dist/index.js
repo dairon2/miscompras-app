@@ -292,6 +292,11 @@ const prismaMock = {
             }
             return null;
         }
+    },
+    systemConfig: {
+        findFirst: async () => ({ id: 'main', activeYear: 2025, appName: 'MisCompras', isRegistrationEnabled: true, maintenanceMode: false }),
+        create: async (args) => ({ id: 'main', ...args.data }),
+        update: async (args) => ({ id: 'main', ...args.data })
     }
 };
 // Database Initialization

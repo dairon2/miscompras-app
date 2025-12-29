@@ -31,6 +31,10 @@ router.put('/suppliers/:id', adminController_1.updateSupplier);
 router.delete('/suppliers/:id', adminController_1.deleteSupplier);
 // Users Management
 router.get('/users', adminController_1.getUsers);
+router.put('/users/:id', adminController_1.updateUser);
 router.patch('/users/toggle/:id', adminController_1.toggleUserStatus);
 router.delete('/users/:id', adminController_1.deleteUser);
+// System Config
+router.get('/config', adminController_1.getSystemConfig);
+router.patch('/config', adminController_1.updateSystemConfig);
 exports.default = router;

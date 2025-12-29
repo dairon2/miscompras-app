@@ -291,6 +291,11 @@ const prismaMock: any = {
             }
             return null;
         }
+    },
+    systemConfig: {
+        findFirst: async () => ({ id: 'main', activeYear: 2025, appName: 'MisCompras', isRegistrationEnabled: true, maintenanceMode: false }),
+        create: async (args: any) => ({ id: 'main', ...args.data }),
+        update: async (args: any) => ({ id: 'main', ...args.data })
     }
 };
 

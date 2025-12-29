@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAdminStats = exports.deleteUser = exports.toggleUserStatus = exports.getUsers = exports.deleteSupplier = exports.updateSupplier = exports.createSupplier = exports.getSuppliers = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getCategories = exports.deleteProject = exports.updateProject = exports.createProject = exports.getProjects = exports.deleteArea = exports.updateArea = exports.createArea = exports.getAreas = void 0;
+exports.getAdminStats = exports.updateSystemConfig = exports.getSystemConfig = exports.updateUser = exports.deleteUser = exports.toggleUserStatus = exports.getUsers = exports.deleteSupplier = exports.updateSupplier = exports.createSupplier = exports.getSuppliers = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getCategories = exports.deleteProject = exports.updateProject = exports.createProject = exports.getProjects = exports.deleteArea = exports.updateArea = exports.createArea = exports.getAreas = void 0;
 const index_1 = require("../index");
 // ==================== AREAS ====================
 const getAreas = async (req, res) => {
@@ -395,6 +395,66 @@ const deleteUser = async (req, res) => {
     }
 };
 exports.deleteUser = deleteUser;
+const updateUser = async (req, res) => {
+    const { id } = req.params;
+    const { name, role, areaId, isActive } = req.body;
+    try {
+        const user = await index_1.prisma.user.update({
+            where: { id },
+            data: {
+                name,
+                role,
+                areaId,
+                isActive
+            }
+        });
+        res.json(user);
+    }
+    catch (error) {
+        console.error('Error updating user:', error);
+        res.status(500).json({ error: 'Error al actualizar usuario' });
+    }
+};
+exports.updateUser = updateUser;
+// ==================== SYSTEM CONFIG ====================
+const getSystemConfig = async (req, res) => {
+    try {
+        let config = await index_1.prisma.systemConfig.findFirst({
+            where: { id: 'main' }
+        });
+        if (!config) {
+            config = await index_1.prisma.systemConfig.create({
+                data: { id: 'main' }
+            });
+        }
+        res.json(config);
+    }
+    catch (error) {
+        console.error('Error fetching system config:', error);
+        res.status(500).json({ error: 'Error al obtener configuración' });
+    }
+};
+exports.getSystemConfig = getSystemConfig;
+const updateSystemConfig = async (req, res) => {
+    const { activeYear, appName, isRegistrationEnabled, maintenanceMode } = req.body;
+    try {
+        const config = await index_1.prisma.systemConfig.update({
+            where: { id: 'main' },
+            data: {
+                activeYear,
+                appName,
+                isRegistrationEnabled,
+                maintenanceMode
+            }
+        });
+        res.json(config);
+    }
+    catch (error) {
+        console.error('Error updating system config:', error);
+        res.status(500).json({ error: 'Error al actualizar configuración' });
+    }
+};
+exports.updateSystemConfig = updateSystemConfig;
 // ==================== STATS ====================
 const getAdminStats = async (req, res) => {
     try {
