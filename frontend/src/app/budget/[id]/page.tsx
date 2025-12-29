@@ -52,7 +52,7 @@ interface BudgetDetail {
         type: string;
         requestedAmount: number;
         status: string;
-        justification: string;
+        reason: string;
         requestedAt: string;
         requestedBy?: { id: string; name: string };
         reviewedBy?: { id: string; name: string };
@@ -281,11 +281,14 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                                                 {adj.status}
                                             </span>
                                         </div>
-                                        <p className="text-sm text-gray-500 mb-2">{adj.justification}</p>
+                                        {adj.reason && (
+                                            <p className="text-sm text-gray-500 mb-2 italic">"{adj.reason}"</p>
+                                        )}
                                         <div className="flex justify-between text-xs text-gray-400">
                                             <span>Monto: {formatCurrency(Number(adj.requestedAmount))}</span>
                                             <span>{new Date(adj.requestedAt).toLocaleDateString()}</span>
                                         </div>
+
                                     </div>
                                 ))}
                             </div>

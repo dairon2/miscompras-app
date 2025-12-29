@@ -11,6 +11,8 @@ const blobStorageService_1 = require("./blobStorageService");
 // Get the logo path
 const LOGO_PATH = path_1.default.join(__dirname, '../../assets/logo.png');
 const UPLOADS_DIR = path_1.default.join(__dirname, '../../uploads/pdfs');
+// Backend URL for constructing full file URLs
+const BACKEND_URL = process.env.BACKEND_URL || process.env.API_URL || 'http://localhost:3001';
 // Ensure uploads directory exists with better error handling
 const ensureUploadDir = () => {
     try {
@@ -155,7 +157,8 @@ const generateBudgetPDF = async (budget) => {
             }
             doc.end();
             stream.on('finish', async () => {
-                const localUrl = `/uploads/pdfs/${fileName}`;
+                const localPath = `/uploads/pdfs/${fileName}`;
+                const fullLocalUrl = `${BACKEND_URL}${localPath}`;
                 if ((0, blobStorageService_1.isBlobStorageAvailable)()) {
                     try {
                         const blobUrl = await (0, blobStorageService_1.uploadToBlobStorage)(filePath, `budgets/${fileName}`);
@@ -169,8 +172,8 @@ const generateBudgetPDF = async (budget) => {
                         console.error('[PDF Service] Blob upload failed:', e);
                     }
                 }
-                console.log('[PDF Service] Budget PDF generated locally:', localUrl);
-                resolve(localUrl);
+                console.log('[PDF Service] Budget PDF generated locally:', fullLocalUrl);
+                resolve(fullLocalUrl);
             });
             stream.on('error', reject);
         }

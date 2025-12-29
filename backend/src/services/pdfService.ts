@@ -7,6 +7,9 @@ import { uploadToBlobStorage, isBlobStorageAvailable } from './blobStorageServic
 const LOGO_PATH = path.join(__dirname, '../../assets/logo.png');
 const UPLOADS_DIR = path.join(__dirname, '../../uploads/pdfs');
 
+// Backend URL for constructing full file URLs
+const BACKEND_URL = process.env.BACKEND_URL || process.env.API_URL || 'http://localhost:3001';
+
 // Ensure uploads directory exists with better error handling
 const ensureUploadDir = () => {
     try {
@@ -196,7 +199,8 @@ export const generateBudgetPDF = async (budget: BudgetData): Promise<string> => 
             doc.end();
 
             stream.on('finish', async () => {
-                const localUrl = `/uploads/pdfs/${fileName}`;
+                const localPath = `/uploads/pdfs/${fileName}`;
+                const fullLocalUrl = `${BACKEND_URL}${localPath}`;
                 if (isBlobStorageAvailable()) {
                     try {
                         const blobUrl = await uploadToBlobStorage(filePath, `budgets/${fileName}`);
@@ -207,12 +211,13 @@ export const generateBudgetPDF = async (budget: BudgetData): Promise<string> => 
                         }
                     } catch (e) { console.error('[PDF Service] Blob upload failed:', e); }
                 }
-                console.log('[PDF Service] Budget PDF generated locally:', localUrl);
-                resolve(localUrl);
+                console.log('[PDF Service] Budget PDF generated locally:', fullLocalUrl);
+                resolve(fullLocalUrl);
             });
 
 
             stream.on('error', reject);
+
         } catch (error) {
             reject(error);
         }
