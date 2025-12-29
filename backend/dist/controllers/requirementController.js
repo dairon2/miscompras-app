@@ -3,9 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createAsiento = exports.getAsientos = exports.deleteRequirement = exports.updateObservations = exports.getAllRequirements = exports.updateRequirement = exports.updateRequirementStatus = exports.getRequirementById = exports.getMyRequirements = exports.createRequirement = void 0;
+exports.createAsiento = exports.getRequirementGroups = exports.rejectRequirementGroup = exports.approveRequirementGroup = exports.getAsientos = exports.deleteRequirement = exports.updateObservations = exports.getAllRequirements = exports.updateRequirement = exports.updateRequirementStatus = exports.getRequirementById = exports.getMyRequirements = exports.createMassRequirements = exports.createRequirement = void 0;
 const index_1 = require("../index");
 const fs_1 = __importDefault(require("fs"));
+const requirementGroupService_1 = require("../services/requirementGroupService");
 const createRequirement = async (req, res) => {
     const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, budgetId } = req.body;
     const userId = req.user?.id;
@@ -75,6 +76,40 @@ const createRequirement = async (req, res) => {
     }
 };
 exports.createRequirement = createRequirement;
+const createMassRequirements = async (req, res) => {
+    const { requirements } = req.body;
+    const userId = req.user?.id;
+    if (!userId)
+        return res.status(401).json({ error: 'User not authenticated' });
+    if (!requirements || !Array.isArray(requirements) || requirements.length === 0) {
+        return res.status(400).json({ error: 'No requirements provided' });
+    }
+    try {
+        const result = await (0, requirementGroupService_1.createRequirementGroup)(userId, requirements);
+        // Notify Approvers (Leader of the area, Coordinators, Directors)
+        const approvers = await index_1.prisma.user.findMany({
+            where: {
+                role: { in: ['LEADER', 'COORDINATOR', 'DIRECTOR', 'ADMIN'] }
+            }
+        });
+        for (const approver of approvers) {
+            await index_1.prisma.notification.create({
+                data: {
+                    userId: approver.id,
+                    title: 'Nueva Solicitud Múltiple',
+                    message: `Se ha creado una solicitud agrupada (ID: ${result.group.id}) con ${requirements.length} items.`,
+                    type: 'INFO'
+                }
+            });
+        }
+        res.status(201).json(result);
+    }
+    catch (error) {
+        console.error("Mass create error:", error);
+        res.status(500).json({ error: 'Failed to create mass requirements', details: error.message });
+    }
+};
+exports.createMassRequirements = createMassRequirements;
 const getMyRequirements = async (req, res) => {
     const userId = req.user?.id;
     const year = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
@@ -90,7 +125,21 @@ const getMyRequirements = async (req, res) => {
                 project: true,
                 area: true,
                 supplier: true,
-                payments: true
+                payments: true,
+                budget: {
+                    select: {
+                        id: true,
+                        title: true,
+                        code: true,
+                        category: {
+                            select: {
+                                id: true,
+                                name: true,
+                                code: true
+                            }
+                        }
+                    }
+                }
             },
             orderBy: { createdAt: 'desc' }
         });
@@ -114,7 +163,8 @@ const getRequirementById = async (req, res) => {
                 attachments: true,
                 logs: {
                     orderBy: { createdAt: 'desc' }
-                }
+                },
+                group: true
             }
         });
         if (!requirement) {
@@ -258,6 +308,20 @@ const getAllRequirements = async (req, res) => {
                 area: true,
                 supplier: true,
                 payments: true,
+                budget: {
+                    select: {
+                        id: true,
+                        title: true,
+                        code: true,
+                        category: {
+                            select: {
+                                id: true,
+                                name: true,
+                                code: true
+                            }
+                        }
+                    }
+                },
                 createdBy: {
                     select: {
                         id: true,
@@ -395,6 +459,123 @@ const getAsientos = async (req, res) => {
     }
 };
 exports.getAsientos = getAsientos;
+const approveRequirementGroup = async (req, res) => {
+    const { id } = req.params; // Group ID
+    const { comments } = req.body;
+    const userRole = req.user?.role;
+    const userId = req.user?.id;
+    try {
+        const group = await index_1.prisma.requirementGroup.findUnique({
+            where: { id: parseInt(id) },
+            include: { requirements: true }
+        });
+        if (!group)
+            return res.status(404).json({ error: 'Group not found' });
+        const updateData = {};
+        let actionLabel = '';
+        if (userRole === 'LEADER') {
+            updateData.leaderApproval = true;
+            updateData.leaderComment = comments;
+            actionLabel = 'Líder';
+        }
+        else if (userRole === 'COORDINATOR') {
+            updateData.coordinatorApproval = true;
+            updateData.coordinatorComment = comments;
+            actionLabel = 'Coordinador';
+        }
+        else if (userRole === 'DIRECTOR' || userRole === 'ADMIN' || userRole === 'DEVELOPER') {
+            updateData.directorApproval = true;
+            updateData.directorComment = comments;
+            actionLabel = 'Dirección';
+        }
+        else {
+            return res.status(403).json({ error: 'No tienes permisos para aprobar' });
+        }
+        const requirements = await index_1.prisma.requirement.updateMany({
+            where: { groupId: parseInt(id) },
+            data: updateData
+        });
+        // If both Coordinator and Director approved (or just Director/Admin who can override)
+        // Check current status of requirements in group to see if we should mark the whole thing as APPROVED
+        const updatedReqs = await index_1.prisma.requirement.findMany({ where: { groupId: parseInt(id) } });
+        const allApproved = updatedReqs.every(r => (r.coordinatorApproval && r.directorApproval) ||
+            (userRole === 'DIRECTOR' || userRole === 'ADMIN' || userRole === 'DEVELOPER'));
+        if (allApproved) {
+            await index_1.prisma.requirement.updateMany({
+                where: { groupId: parseInt(id) },
+                data: { status: 'APPROVED' }
+            });
+        }
+        // Log and Notify
+        await index_1.prisma.historyLog.create({
+            data: {
+                action: 'GROUP_APPROVED',
+                details: `Grupo ${id} aprobado por ${actionLabel} (${req.user?.email}). ${comments || ''}`,
+                requirementId: group.requirements[0]?.id || '' // Link to first for reference
+            }
+        });
+        res.json({ message: `Solicitud aprobada por ${actionLabel}`, allApproved });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Approval failed', details: error.message });
+    }
+};
+exports.approveRequirementGroup = approveRequirementGroup;
+const rejectRequirementGroup = async (req, res) => {
+    const { id } = req.params;
+    const { comments } = req.body;
+    const userRole = req.user?.role;
+    try {
+        await index_1.prisma.requirement.updateMany({
+            where: { groupId: parseInt(id) },
+            data: {
+                status: 'REJECTED',
+                leaderComment: userRole === 'LEADER' ? comments : undefined,
+                coordinatorComment: userRole === 'COORDINATOR' ? comments : undefined,
+                directorComment: (userRole === 'DIRECTOR' || userRole === 'ADMIN') ? comments : undefined
+            }
+        });
+        res.json({ message: 'Solicitud rechazada' });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Rejection failed' });
+    }
+};
+exports.rejectRequirementGroup = rejectRequirementGroup;
+// Get all requirement groups (for approval view)
+const getRequirementGroups = async (req, res) => {
+    try {
+        const groups = await index_1.prisma.requirementGroup.findMany({
+            include: {
+                requirements: {
+                    include: {
+                        project: true,
+                        area: true,
+                        budget: {
+                            include: {
+                                category: true
+                            }
+                        }
+                    }
+                },
+                creator: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(groups);
+    }
+    catch (error) {
+        console.error("Error fetching requirement groups:", error);
+        res.status(500).json({ error: 'Failed to fetch groups', details: error.message });
+    }
+};
+exports.getRequirementGroups = getRequirementGroups;
 // Create an Asiento (pre-approved requirement)
 const createAsiento = async (req, res) => {
     const userId = req.user?.id;

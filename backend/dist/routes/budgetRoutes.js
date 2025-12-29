@@ -10,6 +10,8 @@ router.use(auth_1.authMiddleware);
 router.get('/years', budgetController_1.getBudgetYears);
 // Get users for manager select (used in budget form)
 router.get('/manager-options', budgetController_1.getManagerOptions);
+// Get pending budgets for current user (manager)
+router.get('/pending-approval', budgetController_1.getPendingBudgetsForManager);
 // Get all budgets (with role-based filtering in controller)
 router.get('/', budgetController_1.getBudgets);
 // Get budget by ID

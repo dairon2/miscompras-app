@@ -4,9 +4,9 @@ const express_1 = require("express");
 const adminController_1 = require("../controllers/adminController");
 const auth_1 = require("../middlewares/auth");
 const router = (0, express_1.Router)();
-// All routes require authentication and ADMIN role
+// All routes require authentication and ADMIN or DIRECTOR role
 router.use(auth_1.authMiddleware);
-router.use((0, auth_1.roleCheck)(['ADMIN']));
+router.use((0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR']));
 // Dashboard stats
 router.get('/stats', adminController_1.getAdminStats);
 // Areas CRUD
@@ -29,4 +29,8 @@ router.get('/suppliers', adminController_1.getSuppliers);
 router.post('/suppliers', adminController_1.createSupplier);
 router.put('/suppliers/:id', adminController_1.updateSupplier);
 router.delete('/suppliers/:id', adminController_1.deleteSupplier);
+// Users Management
+router.get('/users', adminController_1.getUsers);
+router.patch('/users/toggle/:id', adminController_1.toggleUserStatus);
+router.delete('/users/:id', adminController_1.deleteUser);
 exports.default = router;

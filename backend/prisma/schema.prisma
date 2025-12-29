@@ -33,6 +33,7 @@ model User {
   budgetSubLeader      BudgetSubLeader[]
   requirementsCreated  Requirement[]      @relation("CreatedBy")
   requirementsOwned    Requirement[]      @relation("OwnedBy")
+  groupsCreated        RequirementGroup[] @relation("GroupCreator")
   area                 Area?              @relation(fields: [areaId], references: [id])
 }
 
@@ -208,6 +209,7 @@ model Requirement {
 model RequirementGroup {
   id           Int           @id @default(autoincrement())
   creatorId    String
+  creator      User          @relation("GroupCreator", fields: [creatorId], references: [id])
   pdfUrl       String?
   createdAt    DateTime      @default(now())
   requirements Requirement[]

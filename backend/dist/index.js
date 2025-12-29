@@ -318,6 +318,7 @@ const PORT = process.env.PORT || 4000;
 const allowedOrigins = [
     process.env.CORS_ORIGIN,
     'https://miscompras-front-prod-g4akhtbsagfpefbk.canadacentral-01.azurewebsites.net',
+    'https://miscompras-api-prod.azurewebsites.net',
     'http://localhost:3000'
 ].filter(Boolean);
 app.use((0, cors_1.default)({
@@ -332,8 +333,8 @@ app.use(express_1.default.json());
 app.use('/uploads', express_1.default.static('uploads'));
 // Public Routes (No auth needed)
 app.use('/api/auth', authRoutes_1.default);
-// Catalog Routes (Public for authenticated users) - Real DB queries
-app.get('/api/areas', auth_1.authMiddleware, async (req, res) => {
+// Catalog Routes (Public for registration) - Real DB queries
+app.get('/api/areas', async (req, res) => {
     try {
         const areas = await prisma.area.findMany({ orderBy: { name: 'asc' } });
         res.json(areas);

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAdminStats = exports.deleteSupplier = exports.updateSupplier = exports.createSupplier = exports.getSuppliers = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getCategories = exports.deleteProject = exports.updateProject = exports.createProject = exports.getProjects = exports.deleteArea = exports.updateArea = exports.createArea = exports.getAreas = void 0;
+exports.getAdminStats = exports.deleteUser = exports.toggleUserStatus = exports.getUsers = exports.deleteSupplier = exports.updateSupplier = exports.createSupplier = exports.getSuppliers = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getCategories = exports.deleteProject = exports.updateProject = exports.createProject = exports.getProjects = exports.deleteArea = exports.updateArea = exports.createArea = exports.getAreas = void 0;
 const index_1 = require("../index");
 // ==================== AREAS ====================
 const getAreas = async (req, res) => {
@@ -344,20 +344,73 @@ const deleteSupplier = async (req, res) => {
     }
 };
 exports.deleteSupplier = deleteSupplier;
+// ==================== USERS ====================
+const getUsers = async (req, res) => {
+    try {
+        const users = await index_1.prisma.user.findMany({
+            orderBy: { name: 'asc' },
+            include: {
+                area: { select: { name: true } }
+            }
+        });
+        res.json(users);
+    }
+    catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ error: 'Error al obtener usuarios' });
+    }
+};
+exports.getUsers = getUsers;
+const toggleUserStatus = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const user = await index_1.prisma.user.findUnique({ where: { id } });
+        if (!user)
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        const updated = await index_1.prisma.user.update({
+            where: { id },
+            data: { isActive: !user.isActive }
+        });
+        res.json(updated);
+    }
+    catch (error) {
+        console.error('Error toggling user status:', error);
+        res.status(500).json({ error: 'Error al cambiar estado' });
+    }
+};
+exports.toggleUserStatus = toggleUserStatus;
+const deleteUser = async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Can't delete self
+        if (id === req.user?.id) {
+            return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta desde aquí' });
+        }
+        await index_1.prisma.user.delete({ where: { id } });
+        res.json({ message: 'Usuario eliminado' });
+    }
+    catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ error: 'Error al eliminar usuario' });
+    }
+};
+exports.deleteUser = deleteUser;
 // ==================== STATS ====================
 const getAdminStats = async (req, res) => {
     try {
-        const [areasCount, projectsCount, categoriesCount, suppliersCount] = await Promise.all([
+        const [areasCount, projectsCount, categoriesCount, suppliersCount, usersCount] = await Promise.all([
             index_1.prisma.area.count(),
             index_1.prisma.project.count(),
             index_1.prisma.category.count(),
-            index_1.prisma.supplier.count()
+            index_1.prisma.supplier.count(),
+            index_1.prisma.user.count()
         ]);
         res.json({
             areas: areasCount,
             projects: projectsCount,
             categories: categoriesCount,
-            suppliers: suppliersCount
+            suppliers: suppliersCount,
+            users: usersCount
         });
     }
     catch (error) {

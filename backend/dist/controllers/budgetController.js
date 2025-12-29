@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getManagerOptions = exports.getBudgetYears = exports.approveBudget = exports.deleteBudget = exports.updateBudget = exports.createBudget = exports.getBudgetById = exports.getBudgets = void 0;
+exports.getManagerOptions = exports.getBudgetYears = exports.approveBudget = exports.deleteBudget = exports.updateBudget = exports.createBudget = exports.getPendingBudgetsForManager = exports.getBudgetById = exports.getBudgets = void 0;
 const index_1 = require("../index");
 const pdfService_1 = require("../services/pdfService");
 const emailService_1 = require("../services/emailService");
@@ -106,6 +106,39 @@ const getBudgetById = async (req, res) => {
     }
 };
 exports.getBudgetById = getBudgetById;
+// ==================== GET PENDING BUDGETS FOR MANAGER ====================
+const getPendingBudgetsForManager = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const userRole = req.user?.role;
+        // Build where clause based on role
+        const where = {
+            status: 'PENDING'
+        };
+        // For LEADER and USER, only show budgets where they are the manager
+        if (userRole === 'LEADER' || userRole === 'USER') {
+            where.managerId = userId;
+        }
+        // ADMIN and DIRECTOR can see all pending budgets
+        const pendingBudgets = await index_1.prisma.budget.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                project: { select: { id: true, name: true, code: true } },
+                area: { select: { id: true, name: true } },
+                category: { select: { id: true, name: true, code: true } },
+                manager: { select: { id: true, name: true, email: true } },
+                createdBy: { select: { id: true, name: true, email: true } }
+            }
+        });
+        res.json(pendingBudgets);
+    }
+    catch (error) {
+        console.error('Error fetching pending budgets:', error);
+        res.status(500).json({ error: 'Error al obtener presupuestos pendientes' });
+    }
+};
+exports.getPendingBudgetsForManager = getPendingBudgetsForManager;
 // ==================== CREATE BUDGET (DIRECTOR only) ====================
 const createBudget = async (req, res) => {
     try {
@@ -115,19 +148,44 @@ const createBudget = async (req, res) => {
         if (userRole !== 'DIRECTOR') {
             return res.status(403).json({ error: 'Solo el DIRECTOR puede crear presupuestos' });
         }
-        const { title, description, code, amount, projectId, areaId, categoryId, managerId, subLeaders, year } = req.body;
+        const { title, description, code, amount, projectId, areaId, categoryId, managerId, subLeaders, year, expirationDate } = req.body;
         if (!title || !amount || !projectId || !areaId) {
             return res.status(400).json({ error: 'Título, monto, proyecto y área son requeridos' });
+        }
+        // Generate or validate unique code
+        let budgetCode = code;
+        if (budgetCode) {
+            // Check if code already exists
+            const existingBudget = await index_1.prisma.budget.findUnique({ where: { code: budgetCode } });
+            if (existingBudget) {
+                // Append a unique suffix to make it unique
+                const timestamp = Date.now().toString(36).slice(-4);
+                budgetCode = `${budgetCode}-${timestamp}`;
+            }
+        }
+        else {
+            // Generate automatic code: PRJ-CAT-YYYY-NNN
+            const budgetCount = await index_1.prisma.budget.count({
+                where: { year: year || new Date().getFullYear() }
+            });
+            const sequenceNum = (budgetCount + 1).toString().padStart(3, '0');
+            budgetCode = `BUD-${year || new Date().getFullYear()}-${sequenceNum}`;
+            // Ensure uniqueness
+            const existingAuto = await index_1.prisma.budget.findUnique({ where: { code: budgetCode } });
+            if (existingAuto) {
+                budgetCode = `BUD-${year || new Date().getFullYear()}-${Date.now().toString(36).slice(-6)}`;
+            }
         }
         // Create budget with PENDING status
         const budget = await index_1.prisma.budget.create({
             data: {
                 title,
                 description,
-                code,
+                code: budgetCode,
                 amount: parseFloat(amount),
                 available: parseFloat(amount),
                 year: year || new Date().getFullYear(),
+                expirationDate: expirationDate ? new Date(expirationDate) : null,
                 status: 'PENDING',
                 projectId,
                 areaId,
@@ -146,7 +204,7 @@ const createBudget = async (req, res) => {
                 createdBy: { select: { name: true } }
             }
         });
-        // Generate PDF
+        // Generate PDF (optional, don't fail if error)
         try {
             const pdfUrl = await (0, pdfService_1.generateBudgetPDF)({
                 code: budget.code || undefined,
@@ -168,8 +226,32 @@ const createBudget = async (req, res) => {
                 where: { id: budget.id },
                 data: { documentUrl: pdfUrl }
             });
-            // Send email to manager if assigned
-            if (budget.manager?.email) {
+        }
+        catch (pdfError) {
+            console.error('Error generating PDF:', pdfError);
+            // Don't fail the request, PDF is optional
+        }
+        // Create notification for the assigned manager (ALWAYS, separate from PDF)
+        if (budget.managerId) {
+            try {
+                await index_1.prisma.notification.create({
+                    data: {
+                        title: 'Nuevo Presupuesto Asignado',
+                        message: `Se te ha asignado el presupuesto "${budget.title}" por ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(Number(budget.amount))} para el proyecto ${budget.project.name}. Revísalo y apruébalo.`,
+                        type: 'INFO',
+                        userId: budget.managerId,
+                        requirementId: null
+                    }
+                });
+                console.log(`Notification created for manager ${budget.managerId}`);
+            }
+            catch (notifError) {
+                console.error('Error creating notification:', notifError);
+            }
+        }
+        // Send email to manager if assigned (separate try/catch)
+        if (budget.manager?.email) {
+            try {
                 await (0, emailService_1.sendBudgetNotificationEmail)({
                     to: budget.manager.email,
                     type: 'BUDGET_CREATED',
@@ -179,10 +261,9 @@ const createBudget = async (req, res) => {
                     projectName: budget.project.name
                 });
             }
-        }
-        catch (pdfError) {
-            console.error('Error generating PDF or sending email:', pdfError);
-            // Don't fail the request, PDF is optional
+            catch (emailError) {
+                console.error('Error sending email:', emailError);
+            }
         }
         res.status(201).json(budget);
     }
@@ -368,15 +449,24 @@ exports.getBudgetYears = getBudgetYears;
 // ==================== GET USERS FOR MANAGER SELECT ====================
 const getManagerOptions = async (req, res) => {
     try {
-        const users = await index_1.prisma.user.findMany({
+        // First try to get active users
+        let users = await index_1.prisma.user.findMany({
             where: { isActive: true },
             select: { id: true, name: true, email: true, role: true, area: { select: { name: true } } },
             orderBy: { name: 'asc' }
         });
+        // If no active users, get all users as fallback
+        if (users.length === 0) {
+            users = await index_1.prisma.user.findMany({
+                select: { id: true, name: true, email: true, role: true, area: { select: { name: true } } },
+                orderBy: { name: 'asc' }
+            });
+        }
+        console.log(`Manager options: Found ${users.length} users`);
         res.json(users);
     }
     catch (error) {
-        console.error('Error fetching users:', error);
+        console.error('Error fetching users for manager options:', error);
         res.status(500).json({ error: 'Error al obtener usuarios' });
     }
 };
