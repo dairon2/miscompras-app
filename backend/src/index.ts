@@ -338,8 +338,8 @@ app.use('/uploads', express.static('uploads'));
 // Public Routes (No auth needed)
 app.use('/api/auth', authRoutes);
 
-// Catalog Routes (Public for authenticated users) - Real DB queries
-app.get('/api/areas', authMiddleware, async (req, res) => {
+// Catalog Routes (Public for registration) - Real DB queries
+app.get('/api/areas', async (req, res) => {
     try {
         const areas = await prisma.area.findMany({ orderBy: { name: 'asc' } });
         res.json(areas);

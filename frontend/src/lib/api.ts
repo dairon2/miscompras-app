@@ -50,11 +50,14 @@ api.interceptors.response.use(
 
             // No refresh token or refresh failed - redirect to login
             if (typeof window !== 'undefined' && !isRedirecting) {
-                isRedirecting = true;
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                localStorage.removeItem('refreshToken');
-                window.location.href = '/login?expired=true';
+                const isRegisterPage = window.location.pathname === '/register';
+                if (!isRegisterPage) {
+                    isRedirecting = true;
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('refreshToken');
+                    window.location.href = '/login?expired=true';
+                }
             }
         }
 
