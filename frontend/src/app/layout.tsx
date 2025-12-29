@@ -7,7 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useRef, useCallback } from "react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, User as UserIcon, Bell, Package, LayoutDashboard, Database, Briefcase, FileText, Users, Building2, Settings, Shield, Mail, MapPin, X, BookOpen, UserCog } from "lucide-react";
+import { LogOut, User as UserIcon, Bell, Package, LayoutDashboard, Database, Briefcase, FileText, Users, Building2, Settings, Shield, Mail, MapPin, X, BookOpen, UserCog, CheckCircle } from "lucide-react";
 import ToastContainer from "@/components/ToastContainer";
 import Link from "next/link";
 import Image from "next/image";
@@ -146,6 +146,9 @@ export default function RootLayout({
                 <nav className="hidden lg:flex items-center gap-10 text-[11px] font-black uppercase tracking-widest text-gray-400">
                   <NavItem href="/" icon={<LayoutDashboard size={14} />} label="Inicio" active={pathname === "/"} />
                   <NavItem icon={<FileText size={14} />} label="Requerimientos" href="/requirements" active={pathname === "/requirements" || pathname.startsWith("/requirements/")} />
+                  {['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') && (
+                    <NavItem icon={<CheckCircle size={14} />} label="Aprobaciones" href="/approvals" active={pathname === "/approvals" || pathname.startsWith("/approvals/")} />
+                  )}
                   {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && (
                     <NavItem icon={<BookOpen size={14} />} label="Asientos" href="/asientos" active={pathname === "/asientos" || pathname.startsWith("/asientos/")} />
                   )}
@@ -406,11 +409,10 @@ function MobileNavbar({ pathname, userRole }: { pathname: string, userRole: stri
     { href: "/suppliers", icon: <Package size={20} />, label: "Prov" },
   ];
 
-  // If user is ADMIN/DIRECTOR/LEADER and there's space, add Asientos or keep it in the list
-  if (['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole)) {
-    // Replace Suppliers with Asientos for higher roles or just add it
-    navItems.splice(2, 0, { href: "/asientos", icon: <BookOpen size={20} />, label: "Asientos" });
-    if (navItems.length > 5) navItems.pop(); // Keep to 5 items max
+  // If user is ADMIN/DIRECTOR/LEADER/COORDINATOR/DEVELOPER and there's space, add Approvals
+  if (['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole)) {
+    navItems.splice(1, 0, { href: "/approvals", icon: <CheckCircle size={20} />, label: "Aprobar" });
+    if (navItems.length > 5) navItems.pop();
   }
 
   return (

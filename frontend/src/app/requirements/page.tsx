@@ -79,8 +79,8 @@ export default function RequirementsPage() {
 
     // Role-based permissions
     const userRole = user?.role || 'USER';
-    const isAdmin = ['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole);
-    const canDelete = ['ADMIN', 'DIRECTOR'].includes(userRole);
+    const isAdmin = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(userRole);
+    const canDelete = ['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(userRole);
 
     useEffect(() => {
         fetchRequirements();

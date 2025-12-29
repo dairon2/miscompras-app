@@ -391,3 +391,135 @@ export const generateAdjustmentPDF = async (adjustment: AdjustmentData): Promise
         }
     });
 };
+
+// ==================== REQUIREMENT GROUP PDF ====================
+
+interface RequirementGroupData {
+    id: number;
+    creator: { name: string; email: string };
+    createdAt: Date;
+    requirements: Array<{
+        title: string;
+        description: string;
+        estimatedAmount?: number;
+        area: { name: string };
+    }>;
+}
+
+export const generateRequirementGroupPDF = async (group: RequirementGroupData): Promise<string> => {
+    console.log('[PDF Service] Starting Requirement Group PDF generation for ID:', group.id);
+
+    return new Promise((resolve, reject) => {
+        try {
+            if (!ensureUploadDir()) {
+                reject(new Error('Upload directory not available'));
+                return;
+            }
+
+            const fileName = `solicitud_compra_${group.id}_${Date.now()}.pdf`;
+            const filePath = path.join(UPLOADS_DIR, fileName);
+
+            const doc = new PDFDocument({ margin: 50, size: 'LETTER' });
+            const stream = fs.createWriteStream(filePath);
+            doc.pipe(stream);
+
+            const pageWidth = doc.page.width - 100;
+
+            // Header (Standard style)
+            doc.rect(50, 50, 80, 60).stroke();
+            doc.fontSize(8).text('MUSEO DE', 55, 65, { width: 70, align: 'center' });
+            doc.fontSize(8).text('ANTIOQUIA', 55, 78, { width: 70, align: 'center' });
+
+            doc.fontSize(14).font('Helvetica-Bold')
+                .text('SOLICITUD DE COMPRAS', 140, 55, { width: 300, align: 'center' });
+            doc.fontSize(10).font('Helvetica')
+                .text('REPORTE ADMINISTRATIVO DE REQUERIMIENTOS', 140, 75, { width: 300, align: 'center' });
+
+            // ID box
+            doc.rect(450, 50, 110, 60).stroke();
+            doc.fontSize(8).font('Helvetica-Bold').text('ID SOLICITUD', 455, 55);
+            doc.fontSize(12).font('Helvetica-Bold').fillColor('#primary-600').text(`${group.id}`, 455, 70, { width: 100, align: 'center' });
+            doc.fillColor('#000').fontSize(8).font('Helvetica').text(formatDate(group.createdAt), 455, 96, { width: 100, align: 'center' });
+
+            doc.moveTo(50, 125).lineTo(560, 125).stroke();
+
+            // Creator Info
+            doc.fontSize(10).font('Helvetica-Bold').text('INFORMACIÓN DEL SOLICITANTE', 50, 140);
+            doc.fontSize(9).font('Helvetica')
+                .text(`Nombre: ${group.creator.name}`, 50, 155)
+                .text(`Correo: ${group.creator.email}`, 50, 168)
+                .text(`Fecha: ${formatDate(group.createdAt)}`, 50, 181);
+
+            // Table
+            let yPos = 210;
+            doc.rect(50, yPos, 510, 25).fillAndStroke('#f3f4f6', '#000');
+            doc.fillColor('#000').fontSize(9).font('Helvetica-Bold');
+            doc.text('Título / Item', 55, yPos + 8);
+            doc.text('Área', 250, yPos + 8);
+            doc.text('Costo Est.', 450, yPos + 8, { width: 100, align: 'right' });
+
+            yPos += 25;
+            let total = 0;
+
+            for (const req of group.requirements) {
+                // Check if we need a new page
+                if (yPos > 650) {
+                    doc.addPage();
+                    yPos = 50;
+                }
+
+                doc.rect(50, yPos, 510, 35).stroke();
+                doc.fillColor('#000').fontSize(8).font('Helvetica-Bold').text(req.title, 55, yPos + 8, { width: 190, lineBreak: false });
+                doc.font('Helvetica').fontSize(7).text(req.description.substring(0, 100), 55, yPos + 20, { width: 190 });
+
+                doc.fontSize(8).text(req.area.name, 250, yPos + 14);
+
+                const amount = req.estimatedAmount ? Number(req.estimatedAmount) : 0;
+                doc.fontSize(8).font('Helvetica-Bold').text(formatCurrency(amount), 450, yPos + 14, { width: 100, align: 'right' });
+
+                total += amount;
+                yPos += 35;
+            }
+
+            // Total row
+            doc.rect(50, yPos, 510, 25).fillAndStroke('#f9fafb', '#000');
+            doc.fillColor('#000').fontSize(9).font('Helvetica-Bold');
+            doc.text('COSTO TOTAL ESTIMADO DE LA SOLICITUD:', 55, yPos + 8);
+            doc.text(formatCurrency(total), 450, yPos + 8, { width: 100, align: 'right' });
+
+            // Approval signatures placeholder
+            yPos += 60;
+            const sigWidth = 150;
+            doc.fontSize(8).font('Helvetica-Bold');
+
+            doc.moveTo(50, yPos).lineTo(50 + sigWidth, yPos).stroke();
+            doc.text('Firma Líder de Área', 50, yPos + 5, { width: sigWidth, align: 'center' });
+
+            doc.moveTo(230, yPos).lineTo(230 + sigWidth, yPos).stroke();
+            doc.text('Firma Coordinación', 230, yPos + 5, { width: sigWidth, align: 'center' });
+
+            doc.moveTo(410, yPos).lineTo(410 + sigWidth, yPos).stroke();
+            doc.text('Firma Dirección', 410, yPos + 5, { width: sigWidth, align: 'center' });
+
+            doc.end();
+
+            stream.on('finish', async () => {
+                const localUrl = `/uploads/pdfs/${fileName}`;
+                if (isBlobStorageAvailable()) {
+                    try {
+                        const blobUrl = await uploadToBlobStorage(filePath, `requirements/${fileName}`);
+                        if (blobUrl) {
+                            resolve(blobUrl);
+                            return;
+                        }
+                    } catch (e) { console.error('[PDF Service] Blob upload failed:', e); }
+                }
+                resolve(localUrl);
+            });
+
+            stream.on('error', reject);
+        } catch (error) {
+            reject(error);
+        }
+    });
+};

@@ -186,6 +186,13 @@ model Requirement {
   reqCategory            RequirementCategory @default(COMPRA)
   totalAmount            Decimal?            @db.Decimal(15, 2)
   year                   Int                 @default(2025)
+  groupId                Int?
+  leaderApproval         Boolean?
+  coordinatorApproval    Boolean?
+  directorApproval       Boolean?
+  leaderComment          String?
+  coordinatorComment     String?
+  directorComment        String?
   attachments            Attachment[]
   logs                   HistoryLog[]
   payments               Payment[]
@@ -195,6 +202,15 @@ model Requirement {
   currentOwner           User?               @relation("OwnedBy", fields: [currentOwnerId], references: [id])
   project                Project             @relation(fields: [projectId], references: [id])
   supplier               Supplier?           @relation(fields: [supplierId], references: [id])
+  group                  RequirementGroup?   @relation(fields: [groupId], references: [id])
+}
+
+model RequirementGroup {
+  id           Int           @id @default(autoincrement())
+  creatorId    String
+  pdfUrl       String?
+  createdAt    DateTime      @default(now())
+  requirements Requirement[]
 }
 
 model Attachment {
@@ -244,6 +260,9 @@ enum Role {
   LEADER
   DIRECTOR
   ADMIN
+  COORDINATOR
+  AUDITOR
+  DEVELOPER
 }
 
 enum BudgetStatus {
