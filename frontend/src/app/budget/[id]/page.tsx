@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import { resolveApiUrl } from "@/lib/utils";
 
 interface BudgetDetail {
     id: string;
@@ -49,6 +50,7 @@ interface BudgetDetail {
     requirements: Array<{ id: string; title: string; status: string; totalAmount?: number; createdAt: string }>;
     adjustments: Array<{
         id: string;
+        code?: string;
         type: string;
         requestedAmount: number;
         status: string;
@@ -56,6 +58,20 @@ interface BudgetDetail {
         requestedAt: string;
         requestedBy?: { id: string; name: string };
         reviewedBy?: { id: string; name: string };
+        sources?: Array<{ budget: { title: string } }>;
+    }>;
+    adjustmentSources: Array<{
+        amount: number;
+        adjustment: {
+            id: string;
+            code?: string;
+            type: string;
+            status: string;
+            reason: string;
+            requestedAt: string;
+            requestedBy?: { id: string; name: string };
+            budget: { title: string };
+        };
     }>;
 }
 
@@ -144,6 +160,35 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
 
     const executed = Number(budget.amount) - Number(budget.available);
     const progressPercent = getProgressPercent();
+
+    // Combine and unify adjustments
+    const inbound = budget.adjustments.map(adj => ({
+        id: adj.id,
+        code: adj.code,
+        date: adj.requestedAt,
+        amount: Number(adj.requestedAmount),
+        reason: adj.reason,
+        status: adj.status,
+        type: adj.type,
+        isOutbound: false,
+        sourceOrTarget: adj.type === 'TRANSFER' ? adj.sources?.map(s => s.budget.title).join(', ') : null
+    }));
+
+    const outbound = budget.adjustmentSources.map(as => ({
+        id: as.adjustment.id,
+        code: as.adjustment.code,
+        date: as.adjustment.requestedAt,
+        amount: Number(as.amount),
+        reason: as.adjustment.reason,
+        status: as.adjustment.status,
+        type: as.adjustment.type,
+        isOutbound: true,
+        sourceOrTarget: as.adjustment.budget.title
+    }));
+
+    const unifiedHistory = [...inbound, ...outbound].sort((a, b) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
 
     return (
         <div className="p-6 lg:p-12 max-w-6xl mx-auto">
@@ -266,29 +311,41 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                             <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600">
                                 <History size={20} />
                             </div>
-                            <h3 className="text-lg font-black">Historial de Ajustes ({budget.adjustments?.length || 0})</h3>
+                            <h3 className="text-lg font-black">Historial de Ajustes ({unifiedHistory.length})</h3>
                         </div>
-                        {budget.adjustments?.length > 0 ? (
+                        {unifiedHistory.length > 0 ? (
                             <div className="space-y-4">
-                                {budget.adjustments.map(adj => (
-                                    <div key={adj.id} className="p-4 bg-gray-50 dark:bg-slate-900 rounded-xl">
+                                {unifiedHistory.map(adj => (
+                                    <div key={`${adj.id}-${adj.isOutbound}`} className="p-4 bg-gray-50 dark:bg-slate-900 rounded-xl">
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
-                                                {adj.type === 'INCREASE' ? <TrendingUp size={16} className="text-green-500" /> : <TrendingDown size={16} className="text-blue-500" />}
-                                                <span className="font-bold text-sm">{adj.type === 'INCREASE' ? 'Aumento' : 'Transferencia'}</span>
+                                                {adj.isOutbound ? (
+                                                    <TrendingDown size={16} className="text-red-500" />
+                                                ) : (
+                                                    <TrendingUp size={16} className="text-green-500" />
+                                                )}
+                                                <span className="font-bold text-sm">
+                                                    {adj.type === 'INCREASE' ? 'Aumento' : (adj.isOutbound ? 'Salida' : 'Ingreso (Movimiento)')}
+                                                </span>
                                             </div>
                                             <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${adj.status === 'APPROVED' ? 'bg-green-100 text-green-700' : adj.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                                                 {adj.status}
                                             </span>
                                         </div>
                                         {adj.reason && (
-                                            <p className="text-sm text-gray-500 mb-2 italic">"{adj.reason}"</p>
+                                            <p className="text-sm text-gray-500 mb-1 italic">"{adj.reason}"</p>
+                                        )}
+                                        {adj.sourceOrTarget && (
+                                            <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-2">
+                                                {adj.isOutbound ? 'Hacia:' : 'Desde:'} {adj.sourceOrTarget}
+                                            </p>
                                         )}
                                         <div className="flex justify-between text-xs text-gray-400">
-                                            <span>Monto: {formatCurrency(Number(adj.requestedAmount))}</span>
-                                            <span>{new Date(adj.requestedAt).toLocaleDateString()}</span>
+                                            <span className={`font-black ${adj.isOutbound ? 'text-red-600' : 'text-green-600'}`}>
+                                                {adj.isOutbound ? '-' : '+'} {formatCurrency(adj.amount)}
+                                            </span>
+                                            <span>{new Date(adj.date).toLocaleDateString()}</span>
                                         </div>
-
                                     </div>
                                 ))}
                             </div>
@@ -304,7 +361,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                     {budget.documentUrl && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-xl border border-gray-100 dark:border-gray-700">
                             <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Documento</h4>
-                            <a href={budget.documentUrl.startsWith('http') ? budget.documentUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${budget.documentUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-all">
+                            <a href={resolveApiUrl(budget.documentUrl)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-all">
                                 <FileText className="text-primary-600" size={24} />
                                 <div className="flex-1">
                                     <p className="font-bold text-sm">Ver PDF</p>

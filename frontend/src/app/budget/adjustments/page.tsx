@@ -255,8 +255,8 @@ export default function AdjustmentsPage() {
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div className="flex items-start gap-4">
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${adjustment.status === 'PENDING' ? 'bg-amber-100 text-amber-600' :
-                                            adjustment.status === 'APPROVED' ? 'bg-green-100 text-green-600' :
-                                                'bg-red-100 text-red-600'
+                                        adjustment.status === 'APPROVED' ? 'bg-green-100 text-green-600' :
+                                            'bg-red-100 text-red-600'
                                         }`}>
                                         {adjustment.type === 'INCREASE' ? <TrendingUp size={24} /> : <ArrowRightCircle size={24} />}
                                     </div>
@@ -269,6 +269,11 @@ export default function AdjustmentsPage() {
                                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                                             <span className="font-bold">{adjustment.budget.title}</span> • {adjustment.budget.project.name}
                                         </p>
+                                        {adjustment.reason && (
+                                            <p className="text-xs text-gray-400 mb-2 italic line-clamp-1">
+                                                "{adjustment.reason}"
+                                            </p>
+                                        )}
                                         <div className="flex items-center gap-4 text-xs text-gray-400">
                                             <span className="flex items-center gap-1"><User size={12} />{adjustment.requestedBy.name}</span>
                                             <span className="flex items-center gap-1"><Calendar size={12} />{formatDate(adjustment.requestedAt)}</span>

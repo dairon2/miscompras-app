@@ -288,15 +288,19 @@ export const approveAdjustment = async (req: AuthRequest, res: Response) => {
 
         // ============ APPLY BUDGET CHANGES AUTOMATICALLY ============
 
-        // 1. If TRANSFER, reduce available from source budgets
+        // 1. If TRANSFER, reduce available and total amount from source budgets
         if (adjustment.type === 'TRANSFER') {
             for (const source of adjustment.sources) {
                 await prisma.budget.update({
                     where: { id: source.budgetId },
                     data: {
+                        amount: {
+                            decrement: parseFloat(source.amount.toString())
+                        },
                         available: {
                             decrement: parseFloat(source.amount.toString())
-                        }
+                        },
+                        version: { increment: 1 }
                     }
                 });
             }

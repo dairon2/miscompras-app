@@ -214,8 +214,8 @@ export const generateBudgetPDF = async (budget: BudgetData): Promise<string> => 
                         }
                     } catch (e) { console.error('[PDF Service] Blob upload failed:', e); }
                 }
-                console.log('[PDF Service] Budget PDF generated locally:', fullLocalUrl);
-                resolve(fullLocalUrl);
+                console.log('[PDF Service] Budget PDF generated locally:', localPath);
+                resolve(localPath);
             });
 
 
@@ -564,8 +564,8 @@ export const generateRequirementGroupPDF = async (group: RequirementGroupData): 
                         }
                     } catch (e) { console.error('[PDF Service] Blob upload failed:', e); }
                 }
-                console.log('[PDF Service] Requirement PDF generated locally:', fullLocalUrl);
-                resolve(fullLocalUrl);
+                console.log('[PDF Service] Requirement PDF generated locally:', localPath);
+                resolve(localPath);
             });
 
             stream.on('error', reject);

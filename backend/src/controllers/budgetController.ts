@@ -106,7 +106,22 @@ export const getBudgetById = async (req: AuthRequest, res: Response) => {
                     include: {
                         requestedBy: { select: { id: true, name: true } },
                         reviewedBy: { select: { id: true, name: true } },
-                        sources: true
+                        sources: {
+                            include: {
+                                budget: { select: { id: true, title: true } }
+                            }
+                        }
+                    }
+                },
+                adjustmentSources: {
+                    include: {
+                        adjustment: {
+                            include: {
+                                budget: { select: { id: true, title: true } },
+                                requestedBy: { select: { id: true, name: true } },
+                                reviewedBy: { select: { id: true, name: true } }
+                            }
+                        }
                     }
                 }
             }

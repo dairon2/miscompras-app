@@ -8,6 +8,7 @@ import {
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
+import { resolveApiUrl } from "@/lib/utils";
 
 interface Requirement {
     id: string;
@@ -190,7 +191,7 @@ export default function ApprovalsPage() {
                                 <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
                                     {group.pdfUrl && (
                                         <a
-                                            href={group.pdfUrl}
+                                            href={resolveApiUrl(group.pdfUrl)}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl text-gray-400 hover:text-red-500 transition-colors border border-gray-100 dark:border-gray-700"

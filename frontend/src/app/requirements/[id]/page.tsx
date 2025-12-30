@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import { resolveApiUrl } from "@/lib/utils";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -460,7 +461,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                             </div>
                                         </div>
                                         <a
-                                            href={file.fileUrl.startsWith('http') ? file.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${file.fileUrl}`}
+                                            href={resolveApiUrl(file.fileUrl)}
                                             download
                                             onClick={(e) => e.stopPropagation()}
                                             className="p-2 text-gray-400 hover:text-primary-500 transition-colors hover:bg-white dark:hover:bg-slate-800 rounded-lg"
