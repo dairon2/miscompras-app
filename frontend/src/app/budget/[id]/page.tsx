@@ -304,7 +304,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                     {budget.documentUrl && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-xl border border-gray-100 dark:border-gray-700">
                             <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Documento</h4>
-                            <a href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${budget.documentUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-all">
+                            <a href={budget.documentUrl.startsWith('http') ? budget.documentUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${budget.documentUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-all">
                                 <FileText className="text-primary-600" size={24} />
                                 <div className="flex-1">
                                     <p className="font-bold text-sm">Ver PDF</p>
