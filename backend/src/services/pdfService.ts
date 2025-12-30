@@ -389,8 +389,20 @@ export const generateAdjustmentPDF = async (adjustment: AdjustmentData): Promise
 
             doc.end();
 
-            stream.on('finish', () => {
-                resolve(`/uploads/pdfs/${fileName}`);
+            stream.on('finish', async () => {
+                const localPath = `/uploads/pdfs/${fileName}`;
+                if (isBlobStorageAvailable()) {
+                    try {
+                        const blobUrl = await uploadToBlobStorage(filePath, `adjustments/${fileName}`);
+                        if (blobUrl) {
+                            console.log('[PDF Service] Adjustment PDF uploaded to Blob:', blobUrl);
+                            resolve(blobUrl);
+                            return;
+                        }
+                    } catch (e) { console.error('[PDF Service] Blob upload failed for adjustment:', e); }
+                }
+                console.log('[PDF Service] Adjustment PDF generated locally:', localPath);
+                resolve(localPath);
             });
 
             stream.on('error', reject);
