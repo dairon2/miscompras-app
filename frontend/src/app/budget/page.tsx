@@ -14,6 +14,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
 import VisualDashboard from "./VisualDashboard";
+import * as XLSX from 'xlsx';
 
 interface Budget {
     id: string;
@@ -245,6 +246,40 @@ export default function BudgetsPage() {
         );
     });
 
+    // Export to Excel function
+    const exportToExcel = () => {
+        const data = filteredBudgets.map(b => {
+            const monto = safeNumber(b.amount);
+            const disponible = safeNumber(b.available);
+            const ejecutado = monto - disponible;
+            return {
+                'Proyecto': b.project?.name || '',
+                'Presupuesto': b.title,
+                'Rubro': b.category?.name || '',
+                'Monto': monto,
+                'Ejecutado': ejecutado,
+                'Saldo': disponible
+            };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(data);
+
+        // Set column widths
+        worksheet['!cols'] = [
+            { wch: 35 }, // Proyecto
+            { wch: 30 }, // Presupuesto
+            { wch: 25 }, // Rubro
+            { wch: 15 }, // Monto
+            { wch: 15 }, // Ejecutado
+            { wch: 15 }, // Saldo
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, `Presupuestos ${selectedYear}`);
+        XLSX.writeFile(workbook, `Presupuestos_${selectedYear}.xlsx`);
+        addToast('Archivo Excel descargado correctamente', 'success');
+    };
+
     // Handle create/edit budget
     const handleSaveBudget = async () => {
         try {
@@ -363,6 +398,16 @@ export default function BudgetsPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {/* Export to Excel button */}
+                    <button
+                        onClick={exportToExcel}
+                        className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:from-green-600 hover:to-emerald-700 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
+                        title="Descargar Excel"
+                    >
+                        <FileSpreadsheet size={18} />
+                        <span>Descargar Excel</span>
+                    </button>
+
                     {/* Year selector */}
                     <div className="relative group">
                         <select
