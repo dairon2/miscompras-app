@@ -90,7 +90,14 @@ const login = async (req, res) => {
     }
     // --- END MOCK LOGIN ---
     try {
-        const user = await index_1.prisma.user.findUnique({ where: { email } });
+        const user = await index_1.prisma.user.findUnique({
+            where: { email },
+            include: {
+                areasDirected: {
+                    select: { id: true, name: true }
+                }
+            }
+        });
         if (!user) {
             // Generic error message for security
             return res.status(401).json({ error: 'Credenciales inválidas' });
@@ -135,7 +142,9 @@ const login = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 name: user.name,
-                areaId: user.areaId
+                areaId: user.areaId,
+                isAreaDirector: user.areasDirected?.length > 0,
+                directedAreas: user.areasDirected || []
             }
         });
     }
@@ -228,6 +237,11 @@ const refreshToken = async (req, res) => {
                 refreshToken,
                 refreshTokenExpires: {
                     gt: new Date()
+                }
+            },
+            include: {
+                areasDirected: {
+                    select: { id: true, name: true }
                 }
             }
         });

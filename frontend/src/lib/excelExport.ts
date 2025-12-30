@@ -61,29 +61,37 @@ export const exportToExcel = ({ filename, sheetName, columns, data }: ExportOpti
 
 export const exportRequirements = (requirements: any[]) => {
     const columns: ExportColumn[] = [
-        { header: 'ID', key: 'id', width: 15 },
-        { header: 'Título', key: 'title', width: 40 },
-        { header: 'Monto', key: 'totalAmount', width: 15 },
-        { header: 'Estado Trámite', key: 'procurementStatus', width: 20 },
-        { header: 'Proyecto', key: 'projectName', width: 25 },
-        { header: 'Área', key: 'areaName', width: 20 },
-        { header: 'Líder', key: 'leaderName', width: 25 },
-        { header: 'Fecha', key: 'createdAt', width: 15 }
+        { header: 'NÚMERO DE REQUERIMIENTO', key: 'id', width: 20 },
+        { header: 'TITULO REQUERIMIENTO', key: 'title', width: 45 },
+        { header: 'VALOR DE LA COMPRA', key: 'value', width: 20 },
+        { header: 'NÚMERO DE FACTURA', key: 'invoice', width: 20 },
+        { header: 'NÚMERO DE ORDEN DE COMPRA', key: 'oc', width: 25 },
+        { header: 'RUBRO', key: 'rubro', width: 35 },
+        { header: 'PRESUPUESTO', key: 'budget', width: 30 },
+        { header: 'PROYECTO', key: 'project', width: 30 },
+        { header: 'PROVEEDOR', key: 'supplier', width: 30 },
+        { header: 'ESTADO', key: 'status', width: 15 },
+        { header: 'CATEGORÍA', key: 'category', width: 20 },
+        { header: 'FECHA DE SOLICITUD', key: 'date', width: 25 }
     ];
 
     const data = requirements.map(r => ({
         id: r.id?.substring(0, 8).toUpperCase() || '',
         title: r.title || '',
-        totalAmount: `$${parseFloat(r.totalAmount || 0).toLocaleString('es-CO')}`,
-        procurementStatus: r.procurementStatus || 'PENDIENTE',
-        projectName: r.project?.name || 'N/A',
-        areaName: r.area?.name || 'N/A',
-        leaderName: r.createdBy?.name || r.createdBy?.email || 'N/A',
-        createdAt: new Date(r.createdAt).toLocaleDateString('es-CO')
+        value: r.actualAmount ? `$${parseFloat(r.actualAmount).toLocaleString('es-CO')}` : r.estimatedAmount ? `$${parseFloat(r.estimatedAmount).toLocaleString('es-CO')}` : '$0',
+        invoice: r.invoiceNumber || '',
+        oc: r.purchaseOrderNumber || '',
+        rubro: r.budget?.category ? `${r.budget.category.code || ''} ${r.budget.category.name || ''}`.trim() : 'Sin rubro',
+        budget: r.budget?.title || 'Sin presupuesto',
+        project: r.project?.name || 'Sin proyecto',
+        supplier: r.supplier?.name || r.manualSupplierName || 'No definido',
+        status: r.procurementStatus || 'PENDIENTE',
+        category: r.reqCategory?.replace(/_/g, ' ') || 'REQUERIMIENTO',
+        date: r.createdAt ? new Date(r.createdAt).toLocaleString('es-CO') : ''
     }));
 
     exportToExcel({
-        filename: `Reporte_Requerimientos_${new Date().toISOString().split('T')[0]}`,
+        filename: `Requerimientos_${new Date().toISOString().split('T')[0]}`,
         sheetName: 'Requerimientos',
         columns,
         data

@@ -7,6 +7,8 @@ export interface User {
     name?: string;
     role: string;
     areaId?: string;
+    isAreaDirector?: boolean;
+    directedAreas?: Array<{ id: string; name: string }>;
 }
 
 interface AuthState {

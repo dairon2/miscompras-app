@@ -24,7 +24,8 @@ import {
     X,
     Save,
     Info,
-    Loader2
+    Loader2,
+    Tag
 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
@@ -53,10 +54,13 @@ interface Requirement {
     attachments: Attachment[];
     purchaseOrderNumber?: string;
     invoiceNumber?: string;
+    deliveryDate?: string;
+    receivedDate?: string;
+    reqCategory: string;
     createdAt: string;
     project: { name: string };
     area: { name: string };
-    supplier?: { name: string };
+    supplier?: { id: string; name: string };
     createdBy: { id: string; name?: string; email: string };
     createdById: string;
     receivedAtSatisfaction: boolean;
@@ -76,7 +80,9 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     const [editForm, setEditForm] = useState<any>({});
     const [projects, setProjects] = useState([]);
     const [areas, setAreas] = useState([]);
-    const [suppliers, setSuppliers] = useState([]);
+    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [newFiles, setNewFiles] = useState<File[]>([]);
+    const [deleteAttachmentIds, setDeleteAttachmentIds] = useState<string[]>([]);
 
     // Status Change State
     interface StatusForm {
@@ -106,6 +112,17 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
         { value: 'POSTERGADO', label: 'Postergado' }
     ];
 
+    const categoryOptions = [
+        { value: 'COMPRA', label: 'Compra' },
+        { value: 'SERVICIO', label: 'Servicio' },
+        { value: 'ORDEN_COMPRA', label: 'Orden de Compra' },
+        { value: 'ORDEN_SERVICIO', label: 'Orden de Servicio' },
+        { value: 'ANTICIPO', label: 'Anticipo' },
+        { value: 'CONTRATO', label: 'Contrato' },
+        { value: 'ORDEN_PRODUCCION', label: 'Orden de Producción' },
+        { value: 'COMPRA_ONLINE', label: 'Compra Online' }
+    ];
+
     const getStatusLabel = (status: string) => {
         return requestStatusOptions.find(opt => opt.value === status)?.label || status;
     };
@@ -130,12 +147,16 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                 actualAmount: response.data.actualAmount || '',
                 projectId: response.data.projectId,
                 areaId: response.data.areaId,
-                supplierId: response.data.supplierId,
+                supplierId: response.data.supplierId || '',
                 manualSupplierName: response.data.manualSupplierName || '',
                 purchaseOrderNumber: response.data.purchaseOrderNumber || '',
                 invoiceNumber: response.data.invoiceNumber || '',
                 status: response.data.status,
-                procurementStatus: response.data.procurementStatus
+                procurementStatus: response.data.procurementStatus,
+                reqCategory: response.data.reqCategory,
+                deliveryDate: response.data.deliveryDate ? response.data.deliveryDate.split('T')[0] : '',
+                receivedDate: response.data.receivedDate ? response.data.receivedDate.split('T')[0] : '',
+                receivedAtSatisfaction: response.data.receivedAtSatisfaction
             });
             setStatusForm({
                 status: response.data.status,
@@ -143,6 +164,8 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                 remarks: '',
                 receivedAtSatisfaction: false
             });
+            setNewFiles([]);
+            setDeleteAttachmentIds([]);
         } catch (err) {
             console.error("Error fetching requirement", err);
         } finally {
@@ -197,10 +220,31 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     const handleSaveEdit = async () => {
         setActionLoading(true);
         try {
-            await api.put(`/requirements/${id}`, editForm);
+            const formData = new FormData();
+            Object.keys(editForm).forEach(key => {
+                if (editForm[key] !== undefined && editForm[key] !== null) {
+                    formData.append(key, editForm[key]);
+                } else if (editForm[key] === null || editForm[key] === '') {
+                    formData.append(key, 'null');
+                }
+            });
+
+            deleteAttachmentIds.forEach(id => {
+                formData.append('deleteAttachmentIds', id);
+            });
+
+            newFiles.forEach(file => {
+                formData.append('attachments', file);
+            });
+
+            await api.put(`/requirements/${id}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
             setIsEditing(false);
             await fetchRequirement();
         } catch (err) {
+            console.error("Save error:", err);
             alert("Error al guardar los cambios");
         } finally {
             setActionLoading(false);
@@ -357,12 +401,27 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             <InfoItem icon={<Building />} label="Proyecto" value={requirement.project.name} />
                             <InfoItem icon={<Package />} label="Área" value={requirement.area.name} />
                             <InfoItem icon={<User />} label="Solicitado por" value={requirement.createdBy.name || requirement.createdBy.email} />
+                            <InfoItem
+                                icon={<Tag />}
+                                label="Categoría"
+                                value={categoryOptions.find(o => o.value === requirement.reqCategory)?.label || requirement.reqCategory}
+                            />
                             {requirement.purchaseOrderNumber && (
                                 <InfoItem icon={<FileText className="text-blue-500" />} label="Orden de Compra" value={requirement.purchaseOrderNumber} />
                             )}
                         </div>
                         <div className="space-y-6">
                             <InfoItem icon={<Calendar />} label="Fecha de Solicitud" value={new Date(requirement.createdAt).toLocaleDateString()} />
+                            <InfoItem
+                                icon={<Calendar className="text-orange-500" />}
+                                label="Fecha Acordada"
+                                value={requirement.deliveryDate ? new Date(requirement.deliveryDate).toLocaleDateString() : "No definida"}
+                            />
+                            <InfoItem
+                                icon={<Calendar className="text-green-500" />}
+                                label="Fecha de Recepción"
+                                value={requirement.receivedDate ? new Date(requirement.receivedDate).toLocaleDateString() : "Pendiente"}
+                            />
                             <InfoItem
                                 icon={<DollarSign />}
                                 label="Monto Real"
@@ -620,7 +679,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden"
+                        className="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden"
                     >
                         <div className="p-8 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/50">
                             <h3 className="text-xl font-black tracking-tight uppercase">Editar Requerimiento</h3>
@@ -629,63 +688,188 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             </button>
                         </div>
 
-                        <div className="p-10 max-h-[70vh] overflow-y-auto space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Cantidad / Unidades</label>
-                                <input
-                                    type="text"
-                                    value={editForm.quantity}
-                                    onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
-                                    placeholder="Ej: 5 unidades"
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Valor Real de Compra</label>
-                                <input
-                                    type="number"
-                                    value={editForm.actualAmount}
-                                    onChange={(e) => setEditForm({ ...editForm, actualAmount: e.target.value })}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none text-green-600"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Factura</label>
-                                <input
-                                    type="text"
-                                    value={editForm.invoiceNumber}
-                                    onChange={(e) => setEditForm({ ...editForm, invoiceNumber: e.target.value })}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Orden de Compra</label>
-                                <input
-                                    type="text"
-                                    value={editForm.purchaseOrderNumber}
-                                    onChange={(e) => setEditForm({ ...editForm, purchaseOrderNumber: e.target.value })}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                />
-                            </div>
-                            {editForm.manualSupplierName && (
-                                <div className="space-y-2 md:col-span-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Proveedor Sugerido (Manual)</label>
-                                    <input
-                                        type="text"
-                                        value={editForm.manualSupplierName}
-                                        onChange={(e) => setEditForm({ ...editForm, manualSupplierName: e.target.value })}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                    />
+                        <div className="p-10 max-h-[75vh] overflow-y-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Left Column */}
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Título de la Solicitud</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.title}
+                                            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Cantidad / Unidades</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.quantity}
+                                                onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Valor Real de Compra</label>
+                                            <input
+                                                type="number"
+                                                value={editForm.actualAmount}
+                                                onChange={(e) => setEditForm({ ...editForm, actualAmount: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none text-green-600"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Factura</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.invoiceNumber}
+                                                onChange={(e) => setEditForm({ ...editForm, invoiceNumber: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Orden de Compra</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.purchaseOrderNumber}
+                                                onChange={(e) => setEditForm({ ...editForm, purchaseOrderNumber: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Proveedor Asignado</label>
+                                        <select
+                                            value={editForm.supplierId}
+                                            onChange={(e) => setEditForm({ ...editForm, supplierId: e.target.value, manualSupplierName: '' })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                        >
+                                            <option value="">(Sin asignar)</option>
+                                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Estado del Trámite</label>
+                                        <select
+                                            value={editForm.procurementStatus}
+                                            onChange={(e) => setEditForm({ ...editForm, procurementStatus: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                        >
+                                            {procurementStatusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                        </select>
+                                    </div>
                                 </div>
-                            )}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Descripción</label>
-                                <textarea
-                                    rows={3}
-                                    value={editForm.description}
-                                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none resize-none"
-                                />
+
+                                {/* Right Column */}
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Categoría del Requerimiento</label>
+                                        <select
+                                            value={editForm.reqCategory}
+                                            onChange={(e) => setEditForm({ ...editForm, reqCategory: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                        >
+                                            {categoryOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Fecha Acordada</label>
+                                            <input
+                                                type="date"
+                                                value={editForm.deliveryDate}
+                                                onChange={(e) => setEditForm({ ...editForm, deliveryDate: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Fecha Recibido</label>
+                                            <input
+                                                type="date"
+                                                value={editForm.receivedDate}
+                                                onChange={(e) => setEditForm({ ...editForm, receivedDate: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Descripción</label>
+                                        <textarea
+                                            rows={2}
+                                            value={editForm.description}
+                                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none resize-none"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Archivos Adjuntos</label>
+
+                                        {/* Existing attachments */}
+                                        <div className="space-y-2">
+                                            {requirement.attachments.filter(a => !deleteAttachmentIds.includes(a.id)).map(att => (
+                                                <div key={att.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900/50 rounded-xl border border-gray-100 dark:border-gray-700">
+                                                    <span className="text-xs font-bold truncate flex-1 pr-2">{att.fileName}</span>
+                                                    <button
+                                                        onClick={() => setDeleteAttachmentIds([...deleteAttachmentIds, att.id])}
+                                                        className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {deleteAttachmentIds.length > 0 && (
+                                                <p className="text-[10px] text-red-500 font-bold ml-2">
+                                                    {deleteAttachmentIds.length} archivo(s) marcados para eliminar
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* New files upload */}
+                                        <div className="space-y-2">
+                                            <input
+                                                type="file"
+                                                multiple
+                                                id="file-upload-edit"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    if (e.target.files) {
+                                                        setNewFiles([...newFiles, ...Array.from(e.target.files)]);
+                                                    }
+                                                }}
+                                            />
+                                            <label
+                                                htmlFor="file-upload-edit"
+                                                className="flex items-center justify-center gap-2 w-full p-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl text-gray-500 hover:border-primary-500 hover:text-primary-500 cursor-pointer transition-all font-bold text-xs"
+                                            >
+                                                <Paperclip size={16} /> Subir nuevos archivos
+                                            </label>
+
+                                            {newFiles.length > 0 && (
+                                                <div className="space-y-1">
+                                                    {newFiles.map((f, i) => (
+                                                        <div key={i} className="flex items-center justify-between text-[10px] font-bold text-primary-600 bg-primary-50 px-3 py-1.5 rounded-lg">
+                                                            <span className="truncate">{f.name}</span>
+                                                            <button onClick={() => setNewFiles(newFiles.filter((_, idx) => idx !== i))}>
+                                                                <X size={12} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -699,9 +883,9 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             <button
                                 onClick={handleSaveEdit}
                                 disabled={actionLoading}
-                                className="flex-[2] bg-primary-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 transition-all flex items-center justify-center gap-2 tracking-widest uppercase text-xs"
+                                className="flex-[2] bg-primary-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 transition-all flex items-center justify-center gap-2 tracking-widest uppercase text-xs disabled:opacity-50"
                             >
-                                {actionLoading ? "Guardando..." : <><Save size={18} /> Guardar Cambios</>}
+                                {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Guardar Cambios</>}
                             </button>
                         </div>
                     </motion.div>

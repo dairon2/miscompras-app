@@ -34,7 +34,8 @@ model User {
   requirementsCreated  Requirement[]      @relation("CreatedBy")
   requirementsOwned    Requirement[]      @relation("OwnedBy")
   groupsCreated        RequirementGroup[] @relation("GroupCreator")
-  area                 Area?              @relation(fields: [areaId], references: [id])
+  area                 Area?              @relation("AreaUsers", fields: [areaId], references: [id])
+  areasDirected        Area[]             @relation("AreaDirector")
 }
 
 model Project {
@@ -51,11 +52,13 @@ model Project {
 model Area {
   id           String        @id @default(uuid())
   name         String        @unique
+  directorId   String?
+  director     User?         @relation("AreaDirector", fields: [directorId], references: [id])
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   budgets      Budget[]
   requirements Requirement[]
-  users        User[]
+  users        User[]        @relation("AreaUsers")
 }
 
 model Supplier {
@@ -178,6 +181,7 @@ model Requirement {
   purchaseOrderNumber    String?
   invoiceNumber          String?
   deliveryDate           DateTime?
+  receivedDate           DateTime?
   receivedAtSatisfaction Boolean             @default(false)
   satisfactionComments   String?
   createdAt              DateTime            @default(now())

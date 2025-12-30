@@ -8,6 +8,13 @@ const getAreas = async (req, res) => {
         const areas = await index_1.prisma.area.findMany({
             orderBy: { name: 'asc' },
             include: {
+                director: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                },
                 _count: {
                     select: { users: true }
                 }
@@ -22,7 +29,7 @@ const getAreas = async (req, res) => {
 };
 exports.getAreas = getAreas;
 const createArea = async (req, res) => {
-    const { name } = req.body;
+    const { name, directorId } = req.body;
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
     }
@@ -32,7 +39,15 @@ const createArea = async (req, res) => {
             return res.status(400).json({ error: 'Ya existe un área con ese nombre' });
         }
         const area = await index_1.prisma.area.create({
-            data: { name: name.trim() }
+            data: {
+                name: name.trim(),
+                directorId: directorId || null
+            },
+            include: {
+                director: {
+                    select: { id: true, name: true, email: true }
+                }
+            }
         });
         res.status(201).json(area);
     }
@@ -44,14 +59,22 @@ const createArea = async (req, res) => {
 exports.createArea = createArea;
 const updateArea = async (req, res) => {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, directorId } = req.body;
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
     }
     try {
         const area = await index_1.prisma.area.update({
             where: { id },
-            data: { name: name.trim() }
+            data: {
+                name: name.trim(),
+                directorId: directorId || null
+            },
+            include: {
+                director: {
+                    select: { id: true, name: true, email: true }
+                }
+            }
         });
         res.json(area);
     }

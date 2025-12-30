@@ -10,6 +10,13 @@ export const getAreas = async (req: AuthRequest, res: Response) => {
         const areas = await prisma.area.findMany({
             orderBy: { name: 'asc' },
             include: {
+                director: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                },
                 _count: {
                     select: { users: true }
                 }
@@ -23,7 +30,7 @@ export const getAreas = async (req: AuthRequest, res: Response) => {
 };
 
 export const createArea = async (req: AuthRequest, res: Response) => {
-    const { name } = req.body;
+    const { name, directorId } = req.body;
 
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
@@ -36,7 +43,15 @@ export const createArea = async (req: AuthRequest, res: Response) => {
         }
 
         const area = await prisma.area.create({
-            data: { name: name.trim() }
+            data: {
+                name: name.trim(),
+                directorId: directorId || null
+            },
+            include: {
+                director: {
+                    select: { id: true, name: true, email: true }
+                }
+            }
         });
         res.status(201).json(area);
     } catch (error: any) {
@@ -47,7 +62,7 @@ export const createArea = async (req: AuthRequest, res: Response) => {
 
 export const updateArea = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, directorId } = req.body;
 
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
@@ -56,7 +71,15 @@ export const updateArea = async (req: AuthRequest, res: Response) => {
     try {
         const area = await prisma.area.update({
             where: { id },
-            data: { name: name.trim() }
+            data: {
+                name: name.trim(),
+                directorId: directorId || null
+            },
+            include: {
+                director: {
+                    select: { id: true, name: true, email: true }
+                }
+            }
         });
         res.json(area);
     } catch (error: any) {

@@ -33,7 +33,11 @@ interface Requirement {
     title: string;
     description?: string;
     status: string;
+    procurementStatus?: string;
     actualAmount?: string;
+    estimatedAmount?: string;
+    invoiceNumber?: string;
+    purchaseOrderNumber?: string;
     project?: { name: string };
     area?: { name: string };
     budget?: {

@@ -20,16 +20,34 @@ const getBudgets = async (req, res) => {
             where.areaId = areaId;
         if (status)
             where.status = status;
-        // Role-based access: USER only sees budgets where they are leader or subleader
-        if (userRole === 'USER') {
-            where.OR = [
-                { managerId: userId },
-                { subLeaders: { some: { userId } } }
-            ];
-            // Also filter only approved budgets for regular users
-            where.status = 'APPROVED';
+        // Role-based access logic
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole || '');
+        if (!isGlobalViewer) {
+            // Check if user is director of any area
+            const directedAreas = await index_1.prisma.area.findMany({
+                where: { directorId: userId },
+                select: { id: true }
+            });
+            const directedAreaIds = directedAreas.map(a => a.id);
+            if (directedAreaIds.length > 0) {
+                // User is area director: can see their area, or where they are manager/subleader
+                where.OR = [
+                    { areaId: { in: directedAreaIds } },
+                    { managerId: userId },
+                    { subLeaders: { some: { userId } } }
+                ];
+            }
+            else {
+                // Regular USER logic
+                where.OR = [
+                    { managerId: userId },
+                    { subLeaders: { some: { userId } } }
+                ];
+                // Regular users only see approved budgets
+                where.status = 'APPROVED';
+            }
         }
-        // ADMIN, DIRECTOR and LEADER can see all budgets by default
+        // ADMIN, DIRECTOR (global) and LEADER see everything (no extra filters)
         const budgets = await index_1.prisma.budget.findMany({
             where,
             orderBy: [{ createdAt: 'desc' }],

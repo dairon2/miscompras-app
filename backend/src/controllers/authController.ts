@@ -105,7 +105,14 @@ export const login = async (req: Request, res: Response) => {
     // --- END MOCK LOGIN ---
 
     try {
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({
+            where: { email },
+            include: {
+                areasDirected: {
+                    select: { id: true, name: true }
+                }
+            }
+        });
 
         if (!user) {
             // Generic error message for security
@@ -162,7 +169,9 @@ export const login = async (req: Request, res: Response) => {
                 email: user.email,
                 role: user.role,
                 name: user.name,
-                areaId: user.areaId
+                areaId: user.areaId,
+                isAreaDirector: (user as any).areasDirected?.length > 0,
+                directedAreas: (user as any).areasDirected || []
             }
         });
     } catch (error: any) {
@@ -268,6 +277,11 @@ export const refreshToken = async (req: Request, res: Response) => {
                 refreshToken,
                 refreshTokenExpires: {
                     gt: new Date()
+                }
+            },
+            include: {
+                areasDirected: {
+                    select: { id: true, name: true }
                 }
             }
         });

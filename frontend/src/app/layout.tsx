@@ -152,7 +152,7 @@ export default function RootLayout({
                 <nav className="hidden lg:flex items-center gap-10 text-[11px] font-black uppercase tracking-widest text-gray-400">
                   <NavItem href="/" icon={<LayoutDashboard size={14} />} label="Inicio" active={pathname === "/"} />
                   <NavItem icon={<FileText size={14} />} label="Requerimientos" href="/requirements" active={pathname === "/requirements" || pathname.startsWith("/requirements/")} />
-                  {['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') && (
+                  {['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') && (
                     <NavItem icon={<CheckCircle size={14} />} label="Aprobaciones" href="/approvals" active={pathname === "/approvals" || pathname.startsWith("/approvals/")} />
                   )}
                   {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && (
@@ -160,7 +160,7 @@ export default function RootLayout({
                   )}
                   <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers"} />
                   <NavItem icon={<Building2 size={14} />} label="Presupuestos" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
-                  {['ADMIN', 'DIRECTOR'].includes(user?.role || '') && (
+                  {(['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(user?.role || '') || user?.isAreaDirector) && (
                     <NavItem icon={<Settings size={14} />} label="Administración" href="/admin" active={pathname === "/admin" || pathname.startsWith("/admin")} />
                   )}
                 </nav>

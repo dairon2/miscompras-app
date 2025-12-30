@@ -71,10 +71,11 @@ export default function AdminPage() {
     // Search
     const [searchTerm, setSearchTerm] = useState('');
 
-    // ADMIN and DIRECTOR can access catalog management
-    const isAdmin = user?.role === 'ADMIN';
+    // ADMIN, DIRECTOR and Area Directors can access certain management features
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'DEVELOPER' || user?.role === 'LEADER';
     const isDirector = user?.role === 'DIRECTOR';
-    const canManageCatalogs = isAdmin || isDirector;
+    const isAreaDirector = user?.isAreaDirector;
+    const canManageCatalogs = isAdmin || isDirector || isAreaDirector;
 
     useEffect(() => {
         if (canManageCatalogs) {
@@ -118,18 +119,30 @@ export default function AdminPage() {
         setEditingItem(null);
         setFormData(getEmptyForm());
         setShowModal(true);
+        // Load users for director selection when editing areas
+        if (activeTab === 'areas' && usersList.length === 0) {
+            api.get('/admin/users').then(res => setUsersList(res.data)).catch(console.error);
+        }
     };
 
     const openEditModal = (item: any) => {
         setModalMode('edit');
         setEditingItem(item);
-        setFormData({ ...item });
+        // For areas, also set directorId from the item
+        if (activeTab === 'areas') {
+            setFormData({ ...item, directorId: item.director?.id || '' });
+            if (usersList.length === 0) {
+                api.get('/admin/users').then(res => setUsersList(res.data)).catch(console.error);
+            }
+        } else {
+            setFormData({ ...item });
+        }
         setShowModal(true);
     };
 
     const getEmptyForm = () => {
         switch (activeTab) {
-            case 'areas': return { name: '' };
+            case 'areas': return { name: '', directorId: '' };
             case 'projects': return { name: '', code: '', description: '' };
             case 'categories': return { name: '', code: '', description: '' };
             case 'suppliers': return { name: '', nit: '', contactName: '', email: '', phone: '', address: '' };
@@ -516,6 +529,7 @@ export default function AdminPage() {
                                             {activeTab === 'areas' && (
                                                 <>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Director</th>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Usuarios</th>
                                                 </>
                                             )}
@@ -565,6 +579,23 @@ export default function AdminPage() {
                                                     {activeTab === 'areas' && (
                                                         <>
                                                             <td className="px-6 py-4 font-bold">{item.name}</td>
+                                                            <td className="px-6 py-4">
+                                                                {item.director ? (
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 font-black text-xs">
+                                                                            {item.director.name?.charAt(0)?.toUpperCase()}
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="font-bold text-sm tracking-tight">{item.director.name}</p>
+                                                                            <p className="text-[10px] text-gray-500 font-medium">{item.director.email}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="px-2 py-1 bg-gray-50 dark:bg-slate-800/50 rounded-lg text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                                                        Sin asignar
+                                                                    </span>
+                                                                )}
+                                                            </td>
                                                             <td className="px-6 py-4">
                                                                 <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
                                                                     {item._count?.users || 0}
@@ -719,18 +750,33 @@ export default function AdminPage() {
                             </div>
 
                             <div className="space-y-4">
-                                {/* Areas form */}
                                 {activeTab === 'areas' && (
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-black text-gray-600">Nombre del Área *</label>
-                                        <input
-                                            type="text"
-                                            value={formData.name || ''}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                            placeholder="Ej: Curaduría"
-                                        />
-                                    </div>
+                                    <>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-gray-600">Nombre del Área *</label>
+                                            <input
+                                                type="text"
+                                                value={formData.name || ''}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                placeholder="Ej: Curaduría"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-gray-600">Director del Área</label>
+                                            <select
+                                                value={formData.directorId || ''}
+                                                onChange={(e) => setFormData({ ...formData, directorId: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                            >
+                                                <option value="">Sin director asignado</option>
+                                                {usersList.map((u: any) => (
+                                                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                                                ))}
+                                            </select>
+                                            <p className="text-xs text-gray-400">El director podrá ver presupuestos, requerimientos y proveedores de esta área</p>
+                                        </div>
+                                    </>
                                 )}
 
                                 {/* Projects form */}

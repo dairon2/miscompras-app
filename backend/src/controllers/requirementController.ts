@@ -242,13 +242,16 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
         title, description, quantity, actualAmount,
         projectId, areaId, supplierId, manualSupplierName,
         purchaseOrderNumber, invoiceNumber, deliveryDate,
-        receivedAtSatisfaction, satisfactionComments
+        receivedDate, reqCategory, procurementStatus,
+        receivedAtSatisfaction, satisfactionComments,
+        deleteAttachmentIds
     } = req.body;
+    const files = req.files as Express.Multer.File[];
 
     try {
         const currentReq = await prisma.requirement.findUnique({
             where: { id },
-            include: { budget: true }
+            include: { budget: true, attachments: true }
         });
 
         if (!currentReq) return res.status(404).json({ error: 'Requirement not found' });
@@ -271,6 +274,22 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
             }
         }
 
+        // Handle attachment deletions
+        if (deleteAttachmentIds) {
+            const idsToDelete = Array.isArray(deleteAttachmentIds) ? deleteAttachmentIds : [deleteAttachmentIds];
+            const attachmentsToDelete = currentReq.attachments.filter(a => idsToDelete.includes(a.id));
+
+            for (const att of attachmentsToDelete) {
+                if (fs.existsSync(att.fileUrl)) {
+                    fs.unlinkSync(att.fileUrl);
+                }
+            }
+
+            await prisma.attachment.deleteMany({
+                where: { id: { in: idsToDelete } }
+            });
+        }
+
         const updatedRequirement = await prisma.requirement.update({
             where: { id },
             data: {
@@ -280,18 +299,28 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 actualAmount: actualAmount !== undefined ? parseFloat(actualAmount) : undefined,
                 projectId,
                 areaId,
-                supplierId,
+                supplierId: supplierId === 'null' ? null : supplierId,
                 manualSupplierName,
                 purchaseOrderNumber,
                 invoiceNumber,
-                deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
-                receivedAtSatisfaction,
-                satisfactionComments
+                deliveryDate: deliveryDate ? (deliveryDate === 'null' ? null : new Date(deliveryDate)) : undefined,
+                receivedDate: receivedDate ? (receivedDate === 'null' ? null : new Date(receivedDate)) : undefined,
+                reqCategory: reqCategory || undefined,
+                procurementStatus: procurementStatus || undefined,
+                receivedAtSatisfaction: receivedAtSatisfaction !== undefined ? (receivedAtSatisfaction === 'true' || receivedAtSatisfaction === true) : undefined,
+                satisfactionComments,
+                attachments: {
+                    create: files?.map(file => ({
+                        fileName: file.originalname,
+                        fileUrl: file.path
+                    })) || []
+                }
             },
             include: {
                 project: true,
                 area: true,
-                supplier: true
+                supplier: true,
+                attachments: true
             }
         });
 
@@ -301,6 +330,8 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
             changes.push(`Monto actualizado a $${actualAmount}`);
         }
         if (purchaseOrderNumber !== currentReq.purchaseOrderNumber) changes.push(`OC actualizada a ${purchaseOrderNumber}`);
+        if (files?.length > 0) changes.push(`${files.length} nuevos adjuntos añadidos`);
+        if (deleteAttachmentIds) changes.push(`Adjuntos eliminados`);
 
         if (changes.length > 0) {
             await prisma.historyLog.create({
@@ -324,12 +355,41 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
     const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
     const includeAsientos = req.query.includeAsientos === 'true';
 
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
     try {
+        const where: any = {
+            year: year,
+            isAsiento: includeAsientos ? undefined : false
+        };
+
+        // ADMIN, DIRECTOR (global) and LEADER see everything
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole || '');
+
+        if (!isGlobalViewer) {
+            // Check if user is director of any area
+            const directedAreas = await prisma.area.findMany({
+                where: { directorId: userId },
+                select: { id: true }
+            });
+            const directedAreaIds = directedAreas.map(a => a.id);
+
+            if (directedAreaIds.length > 0) {
+                // Area Director sees all of their area + their owned ones
+                where.OR = [
+                    { areaId: { in: directedAreaIds } },
+                    { createdById: userId }
+                ];
+            } else {
+                // If they are not global viewer and not area director (e.g. COORDINATOR or AUDITOR with limited scope)
+                // We should still filter by something or allow them to see what their role allows
+                // For now, if they passed roleCheck, we assume they can see unless specialized logic needed
+            }
+        }
+
         const requirements = await prisma.requirement.findMany({
-            where: {
-                year: year,
-                isAsiento: includeAsientos ? undefined : false
-            },
+            where,
             include: {
                 project: true,
                 area: true,
@@ -513,11 +573,7 @@ export const approveRequirementGroup = async (req: AuthRequest, res: Response) =
         const updateData: any = {};
         let actionLabel = '';
 
-        if (userRole === 'LEADER') {
-            updateData.leaderApproval = true;
-            updateData.leaderComment = comments;
-            actionLabel = 'Líder';
-        } else if (userRole === 'COORDINATOR') {
+        if (userRole === 'COORDINATOR') {
             updateData.coordinatorApproval = true;
             updateData.coordinatorComment = comments;
             actionLabel = 'Coordinador';
@@ -574,7 +630,6 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
             where: { groupId: parseInt(id) },
             data: {
                 status: 'REJECTED',
-                leaderComment: userRole === 'LEADER' ? comments : undefined,
                 coordinatorComment: userRole === 'COORDINATOR' ? comments : undefined,
                 directorComment: (userRole === 'DIRECTOR' || userRole === 'ADMIN') ? comments : undefined
             }
@@ -588,8 +643,35 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
 
 // Get all requirement groups (for approval view)
 export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
     try {
+        const where: any = {};
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole || '');
+
+        if (!isGlobalViewer) {
+            const directedAreas = await prisma.area.findMany({
+                where: { directorId: userId },
+                select: { id: true }
+            });
+            const directedAreaIds = directedAreas.map(a => a.id);
+
+            if (directedAreaIds.length > 0) {
+                where.requirements = {
+                    some: {
+                        areaId: { in: directedAreaIds }
+                    }
+                };
+            } else {
+                // Regular USER should only see what they created? 
+                // Normally regular users don't see this view, but for safety:
+                where.creatorId = userId;
+            }
+        }
+
         const groups = await prisma.requirementGroup.findMany({
+            where,
             include: {
                 requirements: {
                     include: {
