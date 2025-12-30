@@ -47,17 +47,29 @@ export default function ApprovalsPage() {
             setLoading(true);
             const response = await api.get('/requirements/groups');
             setGroups(response.data);
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error fetching groups:", err);
-            addToast("Error al cargar las solicitudes", "error");
+            if (err.response?.status === 403) {
+                addToast("No tienes permisos para ver las aprobaciones", "error");
+            } else if (err.response?.status === 401) {
+                addToast("Sesión expirada. Por favor inicia sesión nuevamente", "error");
+            } else {
+                addToast("Error al cargar las solicitudes", "error");
+            }
         } finally {
             setLoading(false);
         }
     };
 
+    // Only users with these roles can access approvals
+    const userRole = user?.role?.toUpperCase() || 'USER';
+    const canAccessApprovals = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(userRole);
+
     useEffect(() => {
-        fetchGroups();
-    }, []);
+        if (canAccessApprovals) {
+            fetchGroups();
+        }
+    }, [canAccessApprovals]);
 
     const handleAction = async () => {
         if (!commentModal) return;
@@ -89,6 +101,21 @@ export default function ApprovalsPage() {
         if (filterStatus === 'all') return true;
         return getGroupStatus(g) === 'PENDING';
     });
+
+    // Show access denied if user doesn't have permission
+    if (!canAccessApprovals) {
+        return (
+            <div className="p-6 lg:p-12 max-w-6xl mx-auto">
+                <div className="flex flex-col items-center justify-center py-40 gap-6 text-center">
+                    <div className="w-20 h-20 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                        <XCircle className="text-red-500" size={40} />
+                    </div>
+                    <h2 className="text-2xl font-black">Acceso Denegado</h2>
+                    <p className="text-gray-500">No tienes permisos para acceder al panel de aprobaciones.</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 lg:p-12 max-w-6xl mx-auto">
