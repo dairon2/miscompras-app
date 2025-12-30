@@ -72,6 +72,8 @@ export const exportRequirements = (requirements: any[]) => {
         { header: 'PROVEEDOR', key: 'supplier', width: 30 },
         { header: 'ESTADO', key: 'status', width: 15 },
         { header: 'CATEGORÍA', key: 'category', width: 20 },
+        { header: 'FECHA ACORDADA', key: 'deliveryDate', width: 20 },
+        { header: 'FECHA DE RECIBIDO', key: 'receivedDate', width: 20 },
         { header: 'FECHA DE SOLICITUD', key: 'date', width: 25 }
     ];
 
@@ -87,6 +89,8 @@ export const exportRequirements = (requirements: any[]) => {
         supplier: r.supplier?.name || r.manualSupplierName || 'No definido',
         status: r.procurementStatus || 'PENDIENTE',
         category: r.reqCategory?.replace(/_/g, ' ') || 'REQUERIMIENTO',
+        deliveryDate: r.deliveryDate ? new Date(r.deliveryDate).toLocaleDateString('es-CO') : 'No definida',
+        receivedDate: r.receivedDate ? new Date(r.receivedDate).toLocaleDateString('es-CO') : 'Pendiente',
         date: r.createdAt ? new Date(r.createdAt).toLocaleString('es-CO') : ''
     }));
 
