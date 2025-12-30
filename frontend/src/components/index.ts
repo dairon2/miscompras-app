@@ -1,7 +1,8 @@
 /**
  * Re-export all components for easier imports
- * Usage: import { ConfirmModal, LoadingButton } from '@/components';
+ * Usage: import { ConfirmModal, LoadingButton, Pagination } from '@/components';
  */
 
 export { default as ConfirmModal } from './ConfirmModal';
 export { default as LoadingButton } from './LoadingButton';
+export { default as Pagination } from './Pagination';

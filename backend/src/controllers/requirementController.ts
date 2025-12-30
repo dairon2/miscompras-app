@@ -124,13 +124,23 @@ export const getMyRequirements = async (req: AuthRequest, res: Response) => {
     const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
     const includeAsientos = req.query.includeAsientos === 'true';
 
+    // Pagination params
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 25));
+    const skip = (page - 1) * limit;
+
     try {
+        const where = {
+            createdById: userId,
+            year: year,
+            isAsiento: includeAsientos ? undefined : false
+        };
+
+        // Get total count for pagination
+        const total = await prisma.requirement.count({ where });
+
         const requirements = await prisma.requirement.findMany({
-            where: {
-                createdById: userId,
-                year: year,
-                isAsiento: includeAsientos ? undefined : false
-            },
+            where,
             include: {
                 project: true,
                 area: true,
@@ -151,9 +161,20 @@ export const getMyRequirements = async (req: AuthRequest, res: Response) => {
                     }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            skip,
+            take: limit
         });
-        res.json(requirements);
+
+        res.json({
+            data: requirements,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     } catch (error: any) {
         res.status(500).json({ error: 'Failed to fetch requirements' });
     }
@@ -366,6 +387,11 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
     const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
     const includeAsientos = req.query.includeAsientos === 'true';
 
+    // Pagination params
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 25));
+    const skip = (page - 1) * limit;
+
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
@@ -381,7 +407,7 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
         if (!isGlobalViewer) {
             // Check if user is director of any area
             const directedAreas = await prisma.area.findMany({
-                where: { directorId: userId },
+                where: { directorId: userId } as any,
                 select: { id: true }
             });
             const directedAreaIds = directedAreas.map(a => a.id);
@@ -392,12 +418,11 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
                     { areaId: { in: directedAreaIds } },
                     { createdById: userId }
                 ];
-            } else {
-                // If they are not global viewer and not area director (e.g. COORDINATOR or AUDITOR with limited scope)
-                // We should still filter by something or allow them to see what their role allows
-                // For now, if they passed roleCheck, we assume they can see unless specialized logic needed
             }
         }
+
+        // Get total count for pagination
+        const total = await prisma.requirement.count({ where });
 
         const requirements = await prisma.requirement.findMany({
             where,
@@ -428,9 +453,20 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
                     }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            skip,
+            take: limit
         });
-        res.json(requirements);
+
+        res.json({
+            data: requirements,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     } catch (error: any) {
         console.error("Error fetching all requirements:", error);
         res.status(500).json({ error: 'Failed to fetch requirements' });
