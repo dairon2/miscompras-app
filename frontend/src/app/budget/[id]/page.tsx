@@ -162,7 +162,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     const progressPercent = getProgressPercent();
 
     // Combine and unify adjustments
-    const inbound = budget.adjustments.map(adj => ({
+    const inbound = (budget.adjustments || []).map(adj => ({
         id: adj.id,
         code: adj.code,
         date: adj.requestedAt,
@@ -174,7 +174,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
         sourceOrTarget: adj.type === 'TRANSFER' ? adj.sources?.map(s => s.budget.title).join(', ') : null
     }));
 
-    const outbound = budget.adjustmentSources.map(as => ({
+    const outbound = (budget.adjustmentSources || []).map(as => ({
         id: as.adjustment.id,
         code: as.adjustment.code,
         date: as.adjustment.requestedAt,

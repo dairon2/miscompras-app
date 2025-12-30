@@ -356,6 +356,131 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Info */}
                 <div className="lg:col-span-2 space-y-8" id="requirement-content">
+                    {/* Action buttons moved to the top */}
+                    {(canApprovePending || canApproveCoordination || canApproveFinance || canManageProcurement || canMarkReceived || canManage || canFullEdit || canEditObservationsOnly) && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex flex-wrap gap-4 mb-4"
+                        >
+                            {/* Approve button for PENDING_APPROVAL status - Director/Coordinator */}
+                            {canApprovePending && (
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            setFormError('');
+                                            setStatusForm({ ...statusForm, status: 'APPROVED', remarks: '' });
+                                            setShowStatusModal(true);
+                                        }}
+                                        disabled={actionLoading}
+                                        className="flex-1 bg-green-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <CheckCircle size={20} /> Aprobar Solicitud
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setFormError('');
+                                            setStatusForm({ ...statusForm, status: 'REJECTED', remarks: '' });
+                                            setShowStatusModal(true);
+                                        }}
+                                        disabled={actionLoading}
+                                        className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-red-600 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <XCircle size={20} /> Rechazar
+                                    </button>
+                                </>
+                            )}
+                            {canApproveCoordination && (
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            setFormError('');
+                                            setStatusForm({ ...statusForm, status: 'PENDING_FINANCE', remarks: '' });
+                                            setShowStatusModal(true);
+                                        }}
+                                        disabled={actionLoading}
+                                        className="flex-1 bg-green-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <CheckCircle size={20} /> Aprobar Coordinación
+                                    </button>
+                                </>
+                            )}
+
+                            {canApproveFinance && (
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            setFormError('');
+                                            setStatusForm({ ...statusForm, status: 'APPROVED_FOR_PURCHASE', remarks: '' });
+                                            setShowStatusModal(true);
+                                        }}
+                                        disabled={actionLoading}
+                                        className="flex-1 bg-green-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <CheckCircle size={20} /> Aprobar Finanzas
+                                    </button>
+                                </>
+                            )}
+                            {(canApproveCoordination || canApproveFinance) && (
+                                <button
+                                    onClick={() => {
+                                        setFormError('');
+                                        setStatusForm({ ...statusForm, status: 'REJECTED', remarks: '' });
+                                        setShowStatusModal(true);
+                                    }}
+                                    disabled={actionLoading}
+                                    className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-red-600 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <XCircle size={20} /> Rechazar
+                                </button>
+                            )}
+
+                            {canManageProcurement && !isUserOnly && (
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    className="flex-1 bg-primary-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Settings size={20} /> Ingresar Datos de Compra
+                                </button>
+                            )}
+
+                            {canMarkReceived && (
+                                <div className="flex-1 bg-green-50 p-2 rounded-2xl border border-green-100 flex items-center justify-center gap-2 text-center">
+                                    <Info className="text-green-600" size={16} />
+                                    <span className="text-[10px] font-black text-green-700 uppercase tracking-widest">Usa el panel de confirmación abajo</span>
+                                </div>
+                            )}
+
+                            {canManage && (
+                                <button
+                                    onClick={() => setShowStatusModal(true)}
+                                    disabled={actionLoading}
+                                    className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-4 rounded-2xl font-black border border-slate-200 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Settings size={20} /> Cambiar Estado
+                                </button>
+                            )}
+
+                            {canFullEdit && (
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    className="flex-1 bg-primary-50 text-primary-600 py-4 rounded-2xl font-black border border-primary-100 hover:bg-primary-100 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Edit3 size={20} /> Editar Detalles
+                                </button>
+                            )}
+
+                            {canEditObservationsOnly && !isUserOnly && (
+                                <button
+                                    onClick={() => setShowStatusModal(true)}
+                                    className="flex-1 bg-amber-50 text-amber-600 py-4 rounded-2xl font-black border border-amber-100 hover:bg-amber-100 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Edit3 size={20} /> Agregar Observaciones
+                                </button>
+                            )}
+                        </motion.div>
+                    )}
+
                     <div className="bg-white dark:bg-slate-800 p-10 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-700">
                         <div className="flex justify-between items-start mb-8 pb-8 border-b border-gray-50 dark:border-gray-700">
                             <div>
@@ -528,125 +653,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                         </motion.div>
                     )}
 
-                    {(canApprovePending || canApproveCoordination || canApproveFinance || canManageProcurement || canMarkReceived || canManage || canFullEdit || canEditObservationsOnly) && (
-                        <div className="mt-12 flex flex-wrap gap-4 pt-10 border-t border-gray-50 dark:border-gray-700">
-                            {/* Approve button for PENDING_APPROVAL status - Director/Coordinator */}
-                            {canApprovePending && (
-                                <>
-                                    <button
-                                        onClick={() => {
-                                            setFormError('');
-                                            setStatusForm({ ...statusForm, status: 'APPROVED', remarks: '' });
-                                            setShowStatusModal(true);
-                                        }}
-                                        disabled={actionLoading}
-                                        className="flex-1 bg-green-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <CheckCircle size={20} /> Aprobar Solicitud
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setFormError('');
-                                            setStatusForm({ ...statusForm, status: 'REJECTED', remarks: '' });
-                                            setShowStatusModal(true);
-                                        }}
-                                        disabled={actionLoading}
-                                        className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-red-600 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <XCircle size={20} /> Rechazar
-                                    </button>
-                                </>
-                            )}
-                            {canApproveCoordination && (
-                                <>
-                                    <button
-                                        onClick={() => {
-                                            setFormError('');
-                                            setStatusForm({ ...statusForm, status: 'PENDING_FINANCE', remarks: '' });
-                                            setShowStatusModal(true);
-                                        }}
-                                        disabled={actionLoading}
-                                        className="flex-1 bg-green-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <CheckCircle size={20} /> Aprobar Coordinación
-                                    </button>
-                                </>
-                            )}
 
-                            {canApproveFinance && (
-                                <>
-                                    <button
-                                        onClick={() => {
-                                            setFormError('');
-                                            setStatusForm({ ...statusForm, status: 'APPROVED_FOR_PURCHASE', remarks: '' });
-                                            setShowStatusModal(true);
-                                        }}
-                                        disabled={actionLoading}
-                                        className="flex-1 bg-green-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <CheckCircle size={20} /> Aprobar Finanzas
-                                    </button>
-                                </>
-                            )}
-                            {(canApproveCoordination || canApproveFinance) && (
-                                <button
-                                    onClick={() => {
-                                        setFormError('');
-                                        setStatusForm({ ...statusForm, status: 'REJECTED', remarks: '' });
-                                        setShowStatusModal(true);
-                                    }}
-                                    disabled={actionLoading}
-                                    className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-red-600 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <XCircle size={20} /> Rechazar
-                                </button>
-                            )}
-
-                            {canManageProcurement && (
-                                <button
-                                    onClick={() => setIsEditing(true)}
-                                    className="flex-1 bg-primary-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Settings size={20} /> Ingresar Datos de Compra
-                                </button>
-                            )}
-
-                            {canMarkReceived && (
-                                <div className="flex-1 bg-green-50 p-2 rounded-2xl border border-green-100 flex items-center justify-center gap-2">
-                                    <Info className="text-green-600" size={16} />
-                                    <span className="text-[10px] font-black text-green-700 uppercase tracking-widest">Usa el panel de confirmación arriba</span>
-                                </div>
-                            )}
-
-                            {canManage && (
-                                <button
-                                    onClick={() => setShowStatusModal(true)}
-                                    disabled={actionLoading}
-                                    className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-4 rounded-2xl font-black border border-slate-200 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Settings size={20} /> Cambiar Estado
-                                </button>
-                            )}
-
-                            {canFullEdit && (
-                                <button
-                                    onClick={() => setIsEditing(true)}
-                                    className="flex-1 bg-primary-50 text-primary-600 py-4 rounded-2xl font-black border border-primary-100 hover:bg-primary-100 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Edit3 size={20} /> Editar Detalles
-                                </button>
-                            )}
-
-                            {canEditObservationsOnly && (
-                                <button
-                                    onClick={() => setShowStatusModal(true)}
-                                    className="flex-1 bg-amber-50 text-amber-600 py-4 rounded-2xl font-black border border-amber-100 hover:bg-amber-100 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Edit3 size={20} /> Agregar Observaciones
-                                </button>
-                            )}
-                        </div>
-                    )}
                 </div>
 
                 {/* Timeline / Logs */}
