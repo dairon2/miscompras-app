@@ -280,8 +280,12 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
             const attachmentsToDelete = currentReq.attachments.filter(a => idsToDelete.includes(a.id));
 
             for (const att of attachmentsToDelete) {
-                if (fs.existsSync(att.fileUrl)) {
-                    fs.unlinkSync(att.fileUrl);
+                try {
+                    if (att.fileUrl && fs.existsSync(att.fileUrl)) {
+                        fs.unlinkSync(att.fileUrl);
+                    }
+                } catch (err) {
+                    console.error(`Warning: Could not delete file ${att.fileUrl}:`, err);
                 }
             }
 
@@ -289,6 +293,13 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 where: { id: { in: idsToDelete } }
             });
         }
+
+        // Safe date parsing helper
+        const parseSafeDate = (val: any) => {
+            if (!val || val === 'null' || val === '') return null;
+            const d = new Date(val);
+            return (d instanceof Date && !isNaN(d.getTime())) ? d : undefined;
+        };
 
         const updatedRequirement = await prisma.requirement.update({
             where: { id },
@@ -303,8 +314,8 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 manualSupplierName: manualSupplierName === 'null' ? null : manualSupplierName,
                 purchaseOrderNumber: purchaseOrderNumber === 'null' ? null : purchaseOrderNumber,
                 invoiceNumber: invoiceNumber === 'null' ? null : invoiceNumber,
-                deliveryDate: (deliveryDate && deliveryDate !== 'null') ? new Date(deliveryDate) : (deliveryDate === 'null' ? null : undefined),
-                receivedDate: (receivedDate && receivedDate !== 'null') ? new Date(receivedDate) : (receivedDate === 'null' ? null : undefined),
+                deliveryDate: parseSafeDate(deliveryDate),
+                receivedDate: parseSafeDate(receivedDate),
                 reqCategory: (reqCategory && reqCategory !== 'null') ? reqCategory : undefined,
                 procurementStatus: (procurementStatus && procurementStatus !== 'null') ? procurementStatus : undefined,
                 receivedAtSatisfaction: receivedAtSatisfaction !== undefined ? (receivedAtSatisfaction === 'true' || receivedAtSatisfaction === true) : undefined,
