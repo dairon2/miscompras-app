@@ -185,9 +185,9 @@ export const getPendingAdjustments = async (req: AuthRequest, res: Response) => 
     try {
         const userRole = req.user?.role;
 
-        // Only DIRECTOR can see pending adjustments
-        if (userRole !== 'DIRECTOR') {
-            return res.status(403).json({ error: 'Solo el DIRECTOR puede ver solicitudes pendientes' });
+        // Allow DIRECTOR, ADMIN, and DEVELOPER to see pending adjustments
+        if (!['DIRECTOR', 'ADMIN', 'DEVELOPER'].includes(userRole || '')) {
+            return res.status(403).json({ error: 'Solo el DIRECTOR o ADMIN pueden ver solicitudes pendientes' });
         }
 
         const adjustments = await prisma.budgetAdjustment.findMany({
@@ -264,9 +264,9 @@ export const approveAdjustment = async (req: AuthRequest, res: Response) => {
         const userId = req.user?.id;
         const { id } = req.params;
 
-        // Only DIRECTOR can approve
-        if (userRole !== 'DIRECTOR') {
-            return res.status(403).json({ error: 'Solo el DIRECTOR puede aprobar solicitudes' });
+        // Allow DIRECTOR, ADMIN, and DEVELOPER to approve
+        if (!['DIRECTOR', 'ADMIN', 'DEVELOPER'].includes(userRole || '')) {
+            return res.status(403).json({ error: 'Solo el DIRECTOR o ADMIN pueden aprobar solicitudes' });
         }
 
         const adjustment = await prisma.budgetAdjustment.findUnique({
@@ -397,9 +397,9 @@ export const rejectAdjustment = async (req: AuthRequest, res: Response) => {
         const { id } = req.params;
         const { comment } = req.body;
 
-        // Only DIRECTOR can reject
-        if (userRole !== 'DIRECTOR') {
-            return res.status(403).json({ error: 'Solo el DIRECTOR puede rechazar solicitudes' });
+        // Allow DIRECTOR, ADMIN, and DEVELOPER to reject
+        if (!['DIRECTOR', 'ADMIN', 'DEVELOPER'].includes(userRole || '')) {
+            return res.status(403).json({ error: 'Solo el DIRECTOR o ADMIN pueden rechazar solicitudes' });
         }
 
         const adjustment = await prisma.budgetAdjustment.findUnique({
