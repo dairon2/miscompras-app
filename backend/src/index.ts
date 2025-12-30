@@ -18,6 +18,24 @@ import adjustmentRoutes from './routes/adjustmentRoutes';
 
 dotenv.config();
 
+// Validate critical environment variables
+const validateEnv = () => {
+    const required = ['DATABASE_URL', 'JWT_SECRET'];
+    const missing = required.filter(key => !process.env[key]);
+
+    if (missing.length > 0) {
+        console.error(`[CONFIG ERROR] Missing required environment variables: ${missing.join(', ')}`);
+        console.error('[CONFIG ERROR] The application may not function correctly.');
+    }
+
+    // Warn about default JWT secret
+    if (process.env.JWT_SECRET === 'fallback_secret' || !process.env.JWT_SECRET) {
+        console.warn('[SECURITY WARNING] Using default JWT_SECRET. Set a strong secret in production!');
+    }
+};
+
+validateEnv();
+
 const app = express();
 const demoNotifications: any[] = [];
 const demoRequirements: any[] = [

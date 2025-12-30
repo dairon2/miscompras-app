@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
 import { uploadToBlobStorage, isBlobStorageAvailable } from './blobStorageService';
+import logger from './logger';
 
 // Get the logo path
 const LOGO_PATH = path.join(__dirname, '../../assets/logo.png');
@@ -15,11 +16,11 @@ const ensureUploadDir = () => {
     try {
         if (!fs.existsSync(UPLOADS_DIR)) {
             fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-            console.log('[PDF Service] Created uploads directory:', UPLOADS_DIR);
+            logger.pdf('Created uploads directory:', UPLOADS_DIR);
         }
         return true;
     } catch (error) {
-        console.error('[PDF Service] Failed to create uploads directory:', error);
+        logger.error('Failed to create uploads directory:', error);
         return false;
     }
 };
@@ -68,20 +69,20 @@ interface BudgetData {
 }
 
 export const generateBudgetPDF = async (budget: BudgetData): Promise<string> => {
-    console.log('[PDF Service] Starting budget PDF generation for:', budget.code || budget.title);
+    logger.pdf('Starting budget PDF generation for:', budget.code || budget.title);
 
     return new Promise((resolve, reject) => {
         try {
             // Ensure directory exists before creating file
             if (!ensureUploadDir()) {
-                console.error('[PDF Service] Upload directory not available, skipping PDF generation');
+                logger.error('Upload directory not available, skipping PDF generation');
                 reject(new Error('Upload directory not available'));
                 return;
             }
 
             const fileName = `presupuesto_${budget.code || budget.title.replace(/\s/g, '_')}_${Date.now()}.pdf`;
             const filePath = path.join(UPLOADS_DIR, fileName);
-            console.log('[PDF Service] Creating PDF at:', filePath);
+            logger.pdf('Creating PDF at:', filePath);
 
             const doc = new PDFDocument({ margin: 50, size: 'LETTER' });
             const stream = fs.createWriteStream(filePath);
@@ -208,13 +209,13 @@ export const generateBudgetPDF = async (budget: BudgetData): Promise<string> => 
                     try {
                         const blobUrl = await uploadToBlobStorage(filePath, `budgets/${fileName}`);
                         if (blobUrl) {
-                            console.log('[PDF Service] Budget PDF uploaded to Blob:', blobUrl);
+                            logger.pdf('Budget PDF uploaded to Blob:', blobUrl);
                             resolve(blobUrl);
                             return;
                         }
-                    } catch (e) { console.error('[PDF Service] Blob upload failed:', e); }
+                    } catch (e) { logger.error('Blob upload failed:', e); }
                 }
-                console.log('[PDF Service] Budget PDF generated locally:', localPath);
+                logger.pdf('Budget PDF generated locally:', localPath);
                 resolve(localPath);
             });
 
@@ -395,13 +396,13 @@ export const generateAdjustmentPDF = async (adjustment: AdjustmentData): Promise
                     try {
                         const blobUrl = await uploadToBlobStorage(filePath, `adjustments/${fileName}`);
                         if (blobUrl) {
-                            console.log('[PDF Service] Adjustment PDF uploaded to Blob:', blobUrl);
+                            logger.pdf('Adjustment PDF uploaded to Blob:', blobUrl);
                             resolve(blobUrl);
                             return;
                         }
-                    } catch (e) { console.error('[PDF Service] Blob upload failed for adjustment:', e); }
+                    } catch (e) { logger.error('Blob upload failed for adjustment:', e); }
                 }
-                console.log('[PDF Service] Adjustment PDF generated locally:', localPath);
+                logger.pdf('Adjustment PDF generated locally:', localPath);
                 resolve(localPath);
             });
 
@@ -436,7 +437,7 @@ interface RequirementGroupData {
 }
 
 export const generateRequirementGroupPDF = async (group: RequirementGroupData): Promise<string> => {
-    console.log('[PDF Service] Starting Requirement Group PDF generation for ID:', group.id);
+    logger.pdf('Starting Requirement Group PDF generation for ID:', group.id);
 
     return new Promise((resolve, reject) => {
         try {
@@ -570,13 +571,13 @@ export const generateRequirementGroupPDF = async (group: RequirementGroupData): 
                     try {
                         const blobUrl = await uploadToBlobStorage(filePath, `requirements/${fileName}`);
                         if (blobUrl) {
-                            console.log('[PDF Service] Requirement PDF uploaded to Blob:', blobUrl);
+                            logger.pdf('Requirement PDF uploaded to Blob:', blobUrl);
                             resolve(blobUrl);
                             return;
                         }
-                    } catch (e) { console.error('[PDF Service] Blob upload failed:', e); }
+                    } catch (e) { logger.error('Blob upload failed:', e); }
                 }
-                console.log('[PDF Service] Requirement PDF generated locally:', localPath);
+                logger.pdf('Requirement PDF generated locally:', localPath);
                 resolve(localPath);
             });
 
