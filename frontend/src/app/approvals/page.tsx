@@ -21,7 +21,7 @@ interface Requirement {
     directorApproval: boolean | null;
     project: { name: string };
     area: { name: string };
-    budget: { category: { name: string }, amount: string };
+    budget?: { category: { name: string }, amount: string };
 }
 
 interface Group {
@@ -254,8 +254,8 @@ export default function ApprovalsPage() {
                                                                 <div className="text-[10px] text-gray-400 mt-0.5">{req.area.name}</div>
                                                             </td>
                                                             <td className="py-6 px-4">
-                                                                <div className="font-bold text-primary-600 text-xs">{req.budget.category.name}</div>
-                                                                <div className="text-[10px] text-gray-400 mt-0.5">${parseFloat(req.budget.amount).toLocaleString()}</div>
+                                                                <div className="font-bold text-primary-600 text-xs">{req.budget?.category?.name || 'Sin presupuesto'}</div>
+                                                                <div className="text-[10px] text-gray-400 mt-0.5">{req.budget ? `$${parseFloat(req.budget.amount).toLocaleString()}` : 'N/A'}</div>
                                                             </td>
                                                             <td className="py-6 px-4">
                                                                 <span className="bg-white dark:bg-slate-800 px-2 py-1 rounded text-[10px] font-black border border-gray-100 dark:border-gray-700">{req.quantity || '1'}</span>

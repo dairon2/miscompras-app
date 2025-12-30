@@ -364,8 +364,8 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
             isAsiento: includeAsientos ? undefined : false
         };
 
-        // ADMIN, DIRECTOR (global) and LEADER see everything
-        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole || '');
+        // ADMIN, DIRECTOR (global), LEADER, COORDINATOR and AUDITOR see everything
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'].includes(userRole || '');
 
         if (!isGlobalViewer) {
             // Check if user is director of any area
@@ -648,7 +648,7 @@ export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
 
     try {
         const where: any = {};
-        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole || '');
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
 
         if (!isGlobalViewer) {
             const directedAreas = await prisma.area.findMany({
