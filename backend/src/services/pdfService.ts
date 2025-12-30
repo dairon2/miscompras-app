@@ -95,29 +95,32 @@ export const generateBudgetPDF = async (budget: BudgetData): Promise<string> => 
             doc.fontSize(8).text('MUSEO DE', 55, 65, { width: 70, align: 'center' });
             doc.fontSize(8).text('ANTIOQUIA', 55, 78, { width: 70, align: 'center' });
 
-            // Title (center)
+            // Title (center) - Only project name, no code
             doc.fontSize(14).font('Helvetica-Bold')
                 .text('PRESUPUESTO', 140, 55, { width: 300, align: 'center' });
             doc.fontSize(10).font('Helvetica')
-                .text(`${budget.code || ''} ${budget.project?.name || ''}`, 140, 75, { width: 300, align: 'center' });
+                .text(budget.project?.name || budget.title, 140, 75, { width: 300, align: 'center' });
             doc.fontSize(9)
                 .text(`Fecha de ejecución: ${formatDate(budget.createdAt)}`, 140, 92, { width: 300, align: 'center' });
 
-            // Code box (right)
+            // Code box (right) - Format: Código, Versión, Año (with month)
             doc.rect(450, 50, 110, 60).stroke();
-            doc.fontSize(8).font('Helvetica-Bold').text('Código', 455, 55);
-            doc.fontSize(9).font('Helvetica').text(budget.code || 'N/A', 455, 68);
-            doc.fontSize(8).font('Helvetica-Bold').text('VERSIÓN:', 455, 82);
-            doc.fontSize(9).font('Helvetica').text(`${budget.version}`, 505, 82);
-            doc.fontSize(8).font('Helvetica-Bold').text('Año:', 455, 96);
-            doc.fontSize(9).font('Helvetica').text(`${budget.year}`, 480, 96);
+            doc.fontSize(8).font('Helvetica-Bold').text('Código:', 455, 55);
+            doc.fontSize(9).font('Helvetica').text(budget.code || 'FA-4.5-01', 455, 66);
+            doc.fontSize(8).font('Helvetica-Bold').text('Versión:', 455, 78);
+            doc.fontSize(9).font('Helvetica').text(`${budget.version}`, 495, 78);
+            doc.fontSize(8).font('Helvetica-Bold').text('Año:', 455, 90);
+            // Format year with month name
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const yearMonth = `${monthNames[budget.createdAt.getMonth()]} ${budget.year}`;
+            doc.fontSize(9).font('Helvetica').text(yearMonth, 475, 90);
 
             // Line separator
             doc.moveTo(50, 125).lineTo(560, 125).stroke();
 
-            // Budget summary
+            // Budget summary - Title and total (no code)
             doc.fontSize(11).font('Helvetica-Bold')
-                .text(`${budget.code || ''} ${budget.title} Presupuesto total: ${formatCurrency(budget.amount)}`, 50, 140, { width: pageWidth, align: 'center' });
+                .text(`${budget.title} - Presupuesto total: ${formatCurrency(budget.amount)}`, 50, 140, { width: pageWidth, align: 'center' });
 
             // Table header
             const tableTop = 170;
@@ -125,7 +128,7 @@ export const generateBudgetPDF = async (budget: BudgetData): Promise<string> => 
 
             doc.rect(50, tableTop, 510, 25).fillAndStroke('#f0f0f0', '#000');
             doc.fillColor('#000').fontSize(10).font('Helvetica-Bold');
-            doc.text('Rubro', col1 + 5, tableTop + 8);
+            doc.text('Categoría', col1 + 5, tableTop + 8);
             doc.text('Presupuesto', col2 + 5, tableTop + 8);
             doc.text('Ejecutado', col3 + 5, tableTop + 8);
             doc.text('Saldo', col4 + 5, tableTop + 8);
@@ -154,7 +157,7 @@ export const generateBudgetPDF = async (budget: BudgetData): Promise<string> => 
             const sepY = totalY + 45;
             doc.moveTo(50, sepY).lineTo(560, sepY).stroke();
 
-            // Financier section
+            // Financier section - Shows Project name
             const finY = sepY + 15;
             doc.rect(50, finY, 260, 40).stroke();
             doc.rect(310, finY, 250, 40).stroke();
@@ -162,7 +165,7 @@ export const generateBudgetPDF = async (budget: BudgetData): Promise<string> => 
             doc.text('Financiador:', 55, finY + 5);
             doc.text('Valor:', 315, finY + 5);
             doc.fontSize(10).font('Helvetica');
-            doc.text(budget.area?.name || 'N/A', 55, finY + 22, { width: 250, align: 'center' });
+            doc.text(budget.project?.name || 'N/A', 55, finY + 22, { width: 250, align: 'center' });
             doc.text(formatCurrency(budget.amount), 315, finY + 22, { width: 240, align: 'center' });
 
             // Signatures section
@@ -401,12 +404,21 @@ export const generateAdjustmentPDF = async (adjustment: AdjustmentData): Promise
 
 interface RequirementGroupData {
     id: number;
+    code?: string;
+    version?: number;
     creator: { name: string; email: string };
     createdAt: Date;
+    project?: { name: string; code?: string };
+    status?: string;
+    approvedBy?: { name: string };
+    approvedAt?: Date;
     requirements: Array<{
         title: string;
         description: string;
-        estimatedAmount?: number;
+        quantity?: string;
+        budget?: { title: string; code?: string };
+        supplier?: { name: string };
+        comments?: string;
         area: { name: string };
     }>;
 }
@@ -421,7 +433,7 @@ export const generateRequirementGroupPDF = async (group: RequirementGroupData): 
                 return;
             }
 
-            const fileName = `solicitud_compra_${group.id}_${Date.now()}.pdf`;
+            const fileName = `requerimiento_${group.id}_${Date.now()}.pdf`;
             const filePath = path.join(UPLOADS_DIR, fileName);
 
             const doc = new PDFDocument({ margin: 50, size: 'LETTER' });
@@ -430,96 +442,130 @@ export const generateRequirementGroupPDF = async (group: RequirementGroupData): 
 
             const pageWidth = doc.page.width - 100;
 
-            // Header (Standard style)
-            doc.rect(50, 50, 80, 60).stroke();
-            doc.fontSize(8).text('MUSEO DE', 55, 65, { width: 70, align: 'center' });
-            doc.fontSize(8).text('ANTIOQUIA', 55, 78, { width: 70, align: 'center' });
+            // ===== HEADER =====
+            // Logo placeholder (left)
+            doc.rect(50, 50, 100, 60).stroke();
+            doc.fontSize(7).font('Helvetica-Bold').text('MUSEO DE', 55, 65, { width: 90, align: 'center' });
+            doc.fontSize(7).text('ANTIOQUIA', 55, 75, { width: 90, align: 'center' });
 
-            doc.fontSize(14).font('Helvetica-Bold')
-                .text('SOLICITUD DE COMPRAS', 140, 55, { width: 300, align: 'center' });
-            doc.fontSize(10).font('Helvetica')
-                .text('REPORTE ADMINISTRATIVO DE REQUERIMIENTOS', 140, 75, { width: 300, align: 'center' });
+            // Title (center)
+            doc.fontSize(12).font('Helvetica-Bold')
+                .text('REQUERIMIENTO DE BIENES Y SERVICIOS', 160, 55, { width: 280, align: 'center' });
+            doc.fontSize(9).font('Helvetica')
+                .text(group.project?.name || 'Museo de Antioquia', 160, 75, { width: 280, align: 'center' });
 
-            // ID box
+            // Code box (right)
             doc.rect(450, 50, 110, 60).stroke();
-            doc.fontSize(8).font('Helvetica-Bold').text('ID SOLICITUD', 455, 55);
-            doc.fontSize(12).font('Helvetica-Bold').fillColor('#primary-600').text(`${group.id}`, 455, 70, { width: 100, align: 'center' });
-            doc.fillColor('#000').fontSize(8).font('Helvetica').text(formatDate(group.createdAt), 455, 96, { width: 100, align: 'center' });
+            doc.fontSize(8).font('Helvetica-Bold').text('Código', 455, 55);
+            doc.fontSize(9).font('Helvetica').text(group.code || `REQ-${group.id}`, 455, 66);
+            doc.fontSize(8).font('Helvetica-Bold').text('VERSIÓN:', 455, 78);
+            doc.fontSize(9).font('Helvetica').text(`${group.version || '01'}`, 500, 78);
+            // Format date with month name and year only (e.g., "Enero 2026")
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const dateStr = `${monthNames[group.createdAt.getMonth()]} ${group.createdAt.getFullYear()}`;
+            doc.fontSize(8).text(dateStr, 455, 92);
 
+            // ===== REQUESTER INFO =====
             doc.moveTo(50, 125).lineTo(560, 125).stroke();
 
-            // Creator Info
-            doc.fontSize(10).font('Helvetica-Bold').text('INFORMACIÓN DEL SOLICITANTE', 50, 140);
-            doc.fontSize(9).font('Helvetica')
-                .text(`Nombre: ${group.creator.name}`, 50, 155)
-                .text(`Correo: ${group.creator.email}`, 50, 168)
-                .text(`Fecha: ${formatDate(group.createdAt)}`, 50, 181);
+            doc.fontSize(9).font('Helvetica');
+            doc.text(`Fecha de impresión: ${formatDate(new Date())} ${new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`, 50, 135);
+            doc.text(`Solicita: ${group.creator.name}`, 50, 150);
+            doc.fontSize(10).font('Helvetica-Bold').text(`Requerimiento N°: ${group.id}`, 50, 165);
 
-            // Table
-            let yPos = 210;
-            doc.rect(50, yPos, 510, 25).fillAndStroke('#f3f4f6', '#000');
-            doc.fillColor('#000').fontSize(9).font('Helvetica-Bold');
-            doc.text('Título / Item', 55, yPos + 8);
-            doc.text('Área', 250, yPos + 8);
-            doc.text('Costo Est.', 450, yPos + 8, { width: 100, align: 'right' });
+            // ===== TABLE =====
+            let yPos = 195;
+            const col1 = 50, col2 = 200, col3 = 300, col4 = 400, col5 = 510;
 
-            yPos += 25;
-            let total = 0;
+            // Table header
+            doc.rect(50, yPos, 510, 30).fillAndStroke('#f3f4f6', '#000');
+            doc.fillColor('#000').fontSize(8).font('Helvetica-Bold');
+            doc.text('Detalles del\nRequerimiento', col1 + 5, yPos + 5, { width: 140 });
+            doc.text('Presupuesto', col2 + 5, yPos + 10);
+            doc.text('Comentarios', col3 + 5, yPos + 10);
+            doc.text('Proveedor\nSugerido', col4 + 5, yPos + 5, { width: 80 });
+            doc.text('Cantidad', col5 + 5, yPos + 10);
 
+            yPos += 30;
+
+            // Table rows
             for (const req of group.requirements) {
-                // Check if we need a new page
-                if (yPos > 650) {
+                if (yPos > 600) {
                     doc.addPage();
                     yPos = 50;
                 }
 
-                doc.rect(50, yPos, 510, 35).stroke();
-                doc.fillColor('#000').fontSize(8).font('Helvetica-Bold').text(req.title, 55, yPos + 8, { width: 190, lineBreak: false });
-                doc.font('Helvetica').fontSize(7).text(req.description.substring(0, 100), 55, yPos + 20, { width: 190 });
+                const rowHeight = 40;
+                doc.rect(50, yPos, 510, rowHeight).stroke();
+                doc.fillColor('#000').fontSize(8).font('Helvetica');
 
-                doc.fontSize(8).text(req.area.name, 250, yPos + 14);
+                // Column 1: Details (Title + Area)
+                doc.font('Helvetica-Bold').text(req.title, col1 + 5, yPos + 5, { width: 140 });
+                doc.font('Helvetica').fontSize(7).text(req.area?.name || '', col1 + 5, yPos + 20, { width: 140 });
 
-                const amount = req.estimatedAmount ? Number(req.estimatedAmount) : 0;
-                doc.fontSize(8).font('Helvetica-Bold').text(formatCurrency(amount), 450, yPos + 14, { width: 100, align: 'right' });
+                // Column 2: Budget
+                doc.fontSize(8).text(req.budget?.code || req.budget?.title || '', col2 + 5, yPos + 15, { width: 90 });
 
-                total += amount;
-                yPos += 35;
+                // Column 3: Comments
+                doc.text(req.comments || '', col3 + 5, yPos + 10, { width: 90, height: 30 });
+
+                // Column 4: Supplier
+                doc.text(req.supplier?.name || '', col4 + 5, yPos + 15, { width: 80 });
+
+                // Column 5: Quantity
+                doc.text(req.quantity || '1', col5 + 5, yPos + 15, { width: 40, align: 'center' });
+
+                yPos += rowHeight;
             }
 
-            // Total row
-            doc.rect(50, yPos, 510, 25).fillAndStroke('#f9fafb', '#000');
-            doc.fillColor('#000').fontSize(9).font('Helvetica-Bold');
-            doc.text('COSTO TOTAL ESTIMADO DE LA SOLICITUD:', 55, yPos + 8);
-            doc.text(formatCurrency(total), 450, yPos + 8, { width: 100, align: 'right' });
+            // ===== STATUS NOTE =====
+            yPos += 20;
+            const statusText = group.status === 'APPROVED'
+                ? 'Este documento ha sido aprobado.'
+                : group.status === 'REJECTED'
+                    ? 'Este documento ha sido rechazado.'
+                    : 'Este documento se envió a Compras y a financiera para buscar su aprobación.';
 
-            // Approval signatures placeholder
+            doc.rect(50, yPos, 510, 30).fillAndStroke('#fff9e6', '#e6d800');
+            doc.fillColor('#666').fontSize(9).font('Helvetica')
+                .text(statusText, 55, yPos + 10, { width: 500, align: 'center' });
+
+            // ===== APPROVAL STAMP (if approved) =====
+            if (group.approvedBy && group.approvedAt) {
+                doc.save();
+                doc.rotate(-25, { origin: [400, 400] });
+                doc.fontSize(24).fillColor('#00aa00').font('Helvetica-Bold')
+                    .text('APROBADO', 320, 380);
+                doc.fontSize(10).fillColor('#00aa00')
+                    .text(`Por: ${group.approvedBy.name}`, 320, 410);
+                doc.fontSize(9)
+                    .text(formatDate(group.approvedAt), 320, 425);
+                doc.restore();
+                doc.fillColor('#000');
+            }
+
+            // ===== FOOTER =====
             yPos += 60;
-            const sigWidth = 150;
-            doc.fontSize(8).font('Helvetica-Bold');
-
-            doc.moveTo(50, yPos).lineTo(50 + sigWidth, yPos).stroke();
-            doc.text('Firma Líder de Área', 50, yPos + 5, { width: sigWidth, align: 'center' });
-
-            doc.moveTo(230, yPos).lineTo(230 + sigWidth, yPos).stroke();
-            doc.text('Firma Coordinación', 230, yPos + 5, { width: sigWidth, align: 'center' });
-
-            doc.moveTo(410, yPos).lineTo(410 + sigWidth, yPos).stroke();
-            doc.text('Firma Dirección', 410, yPos + 5, { width: sigWidth, align: 'center' });
+            doc.fillColor('#000').fontSize(9).font('Helvetica')
+                .text(`© ${new Date().getFullYear()} Museo de Antioquia. Proceso de Compras.`, 50, yPos, { width: pageWidth, align: 'center' });
 
             doc.end();
 
             stream.on('finish', async () => {
-                const localUrl = `/uploads/pdfs/${fileName}`;
+                const localPath = `/uploads/pdfs/${fileName}`;
+                const fullLocalUrl = `${BACKEND_URL}${localPath}`;
                 if (isBlobStorageAvailable()) {
                     try {
                         const blobUrl = await uploadToBlobStorage(filePath, `requirements/${fileName}`);
                         if (blobUrl) {
+                            console.log('[PDF Service] Requirement PDF uploaded to Blob:', blobUrl);
                             resolve(blobUrl);
                             return;
                         }
                     } catch (e) { console.error('[PDF Service] Blob upload failed:', e); }
                 }
-                resolve(localUrl);
+                console.log('[PDF Service] Requirement PDF generated locally:', fullLocalUrl);
+                resolve(fullLocalUrl);
             });
 
             stream.on('error', reject);
