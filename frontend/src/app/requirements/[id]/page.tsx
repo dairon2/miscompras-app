@@ -401,7 +401,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                             </div>
                                         </div>
                                         <a
-                                            href={file.fileUrl?.startsWith('http') ? file.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${file.fileUrl}`}
+                                            href={file.fileUrl.startsWith('http') ? file.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${file.fileUrl}`}
                                             download
                                             onClick={(e) => e.stopPropagation()}
                                             className="p-2 text-gray-400 hover:text-primary-500 transition-colors hover:bg-white dark:hover:bg-slate-800 rounded-lg"
@@ -808,7 +808,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             </div>
                             <div className="flex gap-2">
                                 <a
-                                    href={selectedFile.fileUrl?.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
+                                    href={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
                                     download
                                     className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-all backdrop-blur-sm"
                                     title="Descargar"
@@ -828,14 +828,14 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                         <div className="w-full h-full flex items-center justify-center p-4">
                             {selectedFile.fileName.toLowerCase().endsWith('.pdf') ? (
                                 <iframe
-                                    src={selectedFile.fileUrl?.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
+                                    src={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
                                     className="w-full h-full rounded-2xl"
                                     title={selectedFile.fileName}
                                 />
                             ) : selectedFile.fileName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) ? (
                                 <div className="relative w-full h-full">
                                     <Image
-                                        src={selectedFile.fileUrl?.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
+                                        src={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
                                         alt={selectedFile.fileName}
                                         fill
                                         className="object-contain rounded-2xl"
@@ -849,7 +849,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                     <h4 className="text-2xl font-black mb-2">Vista previa no disponible</h4>
                                     <p className="text-gray-500 mb-6">Este tipo de archivo no se puede visualizar en el navegador</p>
                                     <a
-                                        href={selectedFile.fileUrl?.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
+                                        href={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
                                         download
                                         className="inline-flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-primary-700 transition-all"
                                     >
