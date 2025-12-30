@@ -23,12 +23,12 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
         if (status) where.status = status;
 
         // Role-based access logic
-        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole || '');
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
 
         if (!isGlobalViewer) {
             // Check if user is director of any area
             const directedAreas = await prisma.area.findMany({
-                where: { directorId: userId },
+                where: { directorId: userId } as any,
                 select: { id: true }
             });
             const directedAreaIds = directedAreas.map(a => a.id);
