@@ -259,13 +259,20 @@ export const updateRequirementStatus = async (req: AuthRequest, res: Response) =
 
 export const updateRequirement = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
+
+    // Defensive check for body
+    if (!req.body) {
+        console.error("updateRequirement: req.body is undefined");
+        return res.status(400).json({ error: 'Request body is missing' });
+    }
+
     const {
         title, description, quantity, actualAmount,
         projectId, areaId, supplierId, manualSupplierName,
         purchaseOrderNumber, invoiceNumber, deliveryDate,
         receivedDate, reqCategory, procurementStatus,
         receivedAtSatisfaction, satisfactionComments,
-        deleteAttachmentIds
+        deleteAttachmentIds, hasMultiplePayments
     } = req.body;
     const files = req.files as Express.Multer.File[];
 
@@ -341,6 +348,7 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 procurementStatus: (procurementStatus && procurementStatus !== 'null') ? procurementStatus : undefined,
                 receivedAtSatisfaction: receivedAtSatisfaction !== undefined ? (receivedAtSatisfaction === 'true' || receivedAtSatisfaction === true) : undefined,
                 satisfactionComments: satisfactionComments === 'null' ? null : satisfactionComments,
+                hasMultiplePayments: hasMultiplePayments !== undefined ? (hasMultiplePayments === 'true' || hasMultiplePayments === true) : undefined,
                 attachments: {
                     create: files?.map(file => ({
                         fileName: file.originalname,
