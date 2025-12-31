@@ -699,7 +699,7 @@ export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
 
         if (!isGlobalViewer) {
             const directedAreas = await prisma.area.findMany({
-                where: { directorId: userId },
+                where: { directorId: userId } as any,
                 select: { id: true }
             });
             const directedAreaIds = directedAreas.map(a => a.id);
@@ -717,7 +717,7 @@ export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
             }
         }
 
-        const groups = await prisma.requirementGroup.findMany({
+        const groups = await (prisma as any).requirementGroup.findMany({
             where,
             include: {
                 requirements: {
