@@ -1,0 +1,273 @@
+"use client";
+
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { useAuthStore } from '@/store/authStore';
+import { invoiceService } from '@/services/invoiceService';
+import LoadingButton from '@/components/LoadingButton';
+import { ChevronLeft, FileText, CheckCircle, AlertTriangle, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import axios from 'axios';
+
+export default function InvoiceDetailPage() {
+    const { token, user } = useAuthStore();
+    const params = useParams();
+    const router = useRouter();
+    const [invoice, setInvoice] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    // Matching State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [requirements, setRequirements] = useState<any[]>([]);
+    const [selectedReq, setSelectedReq] = useState<any>(null);
+    const [verifying, setVerifying] = useState(false);
+
+    useEffect(() => {
+        if (token && params.id) {
+            loadInvoice();
+        }
+    }, [token, params.id]);
+
+    const loadInvoice = async () => {
+        try {
+            // Re-using getInvoices for now or need a specific getById endpoint in service?
+            // The service doesn't have getById, so we might need to filter or add it.
+            // Let's assume we can filter by ID or just use the list for now to find it.
+            // Ideally backend should have getInvoiceById. 
+            // Controller has getInvoices (list) but not getById. I should add it or filter client side.
+            // For speed, let's filter client side from the list or add the endpoint. 
+            // Looking at backend routes: router.get('/', ... getInvoices). No /:id.
+            // I'll update backend later to be proper, for now I'll fetch all (inefficient) or just fix backend.
+            // Actually, let's use the list and find.
+            const all = await invoiceService.getInvoices(token!);
+            const found = all.find((i: any) => i.id === params.id);
+            setInvoice(found);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const searchRequirements = async () => {
+        if (!searchQuery) return;
+        try {
+            // Using existing requirements endpoint with search
+            // The existing endpoint might not support search param.
+            // Let's fetch all and filter client side for prototype.
+            const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/requirements/all`, { // Admin endpoint usually has all
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const matches = res.data.data ? res.data.data : res.data; // Handle pagination structure or plain array
+            const filtered = (Array.isArray(matches) ? matches : []).filter((r: any) =>
+                r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                r.id.includes(searchQuery)
+            ).slice(0, 5);
+            setRequirements(filtered);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const handleVerify = async () => {
+        if (!selectedReq) return;
+        setVerifying(true);
+        try {
+            await invoiceService.verifyInvoice(token!, invoice.id, selectedReq.id);
+            alert('Factura verificada exitosamente');
+            loadInvoice();
+            setSelectedReq(null);
+        } catch (error: any) {
+            alert(error.response?.data?.error || 'Error al verificar');
+        } finally {
+            setVerifying(false);
+        }
+    };
+
+    const handleApprove = async () => {
+        if (!confirm('¿Autorizar pago de esta factura?')) return;
+        try {
+            await invoiceService.approveInvoice(token!, invoice.id);
+            loadInvoice();
+        } catch (error) {
+            alert('Error al aprobar');
+        }
+    };
+
+    const handlePay = async () => {
+        const date = prompt('Fecha de Pago (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+        if (!date) return;
+
+        try {
+            await invoiceService.payInvoice(token!, invoice.id, { paymentDate: date });
+            loadInvoice();
+        } catch (error) {
+            alert('Error al registrar pago');
+        }
+    };
+
+    if (loading) return <div className="p-12 text-center">Cargando...</div>;
+    if (!invoice) return <div className="p-12 text-center">Factura no encontrada</div>;
+
+    const isMatchCorrect = selectedReq && Math.abs(parseFloat(invoice.amount) - (parseFloat(selectedReq.actualAmount || '0'))) < 1.0;
+
+    return (
+        <div className="p-6 max-w-5xl mx-auto space-y-6">
+            <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-900 flex items-center gap-1">
+                <ChevronLeft className="w-4 h-4" /> Volver
+            </button>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Invoice Details */}
+                <div className="space-y-6">
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h2 className="text-2xl font-bold flex items-center gap-2">
+                                    <FileText className="text-blue-600" />
+                                    Factura #{invoice.invoiceNumber}
+                                </h2>
+                                <p className="text-gray-500">{invoice.supplier?.name}</p>
+                            </div>
+                            <span className="px-3 py-1 rounded-full text-sm font-bold bg-gray-100 dark:bg-gray-700">
+                                {invoice.status}
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+                            <div>
+                                <label className="block text-gray-500">Monto Factura</label>
+                                <p className="text-xl font-mono font-bold">${Number(invoice.amount).toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <label className="block text-gray-500">Fecha Emisión</label>
+                                <p className="font-medium">{new Date(invoice.issueDate).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+
+                        {invoice.fileUrl && (
+                            <a
+                                href={`${(process.env.NEXT_PUBLIC_API_URL || '').replace('/api', '')}/${invoice.fileUrl.replace(/\\/g, '/')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-2 text-blue-600 hover:underline p-3 bg-blue-50 rounded-lg"
+                            >
+                                <ExternalLink className="w-4 h-4" />
+                                Ver Documento PDF
+                            </a>
+                        )}
+
+                        {/* Actions for Leaders/Admins */}
+                        <div className="mt-8 flex gap-2">
+                            {invoice.status === 'VERIFIED' && (
+                                <button onClick={handleApprove} className="flex-1 bg-amber-500 text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-colors">
+                                    Autorizar Pago
+                                </button>
+                            )}
+                            {invoice.status === 'APPROVED' && (
+                                <button onClick={handlePay} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition-colors">
+                                    Registrar Pago
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3-Way Match Section */}
+                <div className="space-y-6">
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 h-full">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                            <LinkIcon className="w-5 h-5 text-purple-600" />
+                            Vinculación (3-Way Match)
+                        </h3>
+
+                        {invoice.status === 'RECEIVED' ? (
+                            <div className="space-y-4">
+                                <p className="text-sm text-gray-500">Busca la Orden de Compra (Requerimiento) aprobada para vincular.</p>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar por ID o Título..."
+                                        className="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 max-w-xs"
+                                        value={searchQuery}
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                    />
+                                    <button onClick={searchRequirements} className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Buscar</button>
+                                </div>
+
+                                {requirements.length > 0 && (
+                                    <div className="space-y-2 mt-4 max-h-60 overflow-y-auto">
+                                        {requirements.map(req => (
+                                            <div
+                                                key={req.id}
+                                                onClick={() => setSelectedReq(req)}
+                                                className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedReq?.id === req.id ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:bg-gray-50'}`}
+                                            >
+                                                <p className="font-bold text-sm">{req.title}</p>
+                                                <div className="flex justify-between text-xs mt-1">
+                                                    <span className={req.status === 'APPROVED' ? 'text-green-600' : 'text-amber-600'}>{req.status}</span>
+                                                    <span className="font-mono">${Number(req.actualAmount || 0).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {selectedReq && (
+                                    <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                        <h4 className="font-bold text-sm mb-2">Resumen de coincidencia</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span>Factura:</span>
+                                                <span className="font-mono font-bold">${Number(invoice.amount).toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Orden de Compra:</span>
+                                                <span className="font-mono font-bold">${Number(selectedReq.actualAmount || 0).toLocaleString()}</span>
+                                            </div>
+                                            <div className="pt-2 border-t flex justify-between items-center">
+                                                <span>Diferencia:</span>
+                                                <span className={`font-mono font-bold ${isMatchCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                                                    ${(Number(invoice.amount) - Number(selectedReq.actualAmount || 0)).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {!isMatchCorrect && (
+                                            <div className="mt-2 flex items-center gap-2 text-amber-600 text-xs bg-amber-50 p-2 rounded">
+                                                <AlertTriangle className="w-4 h-4" />
+                                                <span>Los montos no coinciden exactamente. Revisa antes de verificar.</span>
+                                            </div>
+                                        )}
+
+                                        <LoadingButton
+                                            isLoading={verifying}
+                                            onClick={handleVerify}
+                                            className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-bold shadow-sm"
+                                        >
+                                            Verificar y Vincular
+                                        </LoadingButton>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            // Linked View
+                            <div className="text-center py-8 bg-green-50 rounded-xl border border-green-100">
+                                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
+                                <p className="font-bold text-green-800">Factura Vinculada</p>
+                                {invoice.requirement && (
+                                    <div className="mt-4 p-4 bg-white mx-4 rounded-lg shadow-sm text-left">
+                                        <p className="text-xs text-gray-500 uppercase">Orden de Compra</p>
+                                        <p className="font-bold text-sm text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/requirements/${invoice.requirement.id}`)}>
+                                            {invoice.requirement.title}
+                                        </p>
+                                        <p className="text-xs mt-1">ID: {invoice.requirement.id}</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

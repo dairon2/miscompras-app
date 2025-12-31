@@ -128,6 +128,13 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
 });
 
 // Protected Routes
+import invoiceRoutes from './routes/invoiceRoutes';
+
+// ... (existing imports)
+
+// ...
+
+// Protected Routes
 app.use('/api/requirements', authMiddleware, requirementRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
@@ -136,6 +143,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/adjustments', adjustmentRoutes);
+app.use('/api/invoices', invoiceRoutes);
+
 
 // NOTE: Budget CRUD is handled by budgetRoutes mounted at /api/budgets
 

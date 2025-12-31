@@ -8,6 +8,7 @@ const pdfkit_1 = __importDefault(require("pdfkit"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const blobStorageService_1 = require("./blobStorageService");
+const logger_1 = __importDefault(require("./logger"));
 // Get the logo path
 const LOGO_PATH = path_1.default.join(__dirname, '../../assets/logo.png');
 const UPLOADS_DIR = path_1.default.join(__dirname, '../../uploads/pdfs');
@@ -18,12 +19,12 @@ const ensureUploadDir = () => {
     try {
         if (!fs_1.default.existsSync(UPLOADS_DIR)) {
             fs_1.default.mkdirSync(UPLOADS_DIR, { recursive: true });
-            console.log('[PDF Service] Created uploads directory:', UPLOADS_DIR);
+            logger_1.default.pdf('Created uploads directory:', UPLOADS_DIR);
         }
         return true;
     }
     catch (error) {
-        console.error('[PDF Service] Failed to create uploads directory:', error);
+        logger_1.default.error('Failed to create uploads directory:', error);
         return false;
     }
 };
@@ -48,18 +49,18 @@ const formatDate = (date) => {
     }).format(date);
 };
 const generateBudgetPDF = async (budget) => {
-    console.log('[PDF Service] Starting budget PDF generation for:', budget.code || budget.title);
+    logger_1.default.pdf('Starting budget PDF generation for:', budget.code || budget.title);
     return new Promise((resolve, reject) => {
         try {
             // Ensure directory exists before creating file
             if (!ensureUploadDir()) {
-                console.error('[PDF Service] Upload directory not available, skipping PDF generation');
+                logger_1.default.error('Upload directory not available, skipping PDF generation');
                 reject(new Error('Upload directory not available'));
                 return;
             }
             const fileName = `presupuesto_${budget.code || budget.title.replace(/\s/g, '_')}_${Date.now()}.pdf`;
             const filePath = path_1.default.join(UPLOADS_DIR, fileName);
-            console.log('[PDF Service] Creating PDF at:', filePath);
+            logger_1.default.pdf('Creating PDF at:', filePath);
             const doc = new pdfkit_1.default({ margin: 50, size: 'LETTER' });
             const stream = fs_1.default.createWriteStream(filePath);
             doc.pipe(stream);
@@ -166,17 +167,17 @@ const generateBudgetPDF = async (budget) => {
                     try {
                         const blobUrl = await (0, blobStorageService_1.uploadToBlobStorage)(filePath, `budgets/${fileName}`);
                         if (blobUrl) {
-                            console.log('[PDF Service] Budget PDF uploaded to Blob:', blobUrl);
+                            logger_1.default.pdf('Budget PDF uploaded to Blob:', blobUrl);
                             resolve(blobUrl);
                             return;
                         }
                     }
                     catch (e) {
-                        console.error('[PDF Service] Blob upload failed:', e);
+                        logger_1.default.error('Blob upload failed:', e);
                     }
                 }
-                console.log('[PDF Service] Budget PDF generated locally:', fullLocalUrl);
-                resolve(fullLocalUrl);
+                logger_1.default.pdf('Budget PDF generated locally:', localPath);
+                resolve(localPath);
             });
             stream.on('error', reject);
         }
@@ -305,8 +306,23 @@ const generateAdjustmentPDF = async (adjustment) => {
                 doc.fillColor('#000');
             }
             doc.end();
-            stream.on('finish', () => {
-                resolve(`/uploads/pdfs/${fileName}`);
+            stream.on('finish', async () => {
+                const localPath = `/uploads/pdfs/${fileName}`;
+                if ((0, blobStorageService_1.isBlobStorageAvailable)()) {
+                    try {
+                        const blobUrl = await (0, blobStorageService_1.uploadToBlobStorage)(filePath, `adjustments/${fileName}`);
+                        if (blobUrl) {
+                            logger_1.default.pdf('Adjustment PDF uploaded to Blob:', blobUrl);
+                            resolve(blobUrl);
+                            return;
+                        }
+                    }
+                    catch (e) {
+                        logger_1.default.error('Blob upload failed for adjustment:', e);
+                    }
+                }
+                logger_1.default.pdf('Adjustment PDF generated locally:', localPath);
+                resolve(localPath);
             });
             stream.on('error', reject);
         }
@@ -317,7 +333,7 @@ const generateAdjustmentPDF = async (adjustment) => {
 };
 exports.generateAdjustmentPDF = generateAdjustmentPDF;
 const generateRequirementGroupPDF = async (group) => {
-    console.log('[PDF Service] Starting Requirement Group PDF generation for ID:', group.id);
+    logger_1.default.pdf('Starting Requirement Group PDF generation for ID:', group.id);
     return new Promise((resolve, reject) => {
         try {
             if (!ensureUploadDir()) {
@@ -425,17 +441,17 @@ const generateRequirementGroupPDF = async (group) => {
                     try {
                         const blobUrl = await (0, blobStorageService_1.uploadToBlobStorage)(filePath, `requirements/${fileName}`);
                         if (blobUrl) {
-                            console.log('[PDF Service] Requirement PDF uploaded to Blob:', blobUrl);
+                            logger_1.default.pdf('Requirement PDF uploaded to Blob:', blobUrl);
                             resolve(blobUrl);
                             return;
                         }
                     }
                     catch (e) {
-                        console.error('[PDF Service] Blob upload failed:', e);
+                        logger_1.default.error('Blob upload failed:', e);
                     }
                 }
-                console.log('[PDF Service] Requirement PDF generated locally:', fullLocalUrl);
-                resolve(fullLocalUrl);
+                logger_1.default.pdf('Requirement PDF generated locally:', localPath);
+                resolve(localPath);
             });
             stream.on('error', reject);
         }

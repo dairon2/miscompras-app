@@ -61,34 +61,6 @@ const login = async (req, res) => {
     if (!email || !password) {
         return res.status(400).json({ error: 'Email y contraseña son requeridos' });
     }
-    // --- MOCK LOGIN FOR DEMO (Only if DB is not connected) ---
-    const isDemoMode = !process.env.DATABASE_URL || process.env.DATABASE_URL.includes("mock");
-    if (isDemoMode) {
-        if ((email === 'admin@museodeantioquia.co' || email === 'daironmoreno24@gmail.com') && password === 'admin123') {
-            const mockUser = {
-                id: 'mock-admin-id',
-                email: email,
-                role: 'ADMIN',
-                name: email === 'daironmoreno24@gmail.com' ? 'Dairon Moreno (Admin)' : 'Administrador (Demo)',
-                areaId: 'area-3'
-            };
-            const token = jsonwebtoken_1.default.sign({ id: mockUser.id, email: mockUser.email, role: mockUser.role, areaId: mockUser.areaId }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '8h' });
-            return res.json({ token, user: mockUser });
-        }
-        if (email === 'testuser@museodeantioquia.co' && password === 'user123') {
-            const mockUser = {
-                id: 'mock-user-id',
-                email: 'testuser@museodeantioquia.co',
-                role: 'USER',
-                name: 'Usuario de Prueba',
-                areaId: 'area-1'
-            };
-            const token = jsonwebtoken_1.default.sign({ id: mockUser.id, email: mockUser.email, role: mockUser.role, areaId: mockUser.areaId }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '8h' });
-            return res.json({ token, user: mockUser });
-        }
-        // In demo mode, if credentials don't match, fall through to database check
-    }
-    // --- END MOCK LOGIN ---
     try {
         const user = await index_1.prisma.user.findUnique({
             where: { email },

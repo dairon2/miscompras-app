@@ -158,6 +158,7 @@ export default function RootLayout({
                   {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && (
                     <NavItem icon={<BookOpen size={14} />} label="Asientos" href="/asientos" active={pathname === "/asientos" || pathname.startsWith("/asientos/")} />
                   )}
+                  <NavItem icon={<FileText size={14} />} label="Facturas" href="/invoices" active={pathname === "/invoices" || pathname.startsWith("/invoices/")} />
                   <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers"} />
                   <NavItem icon={<Building2 size={14} />} label="Presupuestos" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
                   {(['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(user?.role || '') || user?.isAreaDirector) && (

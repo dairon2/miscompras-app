@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.isBlobStorageAvailable = exports.deleteFromBlobStorage = exports.uploadBufferToBlobStorage = exports.uploadToBlobStorage = void 0;
 const storage_blob_1 = require("@azure/storage-blob");
 const fs_1 = __importDefault(require("fs"));
+const logger_1 = __importDefault(require("./logger"));
 // Azure Blob Storage configuration
 const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const CONTAINER_NAME = process.env.AZURE_STORAGE_CONTAINER || 'pdfs';
@@ -15,7 +16,7 @@ let containerClient = null;
  */
 const initializeBlobClient = async () => {
     if (!AZURE_STORAGE_CONNECTION_STRING) {
-        console.log('[Blob Storage] Connection string not configured, using local storage');
+        logger_1.default.blob('Connection string not configured, using local storage');
         return null;
     }
     try {
@@ -25,13 +26,13 @@ const initializeBlobClient = async () => {
         const exists = await client.exists();
         if (!exists) {
             await client.create({ access: 'blob' }); // Public read access for blobs
-            console.log('[Blob Storage] Created container:', CONTAINER_NAME);
+            logger_1.default.blob('Created container:', CONTAINER_NAME);
         }
-        console.log('[Blob Storage] Initialized successfully');
+        logger_1.default.blob('Initialized successfully');
         return client;
     }
     catch (error) {
-        console.error('[Blob Storage] Failed to initialize:', error);
+        logger_1.default.error('Blob Storage failed to initialize:', error);
         return null;
     }
 };
@@ -48,7 +49,7 @@ const uploadToBlobStorage = async (filePath, blobName) => {
             containerClient = await initializeBlobClient();
         }
         if (!containerClient) {
-            console.log('[Blob Storage] Not available, skipping upload');
+            logger_1.default.blob('Not available, skipping upload');
             return null;
         }
         // Read file and upload
@@ -60,19 +61,19 @@ const uploadToBlobStorage = async (filePath, blobName) => {
             }
         });
         const blobUrl = blockBlobClient.url;
-        console.log('[Blob Storage] Uploaded successfully:', blobUrl);
+        logger_1.default.blob('Uploaded successfully:', blobUrl);
         // Delete local file after successful upload
         try {
             fs_1.default.unlinkSync(filePath);
-            console.log('[Blob Storage] Deleted local file:', filePath);
+            logger_1.default.blob('Deleted local file:', filePath);
         }
         catch (deleteError) {
-            console.warn('[Blob Storage] Could not delete local file:', deleteError);
+            logger_1.default.warn('Could not delete local file:', deleteError);
         }
         return blobUrl;
     }
     catch (error) {
-        console.error('[Blob Storage] Upload failed:', error);
+        logger_1.default.error('Blob Storage upload failed:', error);
         return null;
     }
 };

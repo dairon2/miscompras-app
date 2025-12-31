@@ -21,7 +21,7 @@ const getBudgets = async (req, res) => {
         if (status)
             where.status = status;
         // Role-based access logic
-        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole || '');
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
         if (!isGlobalViewer) {
             // Check if user is director of any area
             const directedAreas = await index_1.prisma.area.findMany({
@@ -100,7 +100,22 @@ const getBudgetById = async (req, res) => {
                     include: {
                         requestedBy: { select: { id: true, name: true } },
                         reviewedBy: { select: { id: true, name: true } },
-                        sources: true
+                        sources: {
+                            include: {
+                                budget: { select: { id: true, title: true } }
+                            }
+                        }
+                    }
+                },
+                adjustmentSources: {
+                    include: {
+                        adjustment: {
+                            include: {
+                                budget: { select: { id: true, title: true } },
+                                requestedBy: { select: { id: true, name: true } },
+                                reviewedBy: { select: { id: true, name: true } }
+                            }
+                        }
                     }
                 }
             }

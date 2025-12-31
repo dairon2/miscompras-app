@@ -1,0 +1,79 @@
+
+> backend@1.0.0 test
+> jest --coverage src/__tests__/controllers/invoiceController.test.ts
+
+FAIL src/__tests__/controllers/invoiceController.test.ts
+  Invoice Controller
+    createInvoice
+      × should create an invoice successfully (4 ms)
+      √ should return error if file is missing
+    verifyInvoice
+      √ should verify match with approved PO (1 ms)
+      √ should fail if PO is not approved (1 ms)
+    approveInvoice
+      √ should allow LEADER to approve
+      √ should deny regular USER (1 ms)
+    payInvoice
+      √ should mark as PAID and create payment record
+
+  ● Invoice Controller › createInvoice › should create an invoice successfully
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 201
+    Received: 400
+
+    Number of calls: 1
+
+    [0m [90m 69 |[39m                 })
+     [90m 70 |[39m             }))[33m;[39m
+    [31m[1m>[22m[39m[90m 71 |[39m             expect(status)[33m.[39mtoHaveBeenCalledWith([35m201[39m)[33m;[39m
+     [90m    |[39m                            [31m[1m^[22m[39m
+     [90m 72 |[39m             expect(json)[33m.[39mtoHaveBeenCalledWith(expect[33m.[39mobjectContaining({ id[33m:[39m [32m'inv-1'[39m }))[33m;[39m
+     [90m 73 |[39m         })[33m;[39m
+     [90m 74 |[39m[0m
+
+      at Object.<anonymous> (src/__tests__/controllers/invoiceController.test.ts:71:28)
+
+-----------------------------|---------|----------|---------|---------|------------------------
+File                         | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s      
+-----------------------------|---------|----------|---------|---------|------------------------
+All files                    |    2.31 |     1.12 |    2.43 |    2.17 |                        
+ controllers                 |    3.66 |     1.45 |    3.66 |    3.51 |                        
+  adjustmentController.ts    |       0 |        0 |       0 |       0 | 3-491                  
+  adminController.ts         |       0 |        0 |       0 |       0 | 3-519                  
+  authController.ts          |       0 |        0 |       0 |       0 | 2-291                  
+  budgetController.ts        |       0 |        0 |       0 |       0 | 3-551                  
+  invoiceController.ts       |   69.69 |    56.25 |   66.66 |   71.42 | 8-46,85-87,118,138,171 
+  notificationController.ts  |       0 |        0 |       0 |       0 | 3-44                   
+  paymentController.ts       |       0 |        0 |       0 |       0 | 3-207                  
+  reportController.ts        |       0 |        0 |       0 |       0 | 3-154                  
+  requirementController.ts   |       0 |        0 |       0 |       0 | 3-845                  
+  userController.ts          |       0 |        0 |       0 |       0 | 2-342                  
+ middlewares                 |       0 |        0 |       0 |       0 |                        
+  auth.ts                    |       0 |        0 |       0 |       0 | 2-39                   
+ routes                      |       0 |        0 |       0 |       0 |                        
+  adjustmentRoutes.ts        |       0 |      100 |     100 |       0 | 1-39                   
+  adminRoutes.ts             |       0 |      100 |     100 |       0 | 1-79                   
+  authRoutes.ts              |       0 |      100 |     100 |       0 | 1-17                   
+  budgetRoutes.ts            |       0 |      100 |     100 |       0 | 1-47                   
+  catalogRoutes.ts           |       0 |        0 |       0 |       0 | 1-48                   
+  invoiceRoutes.ts           |       0 |      100 |       0 |       0 | 1-26                   
+  notificationRoutes.ts      |       0 |      100 |     100 |       0 | 1-13                   
+  paymentRoutes.ts           |       0 |      100 |     100 |       0 | 1-22                   
+  reportRoutes.ts            |       0 |      100 |     100 |       0 | 1-16                   
+  requirementRoutes.ts       |       0 |      100 |       0 |       0 | 1-55                   
+  userRoutes.ts              |       0 |      100 |     100 |       0 | 1-34                   
+ services                    |       0 |        0 |       0 |       0 |                        
+  blobStorageService.ts      |       0 |        0 |       0 |       0 | 1-153                  
+  emailService.ts            |       0 |        0 |       0 |       0 | 1-262                  
+  excelService.ts            |       0 |        0 |       0 |       0 | 1-85                   
+  logger.ts                  |       0 |        0 |       0 |       0 | 6-51                   
+  pdfService.ts              |       0 |        0 |       0 |       0 | 1-586                  
+  requirementGroupService.ts |       0 |        0 |       0 |       0 | 1-72                   
+-----------------------------|---------|----------|---------|---------|------------------------
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 6 passed, 7 total
+Snapshots:   0 total
+Time:        12.191 s
+Ran all test suites matching /src\\__tests__\\controllers\\invoiceController.test.ts/i.

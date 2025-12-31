@@ -164,9 +164,9 @@ exports.getMyAdjustments = getMyAdjustments;
 const getPendingAdjustments = async (req, res) => {
     try {
         const userRole = req.user?.role;
-        // Only DIRECTOR can see pending adjustments
-        if (userRole !== 'DIRECTOR') {
-            return res.status(403).json({ error: 'Solo el DIRECTOR puede ver solicitudes pendientes' });
+        // Allow DIRECTOR, ADMIN, and DEVELOPER to see pending adjustments
+        if (!['DIRECTOR', 'ADMIN', 'DEVELOPER'].includes(userRole || '')) {
+            return res.status(403).json({ error: 'Solo el DIRECTOR o ADMIN pueden ver solicitudes pendientes' });
         }
         const adjustments = await index_1.prisma.budgetAdjustment.findMany({
             where: { status: 'PENDING' },
@@ -238,9 +238,9 @@ const approveAdjustment = async (req, res) => {
         const userRole = req.user?.role;
         const userId = req.user?.id;
         const { id } = req.params;
-        // Only DIRECTOR can approve
-        if (userRole !== 'DIRECTOR') {
-            return res.status(403).json({ error: 'Solo el DIRECTOR puede aprobar solicitudes' });
+        // Allow DIRECTOR, ADMIN, and DEVELOPER to approve
+        if (!['DIRECTOR', 'ADMIN', 'DEVELOPER'].includes(userRole || '')) {
+            return res.status(403).json({ error: 'Solo el DIRECTOR o ADMIN pueden aprobar solicitudes' });
         }
         const adjustment = await index_1.prisma.budgetAdjustment.findUnique({
             where: { id },
@@ -257,15 +257,19 @@ const approveAdjustment = async (req, res) => {
             return res.status(400).json({ error: 'Esta solicitud ya fue procesada' });
         }
         // ============ APPLY BUDGET CHANGES AUTOMATICALLY ============
-        // 1. If TRANSFER, reduce available from source budgets
+        // 1. If TRANSFER, reduce available and total amount from source budgets
         if (adjustment.type === 'TRANSFER') {
             for (const source of adjustment.sources) {
                 await index_1.prisma.budget.update({
                     where: { id: source.budgetId },
                     data: {
+                        amount: {
+                            decrement: parseFloat(source.amount.toString())
+                        },
                         available: {
                             decrement: parseFloat(source.amount.toString())
-                        }
+                        },
+                        version: { increment: 1 }
                     }
                 });
             }
@@ -355,9 +359,9 @@ const rejectAdjustment = async (req, res) => {
         const userId = req.user?.id;
         const { id } = req.params;
         const { comment } = req.body;
-        // Only DIRECTOR can reject
-        if (userRole !== 'DIRECTOR') {
-            return res.status(403).json({ error: 'Solo el DIRECTOR puede rechazar solicitudes' });
+        // Allow DIRECTOR, ADMIN, and DEVELOPER to reject
+        if (!['DIRECTOR', 'ADMIN', 'DEVELOPER'].includes(userRole || '')) {
+            return res.status(403).json({ error: 'Solo el DIRECTOR o ADMIN pueden rechazar solicitudes' });
         }
         const adjustment = await index_1.prisma.budgetAdjustment.findUnique({
             where: { id },

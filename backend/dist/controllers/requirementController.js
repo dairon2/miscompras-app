@@ -114,13 +114,20 @@ const getMyRequirements = async (req, res) => {
     const userId = req.user?.id;
     const year = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
     const includeAsientos = req.query.includeAsientos === 'true';
+    // Pagination params
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 25));
+    const skip = (page - 1) * limit;
     try {
+        const where = {
+            createdById: userId,
+            year: year,
+            isAsiento: includeAsientos ? undefined : false
+        };
+        // Get total count for pagination
+        const total = await index_1.prisma.requirement.count({ where });
         const requirements = await index_1.prisma.requirement.findMany({
-            where: {
-                createdById: userId,
-                year: year,
-                isAsiento: includeAsientos ? undefined : false
-            },
+            where,
             include: {
                 project: true,
                 area: true,
@@ -141,9 +148,19 @@ const getMyRequirements = async (req, res) => {
                     }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            skip,
+            take: limit
         });
-        res.json(requirements);
+        res.json({
+            data: requirements,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to fetch requirements' });
@@ -223,7 +240,12 @@ const updateRequirementStatus = async (req, res) => {
 exports.updateRequirementStatus = updateRequirementStatus;
 const updateRequirement = async (req, res) => {
     const { id } = req.params;
-    const { title, description, quantity, actualAmount, projectId, areaId, supplierId, manualSupplierName, purchaseOrderNumber, invoiceNumber, deliveryDate, receivedDate, reqCategory, procurementStatus, receivedAtSatisfaction, satisfactionComments, deleteAttachmentIds } = req.body;
+    // Defensive check for body
+    if (!req.body) {
+        console.error("updateRequirement: req.body is undefined");
+        return res.status(400).json({ error: 'Request body is missing' });
+    }
+    const { title, description, quantity, actualAmount, projectId, areaId, supplierId, manualSupplierName, purchaseOrderNumber, invoiceNumber, deliveryDate, receivedDate, reqCategory, procurementStatus, receivedAtSatisfaction, satisfactionComments, deleteAttachmentIds, hasMultiplePayments } = req.body;
     const files = req.files;
     try {
         const currentReq = await index_1.prisma.requirement.findUnique({
@@ -252,33 +274,46 @@ const updateRequirement = async (req, res) => {
             const idsToDelete = Array.isArray(deleteAttachmentIds) ? deleteAttachmentIds : [deleteAttachmentIds];
             const attachmentsToDelete = currentReq.attachments.filter(a => idsToDelete.includes(a.id));
             for (const att of attachmentsToDelete) {
-                if (fs_1.default.existsSync(att.fileUrl)) {
-                    fs_1.default.unlinkSync(att.fileUrl);
+                try {
+                    if (att.fileUrl && fs_1.default.existsSync(att.fileUrl)) {
+                        fs_1.default.unlinkSync(att.fileUrl);
+                    }
+                }
+                catch (err) {
+                    console.error(`Warning: Could not delete file ${att.fileUrl}:`, err);
                 }
             }
             await index_1.prisma.attachment.deleteMany({
                 where: { id: { in: idsToDelete } }
             });
         }
+        // Safe date parsing helper
+        const parseSafeDate = (val) => {
+            if (!val || val === 'null' || val === '')
+                return null;
+            const d = new Date(val);
+            return (d instanceof Date && !isNaN(d.getTime())) ? d : undefined;
+        };
         const updatedRequirement = await index_1.prisma.requirement.update({
             where: { id },
             data: {
                 title,
                 description,
                 quantity,
-                actualAmount: actualAmount !== undefined ? parseFloat(actualAmount) : undefined,
-                projectId,
-                areaId,
-                supplierId: supplierId === 'null' ? null : supplierId,
-                manualSupplierName,
-                purchaseOrderNumber,
-                invoiceNumber,
-                deliveryDate: deliveryDate ? (deliveryDate === 'null' ? null : new Date(deliveryDate)) : undefined,
-                receivedDate: receivedDate ? (receivedDate === 'null' ? null : new Date(receivedDate)) : undefined,
-                reqCategory: reqCategory || undefined,
-                procurementStatus: procurementStatus || undefined,
+                actualAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : (actualAmount === 'null' ? null : undefined),
+                projectId: (projectId && projectId !== 'null') ? projectId : undefined,
+                areaId: (areaId && areaId !== 'null') ? areaId : undefined,
+                supplierId: (supplierId === 'null' || !supplierId) ? null : supplierId,
+                manualSupplierName: manualSupplierName === 'null' ? null : manualSupplierName,
+                purchaseOrderNumber: purchaseOrderNumber === 'null' ? null : purchaseOrderNumber,
+                invoiceNumber: invoiceNumber === 'null' ? null : invoiceNumber,
+                deliveryDate: parseSafeDate(deliveryDate),
+                receivedDate: parseSafeDate(receivedDate),
+                reqCategory: (reqCategory && reqCategory !== 'null') ? reqCategory : undefined,
+                procurementStatus: (procurementStatus && procurementStatus !== 'null') ? procurementStatus : undefined,
                 receivedAtSatisfaction: receivedAtSatisfaction !== undefined ? (receivedAtSatisfaction === 'true' || receivedAtSatisfaction === true) : undefined,
-                satisfactionComments,
+                satisfactionComments: satisfactionComments === 'null' ? null : satisfactionComments,
+                hasMultiplePayments: hasMultiplePayments !== undefined ? (hasMultiplePayments === 'true' || hasMultiplePayments === true) : undefined,
                 attachments: {
                     create: files?.map(file => ({
                         fileName: file.originalname,
@@ -325,6 +360,10 @@ exports.updateRequirement = updateRequirement;
 const getAllRequirements = async (req, res) => {
     const year = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
     const includeAsientos = req.query.includeAsientos === 'true';
+    // Pagination params
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 25));
+    const skip = (page - 1) * limit;
     const userId = req.user?.id;
     const userRole = req.user?.role;
     try {
@@ -332,8 +371,8 @@ const getAllRequirements = async (req, res) => {
             year: year,
             isAsiento: includeAsientos ? undefined : false
         };
-        // ADMIN, DIRECTOR (global) and LEADER see everything
-        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole || '');
+        // ADMIN, DIRECTOR (global), LEADER, COORDINATOR and AUDITOR see everything
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'].includes(userRole || '');
         if (!isGlobalViewer) {
             // Check if user is director of any area
             const directedAreas = await index_1.prisma.area.findMany({
@@ -348,12 +387,9 @@ const getAllRequirements = async (req, res) => {
                     { createdById: userId }
                 ];
             }
-            else {
-                // If they are not global viewer and not area director (e.g. COORDINATOR or AUDITOR with limited scope)
-                // We should still filter by something or allow them to see what their role allows
-                // For now, if they passed roleCheck, we assume they can see unless specialized logic needed
-            }
         }
+        // Get total count for pagination
+        const total = await index_1.prisma.requirement.count({ where });
         const requirements = await index_1.prisma.requirement.findMany({
             where,
             include: {
@@ -383,9 +419,19 @@ const getAllRequirements = async (req, res) => {
                     }
                 }
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            skip,
+            take: limit
         });
-        res.json(requirements);
+        res.json({
+            data: requirements,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     }
     catch (error) {
         console.error("Error fetching all requirements:", error);
@@ -589,13 +635,16 @@ const rejectRequirementGroup = async (req, res) => {
     }
 };
 exports.rejectRequirementGroup = rejectRequirementGroup;
-// Get all requirement groups (for approval view)
+// Get pending requirements for approval view (returns requirements with status PENDING_APPROVAL)
 const getRequirementGroups = async (req, res) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
     try {
-        const where = {};
-        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole || '');
+        const where = {
+            status: 'PENDING_APPROVAL'
+        };
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
+        // Filter by area if user is not a global viewer
         if (!isGlobalViewer) {
             const directedAreas = await index_1.prisma.area.findMany({
                 where: { directorId: userId },
@@ -603,33 +652,25 @@ const getRequirementGroups = async (req, res) => {
             });
             const directedAreaIds = directedAreas.map(a => a.id);
             if (directedAreaIds.length > 0) {
-                where.requirements = {
-                    some: {
-                        areaId: { in: directedAreaIds }
-                    }
-                };
+                where.areaId = { in: directedAreaIds };
             }
             else {
-                // Regular USER should only see what they created? 
-                // Normally regular users don't see this view, but for safety:
-                where.creatorId = userId;
+                // Regular USER should only see what they created
+                where.createdById = userId;
             }
         }
-        const groups = await index_1.prisma.requirementGroup.findMany({
+        const requirements = await index_1.prisma.requirement.findMany({
             where,
             include: {
-                requirements: {
+                project: true,
+                area: true,
+                budget: {
                     include: {
-                        project: true,
-                        area: true,
-                        budget: {
-                            include: {
-                                category: true
-                            }
-                        }
+                        category: true
                     }
                 },
-                creator: {
+                attachments: true,
+                createdBy: {
                     select: {
                         id: true,
                         name: true,
@@ -639,11 +680,20 @@ const getRequirementGroups = async (req, res) => {
             },
             orderBy: { createdAt: 'desc' }
         });
-        res.json(groups);
+        // Transform to format expected by frontend (wrap in group-like structure for compatibility)
+        const groupedData = [{
+                id: 1,
+                creator: requirements[0]?.createdBy || { id: '', name: 'Sistema', email: '' },
+                pdfUrl: null,
+                createdAt: new Date().toISOString(),
+                requirements: requirements
+            }];
+        // If no requirements, return empty array
+        res.json(requirements.length > 0 ? groupedData : []);
     }
     catch (error) {
-        console.error("Error fetching requirement groups:", error);
-        res.status(500).json({ error: 'Failed to fetch groups', details: error.message });
+        console.error("Error fetching pending requirements:", error);
+        res.status(500).json({ error: 'Failed to fetch requirements', details: error.message });
     }
 };
 exports.getRequirementGroups = getRequirementGroups;

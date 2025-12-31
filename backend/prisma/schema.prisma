@@ -36,6 +36,7 @@ model User {
   groupsCreated        RequirementGroup[] @relation("GroupCreator")
   area                 Area?              @relation("AreaUsers", fields: [areaId], references: [id])
   areasDirected        Area[]             @relation("AreaDirector")
+  invoicesCreated      Invoice[]          @relation("InvoiceCreator")
 }
 
 model Project {
@@ -75,6 +76,7 @@ model Supplier {
   nit          String?       @unique
   phone        String?
   requirements Requirement[]
+  invoices     Invoice[]
 }
 
 model Category {
@@ -208,6 +210,7 @@ model Requirement {
   project                Project             @relation(fields: [projectId], references: [id])
   supplier               Supplier?           @relation(fields: [supplierId], references: [id])
   group                  RequirementGroup?   @relation(fields: [groupId], references: [id])
+  invoices               Invoice[]
 }
 
 model RequirementGroup {
@@ -321,4 +324,31 @@ enum RequirementCategory {
   ORDEN_SERVICIO
   ORDEN_PRODUCCION
   SERVICIO
+}
+
+
+model Invoice {
+  id              String         @id @default(uuid())
+  invoiceNumber   String
+  supplierId      String
+  supplier        Supplier       @relation(fields: [supplierId], references: [id])
+  requirementId   String?
+  requirement     Requirement?   @relation(fields: [requirementId], references: [id])
+  amount          Decimal        @db.Decimal(15, 2)
+  issueDate       DateTime
+  dueDate         DateTime?
+  status          InvoiceStatus  @default(RECEIVED)
+  fileUrl         String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  createdById     String
+  createdBy       User           @relation("InvoiceCreator", fields: [createdById], references: [id])
+}
+
+enum InvoiceStatus {
+  RECEIVED
+  VERIFIED
+  APPROVED
+  PAID
+  REJECTED
 }
