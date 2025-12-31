@@ -111,7 +111,9 @@ export default function HomePage() {
                       }`}>
                       {req.status.replace('_', ' ')}
                     </span>
-                    <p className="text-lg font-black mt-2 text-primary-900 dark:text-white">${parseFloat(req.totalAmount).toLocaleString()}</p>
+                    <p className="text-lg font-black mt-2 text-primary-900 dark:text-white">
+                      {(req.totalAmount || req.actualAmount) ? `$${parseFloat(req.totalAmount || req.actualAmount || 0).toLocaleString()}` : ''}
+                    </p>
                   </div>
                 </div>
               ))
