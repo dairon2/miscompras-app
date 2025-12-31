@@ -6,7 +6,7 @@
 const mockExists = jest.fn();
 const mockCreate = jest.fn();
 const mockUpload = jest.fn();
-const mockGetBlockBlobClient = jest.fn(() => ({
+const mockGetBlockBlobClient = jest.fn((_fileName?: string) => ({
     upload: mockUpload,
     url: 'https://test.blob.core.windows.net/pdfs/test-file.pdf'
 }));

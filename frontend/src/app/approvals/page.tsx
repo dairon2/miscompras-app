@@ -260,13 +260,13 @@ export default function ApprovalsPage() {
                                 {/* Group Header */}
                                 <div className="p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6 cursor-pointer" onClick={() => setExpandedGroup(expandedGroup === group.id ? null : group.id)}>
                                     <div className="flex items-center gap-6">
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${getGroupStatus(group) === 'PENDING' ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-600' : 'bg-green-100 dark:bg-green-900/20 text-green-600'}`}>
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${getGroupStatus(group) === 'PENDING_APPROVAL' ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-600' : 'bg-green-100 dark:bg-green-900/20 text-green-600'}`}>
                                             <FileText size={28} />
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-3 mb-1">
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Solicitud #{group.id}</span>
-                                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${getGroupStatus(group) === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}>
+                                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${getGroupStatus(group) === 'PENDING_APPROVAL' ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}>
                                                     {getGroupStatus(group)}
                                                 </span>
                                             </div>
