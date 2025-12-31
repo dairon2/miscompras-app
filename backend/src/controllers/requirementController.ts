@@ -734,6 +734,7 @@ export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
                         category: true
                     }
                 },
+                attachments: true,
                 createdBy: {
                     select: {
                         id: true,
