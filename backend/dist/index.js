@@ -120,6 +120,10 @@ app.get('/api/suppliers', auth_1.authMiddleware, async (req, res) => {
     }
 });
 // Protected Routes
+const invoiceRoutes_1 = __importDefault(require("./routes/invoiceRoutes"));
+// ... (existing imports)
+// ...
+// Protected Routes
 app.use('/api/requirements', auth_1.authMiddleware, requirementRoutes_1.default);
 app.use('/api/notifications', auth_1.authMiddleware, notificationRoutes_1.default);
 app.use('/api/reports', auth_1.authMiddleware, reportRoutes_1.default);
@@ -128,6 +132,7 @@ app.use('/api/users', userRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
 app.use('/api/budgets', budgetRoutes_1.default);
 app.use('/api/adjustments', adjustmentRoutes_1.default);
+app.use('/api/invoices', invoiceRoutes_1.default);
 // NOTE: Budget CRUD is handled by budgetRoutes mounted at /api/budgets
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'API Miscompras en ejecución' });

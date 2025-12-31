@@ -87,9 +87,12 @@ export default function RequirementsPage() {
     const canDelete = ['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(userRole);
 
     useEffect(() => {
-        fetchRequirements();
-        fetchCatalogs();
-    }, [userRole, selectedYear]);
+        if (user) {
+            fetchRequirements();
+            fetchCatalogs();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedYear]); // Remove userRole and isAdmin from dependencies
 
     const fetchRequirements = async () => {
         try {

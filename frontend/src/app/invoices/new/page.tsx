@@ -55,10 +55,12 @@ export default function NewInvoicePage() {
             data.append('file', file);
 
             await invoiceService.createInvoice(token!, data);
+            alert('Factura creada exitosamente');
             router.push('/invoices');
-        } catch (error) {
-            console.error(error);
-            alert('Error al crear la factura');
+        } catch (error: any) {
+            console.error('Error creating invoice:', error);
+            const errorMessage = error.response?.data?.error || error.response?.data?.details || error.message || 'Error al crear la factura';
+            alert(errorMessage);
         } finally {
             setLoading(false);
         }
