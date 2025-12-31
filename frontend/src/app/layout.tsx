@@ -191,27 +191,27 @@ export default function RootLayout({
                               <button onClick={markAllRead} className="text-[10px] font-black text-primary-600 hover:underline uppercase">Marcar todas</button>
                             )}
                           </div>
-                          <div className="flex flex-col gap-1">
-                            {notifications.length === 0 ? (
+                          <div className="flex flex-col gap-1 max-h-[400px] overflow-y-auto">
+                            {notifications.filter(n => !n.isRead).length === 0 ? (
                               <div className="py-12 text-center">
                                 <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
                                   <Bell className="text-gray-300" size={32} />
                                 </div>
-                                <p className="text-gray-500 font-bold">No tienes notificaciones</p>
+                                <p className="text-gray-500 font-bold">No tienes notificaciones pendientes</p>
                               </div>
                             ) : (
-                              notifications.map((n: Notification) => (
+                              notifications.filter(n => !n.isRead).map((n: Notification) => (
                                 <div
                                   key={n.id}
                                   onClick={() => markRead(n.id, n.requirementId, n.title, n.type)}
-                                  className={`p-5 rounded-3xl cursor-pointer transition-all border-l-4 ${n.isRead ? 'bg-transparent border-transparent' : 'bg-primary-50/50 dark:bg-primary-500/10 border-primary-500'} hover:bg-gray-50 dark:hover:bg-slate-700`}
+                                  className={`p-5 rounded-3xl cursor-pointer transition-all border-l-4 bg-primary-50/50 dark:bg-primary-500/10 border-primary-500 hover:bg-gray-50 dark:hover:bg-slate-700`}
                                 >
                                   <div className="flex items-start gap-3">
                                     <div className={`mt-1 p-2 rounded-xl ${n.type === 'APPROVAL' ? 'bg-green-100 text-green-600' : 'bg-primary-100 text-primary-600'}`}>
                                       {n.type === 'APPROVAL' ? <Shield size={16} /> : <FileText size={16} />}
                                     </div>
                                     <div>
-                                      <h4 className={`font-black text-sm ${n.isRead ? 'text-gray-600 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>{n.title}</h4>
+                                      <h4 className="font-black text-sm text-gray-900 dark:text-white">{n.title}</h4>
                                       <p className="text-xs text-gray-500 mt-1 leading-relaxed">{n.message}</p>
                                       <span className="text-[10px] text-gray-400 mt-2 block font-bold">{new Date(n.createdAt).toLocaleDateString()}</span>
                                     </div>
