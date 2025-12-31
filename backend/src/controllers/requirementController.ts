@@ -688,15 +688,19 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
     }
 };
 
-// Get all requirement groups (for approval view)
+// Get pending requirements for approval view (returns requirements with status PENDING_APPROVAL)
 export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
     try {
-        const where: any = {};
+        const where: any = {
+            status: 'PENDING_APPROVAL'
+        };
+
         const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
 
+        // Filter by area if user is not a global viewer
         if (!isGlobalViewer) {
             const directedAreas = await prisma.area.findMany({
                 where: { directorId: userId } as any,
@@ -705,33 +709,24 @@ export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
             const directedAreaIds = directedAreas.map(a => a.id);
 
             if (directedAreaIds.length > 0) {
-                where.requirements = {
-                    some: {
-                        areaId: { in: directedAreaIds }
-                    }
-                };
+                where.areaId = { in: directedAreaIds };
             } else {
-                // Regular USER should only see what they created? 
-                // Normally regular users don't see this view, but for safety:
-                where.creatorId = userId;
+                // Regular USER should only see what they created
+                where.createdById = userId;
             }
         }
 
-        const groups = await (prisma as any).requirementGroup.findMany({
+        const requirements = await prisma.requirement.findMany({
             where,
             include: {
-                requirements: {
+                project: true,
+                area: true,
+                budget: {
                     include: {
-                        project: true,
-                        area: true,
-                        budget: {
-                            include: {
-                                category: true
-                            }
-                        }
+                        category: true
                     }
                 },
-                creator: {
+                createdBy: {
                     select: {
                         id: true,
                         name: true,
@@ -741,10 +736,21 @@ export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
             },
             orderBy: { createdAt: 'desc' }
         });
-        res.json(groups);
+
+        // Transform to format expected by frontend (wrap in group-like structure for compatibility)
+        const groupedData = [{
+            id: 1,
+            creator: requirements[0]?.createdBy || { id: '', name: 'Sistema', email: '' },
+            pdfUrl: null,
+            createdAt: new Date().toISOString(),
+            requirements: requirements
+        }];
+
+        // If no requirements, return empty array
+        res.json(requirements.length > 0 ? groupedData : []);
     } catch (error: any) {
-        console.error("Error fetching requirement groups:", error);
-        res.status(500).json({ error: 'Failed to fetch groups', details: error.message });
+        console.error("Error fetching pending requirements:", error);
+        res.status(500).json({ error: 'Failed to fetch requirements', details: error.message });
     }
 };
 
