@@ -19,6 +19,7 @@ import {
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import { BudgetCascadeSelector } from "@/components";
 
 export default function NewAsientoPage() {
     const router = useRouter();
@@ -208,45 +209,29 @@ export default function NewAsientoPage() {
                         </div>
                     </div>
 
-                    {/* Assignment */}
+                    {/* Assignment - Budget Cascade Selector */}
                     <div className="space-y-6">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
-                            <Building size={14} /> Asignación
+                            <Building size={14} /> Asignación de Presupuesto
                         </h3>
 
+                        <div className="p-6 bg-gradient-to-r from-primary-50/50 to-indigo-50/50 dark:from-primary-900/10 dark:to-indigo-900/10 rounded-3xl border border-primary-100 dark:border-primary-800">
+                            <BudgetCascadeSelector
+                                budgets={budgets}
+                                projects={projects}
+                                selectedBudgetId={form.budgetId}
+                                onBudgetSelect={(budgetId, projectId, areaId) => {
+                                    setForm(prev => ({
+                                        ...prev,
+                                        budgetId,
+                                        projectId,
+                                        areaId
+                                    }));
+                                }}
+                            />
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-gray-600">Proyecto *</label>
-                                <select
-                                    name="projectId"
-                                    value={form.projectId}
-                                    onChange={handleChange}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                    required
-                                >
-                                    <option value="">Seleccionar proyecto</option>
-                                    {projects.map((p: any) => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-gray-600">Área *</label>
-                                <select
-                                    name="areaId"
-                                    value={form.areaId}
-                                    onChange={handleChange}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                    required
-                                >
-                                    <option value="">Seleccionar área</option>
-                                    {areas.map((a: any) => (
-                                        <option key={a.id} value={a.id}>{a.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-gray-600">Proveedor</label>
                                 <select
@@ -272,23 +257,6 @@ export default function NewAsientoPage() {
                                     placeholder="Si no está en la lista..."
                                     className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
                                 />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-gray-600">Presupuesto a Afectar</label>
-                                <select
-                                    name="budgetId"
-                                    value={form.budgetId}
-                                    onChange={handleChange}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                >
-                                    <option value="">Seleccionar presupuesto</option>
-                                    {budgets.map((b: any) => (
-                                        <option key={b.id} value={b.id}>
-                                            {b.project?.name} - {b.area?.name} - ${parseFloat(b.available).toLocaleString()} disponible
-                                        </option>
-                                    ))}
-                                </select>
                             </div>
                         </div>
                     </div>

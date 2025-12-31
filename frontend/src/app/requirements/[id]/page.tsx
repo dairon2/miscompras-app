@@ -820,6 +820,32 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                         />
                                     </div>
 
+                                    {/* Multiple Payments Toggle */}
+                                    <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/20">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
+                                                    <DollarSign size={18} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-black text-sm">Pagos en Cuotas</h4>
+                                                    <p className="text-[10px] text-gray-500 font-medium">
+                                                        {editForm.hasMultiplePayments
+                                                            ? 'Múltiples pagos habilitados'
+                                                            : 'Pago único'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditForm({ ...editForm, hasMultiplePayments: !editForm.hasMultiplePayments })}
+                                                className={`w-12 h-7 rounded-full transition-all relative ${editForm.hasMultiplePayments ? 'bg-amber-500' : 'bg-gray-300 dark:bg-slate-600'}`}
+                                            >
+                                                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${editForm.hasMultiplePayments ? 'left-6' : 'left-1'}`} />
+                                            </button>
+                                        </div>
+                                    </div>
+
                                     <div className="space-y-4">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Archivos Adjuntos</label>
 

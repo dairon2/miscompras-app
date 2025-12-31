@@ -6,12 +6,27 @@ import { Save, X, Info, Package, DollarSign, Building, Truck, Paperclip, FileTex
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
+import { BudgetCascadeSelector } from "@/components";
 
 interface Project { id: string; name: string }
 interface Area { id: string; name: string }
 interface Category { id: string; name: string; code: string }
 interface Supplier { id: string; name: string }
-interface Budget { id: string; title: string; amount: string; available: number; code: string; executionDate?: string; projectId: string; areaId: string; managerId?: string; category?: { name: string } }
+interface Budget {
+    id: string;
+    title: string;
+    amount: string;
+    available: number;
+    code: string;
+    executionDate?: string;
+    projectId: string;
+    areaId: string;
+    categoryId?: string;
+    managerId?: string;
+    category?: { id: string; name: string; code: string };
+    project?: { id: string; name: string };
+    area?: { id: string; name: string };
+}
 
 interface RequirementItem {
     id: string;
@@ -216,59 +231,22 @@ export default function NewRequirementPage() {
                         </div>
 
                         <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Clasificación de Proyecto</label>
-                                    <select
-                                        name="projectId"
-                                        value={formData.projectId}
-                                        onChange={handleChange}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold"
-                                    >
-                                        <option value="">Selecciona un proyecto...</option>
-                                        {options.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Área Solicitante</label>
-                                    <select
-                                        name="areaId"
-                                        value={formData.areaId}
-                                        onChange={handleChange}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold"
-                                        disabled={!isAdminRole && userAreaId !== null}
-                                    >
-                                        <option value="">Selecciona un área...</option>
-                                        {/* Filter areas: regular users only see their assigned area */}
-                                        {options.areas
-                                            .filter(a => isAdminRole || a.id === userAreaId)
-                                            .map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                                    </select>
-                                    {!isAdminRole && userAreaId && (
-                                        <p className="text-[10px] text-gray-400 mt-1 ml-1">Solo puedes solicitar para tu área asignada</p>
-                                    )}
-                                </div>
-
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Presupuesto Específico</label>
-                                <select
-                                    name="budgetId"
-                                    value={formData.budgetId}
-                                    onChange={handleChange}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold"
-                                >
-                                    <option value="">Selecciona presupuesto...</option>
-                                    {options.budgets
-                                        .filter(b => (!formData.projectId || b.projectId === formData.projectId) && (!formData.areaId || b.areaId === formData.areaId))
-                                        .map(b => (
-                                            <option key={b.id} value={b.id}>
-                                                {b.category?.name || 'Varios'} - ${parseFloat(b.amount).toLocaleString()}
-                                            </option>
-                                        ))
-                                    }
-                                </select>
+                            {/* Budget Cascade Selector - Project → Category → Budget */}
+                            <div className="p-6 bg-gradient-to-r from-primary-50/50 to-indigo-50/50 dark:from-primary-900/10 dark:to-indigo-900/10 rounded-3xl border border-primary-100 dark:border-primary-800">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-600 mb-4">Selección de Presupuesto</h4>
+                                <BudgetCascadeSelector
+                                    budgets={options.budgets}
+                                    projects={options.projects}
+                                    selectedBudgetId={formData.budgetId}
+                                    onBudgetSelect={(budgetId, projectId, areaId) => {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            budgetId,
+                                            projectId,
+                                            areaId
+                                        }));
+                                    }}
+                                />
                             </div>
 
                             <div>
