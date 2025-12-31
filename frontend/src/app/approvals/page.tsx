@@ -76,14 +76,32 @@ export default function ApprovalsPage() {
             ]);
 
             if (groupsRes.status === 'fulfilled') {
-                setGroups(groupsRes.value.data);
+                console.log('Groups data received:', groupsRes.value.data);
+                const data = groupsRes.value.data;
+                // Handle both array format and paginated response
+                if (Array.isArray(data)) {
+                    setGroups(data);
+                } else if (data?.data && Array.isArray(data.data)) {
+                    // If API returns paginated format, extract data
+                    setGroups(data.data);
+                } else {
+                    console.warn('Unexpected groups format:', data);
+                    setGroups([]);
+                }
             } else {
                 console.error("Error fetching groups:", groupsRes.reason);
                 addToast("Error al cargar requerimientos", "error");
             }
 
             if (adjRes.status === 'fulfilled') {
-                setAdjustments(adjRes.value.data);
+                const adjData = adjRes.value.data;
+                if (Array.isArray(adjData)) {
+                    setAdjustments(adjData);
+                } else if (adjData?.data && Array.isArray(adjData.data)) {
+                    setAdjustments(adjData.data);
+                } else {
+                    setAdjustments([]);
+                }
             } else {
                 console.error("Error fetching adjustments:", adjRes.reason);
                 // Adjustments might fail if user is not ADMIN/DIRECTOR, that's fine for some
@@ -141,12 +159,14 @@ export default function ApprovalsPage() {
         const statuses = group.requirements.map(r => r.status);
         if (statuses.includes('REJECTED')) return 'REJECTED';
         if (statuses.every(s => s === 'APPROVED')) return 'APPROVED';
-        return 'PENDING';
+        // Match the actual enum value from the database
+        return 'PENDING_APPROVAL';
     };
 
     const filteredGroups = groups.filter(g => {
         if (filterStatus === 'all') return true;
-        return getGroupStatus(g) === 'PENDING';
+        const status = getGroupStatus(g);
+        return status === 'PENDING_APPROVAL' || !['APPROVED', 'REJECTED'].includes(status);
     });
 
     const filteredAdjustments = adjustments.filter(adj => {
