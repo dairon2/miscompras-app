@@ -101,7 +101,7 @@ export default function RequirementsPage() {
             const response = await api.get(endpoint, {
                 params: { year: selectedYear }
             });
-            setRequirements(response.data);
+            setRequirements(response.data.data || response.data);
         } catch (err) {
             console.error("Error fetching requirements", err);
         } finally {

@@ -25,7 +25,7 @@ export default function HomePage() {
   const fetchDashboardData = async () => {
     try {
       const response = await api.get("/requirements/me");
-      const requirements = response.data;
+      const requirements = response.data.data || response.data || [];
 
       const pending = requirements.filter((r: any) => (r.status || '').includes('PENDING')).length;
       const approved = requirements.filter((r: any) => r.status === 'APPROVED').length;
