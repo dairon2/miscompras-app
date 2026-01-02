@@ -43,12 +43,12 @@ router.post('/', upload.array('attachments'), createRequirement);
 router.post('/mass-create', createMassRequirements);
 router.get('/me', getMyRequirements);
 router.get('/all', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getAllRequirements);
+router.get('/groups', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getRequirementGroups);
 router.get('/:id', getRequirementById);
 router.put('/:id', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), updateRequirement);
 router.patch('/:id/status', roleCheck(['LEADER', 'DIRECTOR', 'ADMIN', 'COORDINATOR', 'DEVELOPER']), updateRequirementStatus);
 router.post('/group/:id/approve', roleCheck(['LEADER', 'COORDINATOR', 'DIRECTOR', 'ADMIN', 'DEVELOPER']), approveRequirementGroup);
 router.post('/group/:id/reject', roleCheck(['LEADER', 'COORDINATOR', 'DIRECTOR', 'ADMIN', 'DEVELOPER']), rejectRequirementGroup);
-router.get('/groups', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getRequirementGroups);
 router.patch('/:id/observations', updateObservations);
 router.delete('/:id', roleCheck(['ADMIN', 'DIRECTOR', 'DEVELOPER']), deleteRequirement);
 
