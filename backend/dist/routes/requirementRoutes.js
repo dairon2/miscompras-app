@@ -26,12 +26,12 @@ router.post('/', upload.array('attachments'), requirementController_1.createRequ
 router.post('/mass-create', requirementController_1.createMassRequirements);
 router.get('/me', requirementController_1.getMyRequirements);
 router.get('/all', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), requirementController_1.getAllRequirements);
+router.get('/groups', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), requirementController_1.getRequirementGroups);
 router.get('/:id', requirementController_1.getRequirementById);
 router.put('/:id', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), requirementController_1.updateRequirement);
 router.patch('/:id/status', (0, auth_1.roleCheck)(['LEADER', 'DIRECTOR', 'ADMIN', 'COORDINATOR', 'DEVELOPER']), requirementController_1.updateRequirementStatus);
 router.post('/group/:id/approve', (0, auth_1.roleCheck)(['LEADER', 'COORDINATOR', 'DIRECTOR', 'ADMIN', 'DEVELOPER']), requirementController_1.approveRequirementGroup);
 router.post('/group/:id/reject', (0, auth_1.roleCheck)(['LEADER', 'COORDINATOR', 'DIRECTOR', 'ADMIN', 'DEVELOPER']), requirementController_1.rejectRequirementGroup);
-router.get('/groups', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), requirementController_1.getRequirementGroups);
 router.patch('/:id/observations', requirementController_1.updateObservations);
 router.delete('/:id', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'DEVELOPER']), requirementController_1.deleteRequirement);
 exports.default = router;

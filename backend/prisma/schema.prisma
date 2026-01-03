@@ -101,7 +101,7 @@ model Budget {
   updatedAt         DateTime           @updatedAt
   approvedAt        DateTime?
   approvedById      String?
-  code              String?            @unique
+  code              String?
   createdById       String?
   description       String?
   documentUrl       String?

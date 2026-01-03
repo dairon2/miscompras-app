@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">60% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/15</span>
+                <span class='fraction'>9/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">25% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/4</span>
+                <span class='fraction'>1/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">62.5% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/8</span>
+                <span class='fraction'>5/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">60% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/15</span>
+                <span class='fraction'>9/15</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line medium'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -119,31 +119,25 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -161,33 +155,39 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
  * Logger Service - Configurable logging for production and development
  * Only shows debug logs in development mode
  */
 &nbsp;
-const isDev = <span class="cstat-no" title="statement not covered" >process.env.NODE_ENV !== 'production';</span>
+const isDev = process.env.NODE_ENV !== 'production';
 &nbsp;
-const logger = <span class="cstat-no" title="statement not covered" >{</span>
-    info: <span class="fstat-no" title="function not covered" >(m</span>essage: string, ...args: any[]) =&gt; {
-<span class="cstat-no" title="statement not covered" >        console.log(`[INFO] ${message}`, ...args);</span>
+const logger = {
+    info: (message: string, ...args: any[]) =&gt; {
+        console.log(`[INFO] ${message}`, ...args);
     },
 &nbsp;
-    warn: <span class="fstat-no" title="function not covered" >(m</span>essage: string, ...args: any[]) =&gt; {
-<span class="cstat-no" title="statement not covered" >        console.warn(`[WARN] ${message}`, ...args);</span>
+    warn: (message: string, ...args: any[]) =&gt; {
+        console.warn(`[WARN] ${message}`, ...args);
     },
 &nbsp;
-    error: <span class="fstat-no" title="function not covered" >(m</span>essage: string, ...args: any[]) =&gt; {
-<span class="cstat-no" title="statement not covered" >        console.error(`[ERROR] ${message}`, ...args);</span>
+    error: (message: string, ...args: any[]) =&gt; {
+        console.error(`[ERROR] ${message}`, ...args);
     },
 &nbsp;
-    debug: <span class="fstat-no" title="function not covered" >(m</span>essage: string, ...args: any[]) =&gt; {
-<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (isDev) {</span>
-<span class="cstat-no" title="statement not covered" >            console.log(`[DEBUG] ${message}`, ...args);</span>
+    debug: (message: string, ...args: any[]) =&gt; {
+        if (isDev) {
+            console.log(`[DEBUG] ${message}`, ...args);
         }
     },
 &nbsp;
@@ -210,12 +210,12 @@ const logger = <span class="cstat-no" title="statement not covered" >{</span>
         }
     },
 &nbsp;
-    db: <span class="fstat-no" title="function not covered" >(m</span>essage: string, ...args: any[]) =&gt; {
-<span class="cstat-no" title="statement not covered" >        console.log(`[Database] ${message}`, ...args);</span>
+    db: (message: string, ...args: any[]) =&gt; {
+        console.log(`[Database] ${message}`, ...args);
     }
 };
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export default logger;</span>
+export default logger;
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -223,7 +223,7 @@ const logger = <span class="cstat-no" title="statement not covered" >{</span>
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-12-31T06:06:37.414Z
+                at 2026-01-02T13:33:29.873Z
             </div>
         <script src="../prettify.js"></script>
         <script>

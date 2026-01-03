@@ -697,6 +697,7 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
 };
 
 // Get pending requirements for approval view (returns requirements with status PENDING_APPROVAL)
+// Get pending requirements for approval view (returns requirements with status PENDING_APPROVAL)
 export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
@@ -741,22 +742,47 @@ export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
                         name: true,
                         email: true
                     }
-                }
+                },
+                group: true // Include group details if available
             },
             orderBy: { createdAt: 'desc' }
         });
 
-        // Transform to format expected by frontend (wrap in group-like structure for compatibility)
-        const groupedData = [{
-            id: 1,
-            creator: requirements[0]?.createdBy || { id: '', name: 'Sistema', email: '' },
-            pdfUrl: null,
-            createdAt: new Date().toISOString(),
-            requirements: requirements
-        }];
+        // Group requirements by groupId
+        const groupsMap = new Map<number | string, any>();
+        const individualReqs: any[] = [];
 
-        // If no requirements, return empty array
-        res.json(requirements.length > 0 ? groupedData : []);
+        requirements.forEach(req => {
+            if (req.groupId) {
+                if (!groupsMap.has(req.groupId)) {
+                    groupsMap.set(req.groupId, {
+                        id: req.groupId,
+                        creator: req.group?.creatorId ? { ...req.createdBy } : req.createdBy, // Fallback to req creator
+                        pdfUrl: req.group?.pdfUrl || null,
+                        createdAt: req.group?.createdAt || req.createdAt,
+                        requirements: []
+                    });
+                }
+                groupsMap.get(req.groupId).requirements.push(req);
+            } else {
+                individualReqs.push(req);
+            }
+        });
+
+        const result = Array.from(groupsMap.values());
+
+        // Add individual requirements as a separate group if any
+        if (individualReqs.length > 0) {
+            result.push({
+                id: 0, // ID 0 for "Individual/Miscellaneous"
+                creator: { id: 'system', name: 'Solicitudes Individuales', email: '' },
+                pdfUrl: null,
+                createdAt: new Date().toISOString(),
+                requirements: individualReqs
+            });
+        }
+
+        res.json(result);
     } catch (error: any) {
         console.error("Error fetching pending requirements:", error);
         res.status(500).json({ error: 'Failed to fetch requirements', details: error.message });
