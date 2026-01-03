@@ -882,13 +882,8 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
         });
 
         // Log creation
-        await prisma.historyLog.create({
-            data: {
-                action: 'ASIENTO_CREATED',
-                requirementId: asiento.id,
-                details: `Asiento creado por ${req.user?.email} - Monto: $${totalAmount?.toLocaleString() || 0}`
-            }
-        });
+        // History Log removed: Table does not exist in schema.
+        // The record is already tracked by the IsAsiento=true flag in Requirements table.
 
         res.status(201).json(asiento);
     } catch (error: any) {
