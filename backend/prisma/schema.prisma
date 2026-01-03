@@ -108,7 +108,7 @@ model Budget {
   status            BudgetStatus       @default(PENDING)
   title             String
   version           Int                @default(1)
-  year              Int                @default(2025)
+  year              Int                @default(2026)
   expirationDate    DateTime?
   adjustmentSources AdjustmentSource[]
   approvedBy        User?              @relation("BudgetApprovedBy", fields: [approvedById], references: [id])
@@ -192,7 +192,7 @@ model Requirement {
   isAsiento              Boolean             @default(false)
   reqCategory            RequirementCategory @default(COMPRA)
   totalAmount            Decimal?            @db.Decimal(15, 2)
-  year                   Int                 @default(2025)
+  year                   Int                 @default(2026)
   groupId                Int?
   leaderApproval         Boolean?
   coordinatorApproval    Boolean?
@@ -308,7 +308,7 @@ enum ProcurementStatus {
 
 model SystemConfig {
   id                    String   @id @default("main")
-  activeYear            Int      @default(2025)
+  activeYear            Int      @default(2026)
   appName               String   @default("MisCompras")
   isRegistrationEnabled Boolean  @default(true)
   maintenanceMode       Boolean  @default(false)

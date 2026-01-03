@@ -20,6 +20,7 @@ export const createRequirementGroup = async (creatorId: string, requirementsData
                         ...req,
                         groupId: group.id,
                         createdById: creatorId,
+                        year: new Date().getFullYear(),
                         status: 'PENDING_APPROVAL' // Default status
                     },
                     include: {
