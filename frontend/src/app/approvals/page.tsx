@@ -23,6 +23,7 @@ interface Requirement {
     project: { name: string };
     area: { name: string };
     budget?: { category: { name: string }, amount: string };
+    attachments?: { id: string, fileName: string, fileUrl: string }[];
 }
 
 interface Group {
@@ -364,6 +365,7 @@ export default function ApprovalsPage() {
                                                                 <th className="pb-4 px-4">Proyecto / Área</th>
                                                                 <th className="pb-4 px-4">Presupuesto</th>
                                                                 <th className="pb-4 px-4">Cant.</th>
+                                                                <th className="pb-4 px-4 text-center">Adjuntos</th>
                                                                 <th className="pb-4 px-4 text-center">Estado</th>
                                                             </tr>
                                                         </thead>
@@ -384,6 +386,26 @@ export default function ApprovalsPage() {
                                                                     </td>
                                                                     <td className="py-6 px-4">
                                                                         <span className="bg-white dark:bg-slate-800 px-2 py-1 rounded text-[10px] font-black border border-gray-100 dark:border-gray-700">{req.quantity || '1'}</span>
+                                                                    </td>
+                                                                    <td className="py-6 px-4 text-center">
+                                                                        {req.attachments && req.attachments.length > 0 ? (
+                                                                            <div className="flex flex-col gap-1 items-center">
+                                                                                {req.attachments.map(att => (
+                                                                                    <a
+                                                                                        key={att.id}
+                                                                                        href={resolveApiUrl(att.fileUrl)}
+                                                                                        target="_blank"
+                                                                                        rel="noopener noreferrer"
+                                                                                        className="text-primary-600 hover:text-primary-800 flex items-center justify-center bg-primary-50 dark:bg-primary-900/20 p-2 rounded-lg transition-colors"
+                                                                                        title={att.fileName}
+                                                                                    >
+                                                                                        <FileText size={16} />
+                                                                                    </a>
+                                                                                ))}
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span className="text-[10px] text-gray-300 italic">Sin adjuntos</span>
+                                                                        )}
                                                                     </td>
                                                                     <td className="py-6 px-4 text-center">
                                                                         <div className="flex justify-center gap-2">
