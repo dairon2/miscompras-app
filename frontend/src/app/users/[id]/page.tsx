@@ -57,7 +57,7 @@ export default function EditUserPage() {
     const fetchUser = async () => {
         setFetching(true);
         try {
-            const response = await api.get(`/users/${params.id}`);
+            const response = await api.get(`/admin/users/${params.id}`);
             const userData = response.data;
             setUserInfo(userData);
             setForm({
@@ -120,7 +120,7 @@ export default function EditUserPage() {
                 updateData.password = form.password;
             }
 
-            await api.put(`/users/${params.id}`, updateData);
+            await api.put(`/admin/users/${params.id}`, updateData);
             router.push('/users');
         } catch (err: any) {
             console.error("Error updating user", err);

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isBlobStorageAvailable = exports.deleteFromBlobStorage = exports.uploadBufferToBlobStorage = exports.uploadToBlobStorage = void 0;
+exports.isBlobStorageAvailable = exports.processFileUploads = exports.deleteFromBlobStorage = exports.uploadBufferToBlobStorage = exports.uploadToBlobStorage = void 0;
 const storage_blob_1 = require("@azure/storage-blob");
 const fs_1 = __importDefault(require("fs"));
 const logger_1 = __importDefault(require("./logger"));
@@ -60,7 +60,7 @@ const uploadToBlobStorage = async (filePath, blobName) => {
                 blobContentType: 'application/pdf'
             }
         });
-        const blobUrl = blockBlobClient.url;
+        const blobUrl = `https://miscomprasstorage.blob.core.windows.net/${CONTAINER_NAME}/${blobName}`;
         logger_1.default.blob('Uploaded successfully:', blobUrl);
         // Delete local file after successful upload
         try {
@@ -100,7 +100,7 @@ const uploadBufferToBlobStorage = async (buffer, blobName, contentType = 'applic
                 blobContentType: contentType
             }
         });
-        const blobUrl = blockBlobClient.url;
+        const blobUrl = `https://miscomprasstorage.blob.core.windows.net/${CONTAINER_NAME}/${blobName}`;
         console.log('[Blob Storage] Buffer uploaded successfully:', blobUrl);
         return blobUrl;
     }
@@ -133,6 +133,46 @@ const deleteFromBlobStorage = async (blobName) => {
     }
 };
 exports.deleteFromBlobStorage = deleteFromBlobStorage;
+/**
+ * Process multiple files from Multer and upload them to Blob Storage
+ * @param files - Array of Multer files
+ * @param folder - Folder name in blob (e.g. 'requirements')
+ * @returns Array of attachment objects for Prisma
+ */
+const processFileUploads = async (files, folder = 'requirements') => {
+    if (!files || !Array.isArray(files) || files.length === 0)
+        return [];
+    return await Promise.all(files.map(async (file) => {
+        try {
+            const blobName = `${folder}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+            const blobUrl = await (0, exports.uploadToBlobStorage)(file.path, blobName);
+            if (blobUrl) {
+                return {
+                    fileName: file.originalname,
+                    fileUrl: blobUrl
+                };
+            }
+            else {
+                logger_1.default.warn(`Failed to upload ${file.originalname} to Blob Storage, using local path.`);
+                // Normalize path for web: replace backslashes and ensure it starts correctly
+                const normalizedPath = file.path.replace(/\\/g, '/');
+                return {
+                    fileName: file.originalname,
+                    fileUrl: normalizedPath
+                };
+            }
+        }
+        catch (err) {
+            logger_1.default.error(`Error processing file ${file.originalname}:`, err);
+            const normalizedPath = file.path.replace(/\\/g, '/');
+            return {
+                fileName: file.originalname,
+                fileUrl: normalizedPath
+            };
+        }
+    }));
+};
+exports.processFileUploads = processFileUploads;
 /**
  * Check if Blob Storage is configured and available
  */

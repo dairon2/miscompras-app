@@ -76,6 +76,7 @@ app.use((0, helmet_1.default)());
 app.use((0, compression_1.default)());
 app.use(express_1.default.json());
 app.use('/uploads', express_1.default.static('uploads'));
+app.use('/api/uploads', express_1.default.static('uploads'));
 // Public Routes (No auth needed)
 app.use('/api/auth', authRoutes_1.default);
 // Catalog Routes (Public for registration) - Real DB queries

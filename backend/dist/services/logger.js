@@ -22,19 +22,13 @@ const logger = {
     },
     // Service-specific loggers
     pdf: (message, ...args) => {
-        if (isDev) {
-            console.log(`[PDF Service] ${message}`, ...args);
-        }
+        console.log(`[PDF Service] ${message}`, ...args);
     },
     blob: (message, ...args) => {
-        if (isDev) {
-            console.log(`[Blob Storage] ${message}`, ...args);
-        }
+        console.log(`[Blob Storage] ${message}`, ...args);
     },
     email: (message, ...args) => {
-        if (isDev) {
-            console.log(`[Email Service] ${message}`, ...args);
-        }
+        console.log(`[Email Service] ${message}`, ...args);
     },
     db: (message, ...args) => {
         console.log(`[Database] ${message}`, ...args);

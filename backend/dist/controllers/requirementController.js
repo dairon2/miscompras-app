@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createAsiento = exports.getAvailableYears = exports.getRequirementGroups = exports.rejectRequirementGroup = exports.approveRequirementGroup = exports.getAsientos = exports.deleteRequirement = exports.updateObservations = exports.getAllRequirements = exports.updateRequirement = exports.updateRequirementStatus = exports.getRequirementById = exports.getMyRequirements = exports.createMassRequirements = exports.createRequirement = void 0;
+exports.createAsiento = exports.getDashboardStats = exports.getAvailableYears = exports.getRequirementGroups = exports.rejectRequirementGroup = exports.approveRequirementGroup = exports.getAsientos = exports.deleteRequirement = exports.updateObservations = exports.getAllRequirements = exports.updateRequirement = exports.updateRequirementStatus = exports.getRequirementById = exports.getMyRequirements = exports.createMassRequirements = exports.createRequirement = void 0;
 const index_1 = require("../index");
 const fs_1 = __importDefault(require("fs"));
 const requirementGroupService_1 = require("../services/requirementGroupService");
@@ -15,33 +15,8 @@ const createRequirement = async (req, res) => {
     if (!userId)
         return res.status(401).json({ error: 'User not authenticated' });
     try {
-        // Process attachments first
-        const attachmentData = await Promise.all((files || []).map(async (file) => {
-            try {
-                const blobName = `requirements/${Date.now()}-${file.originalname}`;
-                const blobUrl = await (0, blobStorageService_1.uploadToBlobStorage)(file.path, blobName);
-                if (blobUrl) {
-                    return {
-                        fileName: file.originalname,
-                        fileUrl: blobUrl
-                    };
-                }
-                else {
-                    console.warn(`Failed to upload ${file.originalname} to Blob Storage, using local path.`);
-                    return {
-                        fileName: file.originalname,
-                        fileUrl: file.path
-                    };
-                }
-            }
-            catch (err) {
-                console.error(`Error processing file ${file.originalname}:`, err);
-                return {
-                    fileName: file.originalname,
-                    fileUrl: file.path
-                };
-            }
-        }));
+        // Process attachments first using the new helper
+        const attachmentData = await (0, blobStorageService_1.processFileUploads)(files, 'requirements');
         const requirement = await index_1.prisma.requirement.create({
             data: {
                 title,
@@ -326,6 +301,7 @@ const updateRequirement = async (req, res) => {
                 description,
                 quantity,
                 actualAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : (actualAmount === 'null' ? null : undefined),
+                totalAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : (actualAmount === 'null' ? null : undefined),
                 projectId: (projectId && projectId !== 'null') ? projectId : undefined,
                 areaId: (areaId && areaId !== 'null') ? areaId : undefined,
                 supplierId: (supplierId === 'null' || !supplierId) ? null : supplierId,
@@ -340,10 +316,7 @@ const updateRequirement = async (req, res) => {
                 satisfactionComments: satisfactionComments === 'null' ? null : satisfactionComments,
                 hasMultiplePayments: hasMultiplePayments !== undefined ? (hasMultiplePayments === 'true' || hasMultiplePayments === true) : undefined,
                 attachments: {
-                    create: files?.map(file => ({
-                        fileName: file.originalname,
-                        fileUrl: file.path
-                    })) || []
+                    create: await (0, blobStorageService_1.processFileUploads)(files, 'requirements')
                 }
             },
             include: {
@@ -771,6 +744,74 @@ const getAvailableYears = async (req, res) => {
     }
 };
 exports.getAvailableYears = getAvailableYears;
+// Get dashboard stats (counts, sums and recent activity) based on user role
+const getDashboardStats = async (req, res) => {
+    const year = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+    try {
+        const where = {
+            year: year,
+            isAsiento: false // Usually dashboard focuses on actual requirements
+        };
+        // Visibility logic (same as getAllRequirements)
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
+        if (!isGlobalViewer) {
+            const directedAreas = await index_1.prisma.area.findMany({
+                where: { directorId: userId },
+                select: { id: true }
+            });
+            const directedAreaIds = directedAreas.map(a => a.id);
+            if (directedAreaIds.length > 0) {
+                where.OR = [
+                    { areaId: { in: directedAreaIds } },
+                    { createdById: userId }
+                ];
+            }
+            else {
+                where.createdById = userId;
+            }
+        }
+        // Get stats in parallel
+        const [pending, approved, rejected, recent] = await Promise.all([
+            index_1.prisma.requirement.count({ where: { ...where, status: { contains: 'PENDING' } } }),
+            index_1.prisma.requirement.count({ where: { ...where, status: 'APPROVED' } }),
+            index_1.prisma.requirement.count({ where: { ...where, status: 'REJECTED' } }),
+            index_1.prisma.requirement.findMany({
+                where,
+                include: {
+                    project: true,
+                    area: true,
+                    createdBy: {
+                        select: { name: true, email: true }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 8 // Show a few more than the frontend 5 just in case
+            })
+        ]);
+        // Calculate total amount safely by prioritizing actualAmount over totalAmount
+        const allStatsReqs = await index_1.prisma.requirement.findMany({
+            where,
+            select: { actualAmount: true, totalAmount: true }
+        });
+        const totalAmount = allStatsReqs.reduce((acc, req) => {
+            return acc + Number(req.actualAmount || req.totalAmount || 0);
+        }, 0);
+        res.json({
+            pending,
+            approved,
+            rejected,
+            totalAmount,
+            recent
+        });
+    }
+    catch (error) {
+        console.error("Dashboard stats error:", error);
+        res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+    }
+};
+exports.getDashboardStats = getDashboardStats;
 // Create an Asiento (pre-approved requirement)
 const createAsiento = async (req, res) => {
     const userId = req.user?.id;
@@ -795,32 +836,42 @@ const createAsiento = async (req, res) => {
                 title,
                 description,
                 quantity,
-                totalAmount: totalAmount ? parseFloat(totalAmount) : null,
-                actualAmount: actualAmount ? parseFloat(actualAmount) : null,
-                projectId,
-                areaId,
-                supplierId,
-                manualSupplierName,
-                budgetId,
+                totalAmount: (totalAmount && totalAmount !== 'null' && !isNaN(parseFloat(totalAmount))) ? parseFloat(totalAmount) : null,
+                actualAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : null,
+                projectId: (projectId && projectId !== 'null') ? projectId : undefined,
+                areaId: (areaId && areaId !== 'null') ? areaId : undefined,
+                supplierId: (supplierId && supplierId !== 'null') ? supplierId : null,
+                manualSupplierName: manualSupplierName === 'null' ? null : manualSupplierName,
+                budgetId: (budgetId && budgetId !== 'null') ? budgetId : null,
                 reqCategory: reqCategory || 'COMPRA',
-                purchaseOrderNumber,
-                invoiceNumber,
+                purchaseOrderNumber: purchaseOrderNumber === 'null' ? null : purchaseOrderNumber,
+                invoiceNumber: invoiceNumber === 'null' ? null : invoiceNumber,
                 createdById: userId,
                 year: new Date().getFullYear(),
                 isAsiento: true,
-                hasMultiplePayments: hasMultiplePayments || false,
+                hasMultiplePayments: hasMultiplePayments === 'true' || hasMultiplePayments === true,
                 status: 'APPROVED', // Auto-approved for asientos
-                procurementStatus: 'EN_TRAMITE'
+                procurementStatus: 'EN_TRAMITE',
+                attachments: {
+                    create: await (0, blobStorageService_1.processFileUploads)(req.files || [], 'asientos')
+                }
             },
             include: {
                 project: true,
                 area: true,
-                supplier: true
+                supplier: true,
+                attachments: true
             }
         });
         // Log creation
-        // History Log removed: Table does not exist in schema.
-        // The record is already tracked by the IsAsiento=true flag in Requirements table.
+        // Log creation
+        await index_1.prisma.historyLog.create({
+            data: {
+                action: 'CREATED_ASIENTO',
+                requirementId: asiento.id,
+                details: `Asiento contable creado por ${req.user?.email}`
+            }
+        });
         res.status(201).json(asiento);
     }
     catch (error) {

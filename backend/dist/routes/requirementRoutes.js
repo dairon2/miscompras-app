@@ -26,6 +26,7 @@ router.post('/asientos', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', '
 router.post('/', upload.array('attachments'), requirementController_1.createRequirement);
 router.post('/mass-create', requirementController_1.createMassRequirements);
 router.get('/me', requirementController_1.getMyRequirements);
+router.get('/dashboard-stats', requirementController_1.getDashboardStats);
 router.get('/all', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), requirementController_1.getAllRequirements);
 router.get('/groups', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), requirementController_1.getRequirementGroups);
 router.get('/:id', requirementController_1.getRequirementById);

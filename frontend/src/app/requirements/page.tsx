@@ -51,6 +51,7 @@ interface Requirement {
     supplier?: { name: string };
     manualSupplierName?: string;
     reqCategory: string;
+    isAsiento?: boolean;
     createdAt: string;
 }
 
@@ -401,7 +402,14 @@ export default function RequirementsPage() {
                                                                     <FileText className="w-5 h-5" />
                                                                 </div>
                                                                 <div>
-                                                                    <p className="font-black text-gray-800 dark:text-gray-200 tracking-tight">{req.title}</p>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <p className="font-black text-gray-800 dark:text-gray-200 tracking-tight">{req.title}</p>
+                                                                        {req.isAsiento && (
+                                                                            <span className="px-2 py-0.5 rounded outline outline-1 outline-purple-200 dark:outline-purple-800 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider">
+                                                                                Asiento
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">ID: {req.id.substring(0, 8)}</p>
                                                                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-2 flex justify-between items-center">
                                                                         <span>Estado Solicitud:</span>
@@ -577,6 +585,11 @@ function RequirementCard({ req, onClick }: { req: Requirement, onClick: () => vo
                     <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${getStatusStyle(req.status)}`}>
                         {req.status?.replace('_', ' ') || 'PENDIENTE'}
                     </span>
+                    {req.isAsiento && (
+                        <span className="px-2 py-0.5 rounded outline outline-1 outline-purple-200 dark:outline-purple-800 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-[8px] font-black uppercase tracking-wider">
+                            Asiento
+                        </span>
+                    )}
                     <span className="text-[10px] font-black text-gray-300 uppercase">#{req.id?.substring(0, 8)}</span>
                 </div>
             </div>

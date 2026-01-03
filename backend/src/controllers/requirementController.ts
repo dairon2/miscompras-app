@@ -937,24 +937,24 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
                 title,
                 description,
                 quantity,
-                totalAmount: totalAmount ? parseFloat(totalAmount) : null,
-                actualAmount: actualAmount ? parseFloat(actualAmount) : null,
-                projectId,
-                areaId,
-                supplierId,
-                manualSupplierName,
-                budgetId,
+                totalAmount: (totalAmount && totalAmount !== 'null' && !isNaN(parseFloat(totalAmount))) ? parseFloat(totalAmount) : null,
+                actualAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : null,
+                projectId: (projectId && projectId !== 'null') ? projectId : undefined,
+                areaId: (areaId && areaId !== 'null') ? areaId : undefined,
+                supplierId: (supplierId && supplierId !== 'null') ? supplierId : null,
+                manualSupplierName: manualSupplierName === 'null' ? null : manualSupplierName,
+                budgetId: (budgetId && budgetId !== 'null') ? budgetId : null,
                 reqCategory: reqCategory || 'COMPRA',
-                purchaseOrderNumber,
-                invoiceNumber,
+                purchaseOrderNumber: purchaseOrderNumber === 'null' ? null : purchaseOrderNumber,
+                invoiceNumber: invoiceNumber === 'null' ? null : invoiceNumber,
                 createdById: userId!,
                 year: new Date().getFullYear(),
                 isAsiento: true,
-                hasMultiplePayments: hasMultiplePayments || false,
+                hasMultiplePayments: hasMultiplePayments === 'true' || hasMultiplePayments === true,
                 status: 'APPROVED',  // Auto-approved for asientos
                 procurementStatus: 'EN_TRAMITE',
                 attachments: {
-                    create: await processFileUploads(req.files as Express.Multer.File[], 'asientos')
+                    create: await processFileUploads(req.files as Express.Multer.File[] || [], 'asientos')
                 }
             },
             include: {
@@ -966,8 +966,14 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
         });
 
         // Log creation
-        // History Log removed: Table does not exist in schema.
-        // The record is already tracked by the IsAsiento=true flag in Requirements table.
+        // Log creation
+        await prisma.historyLog.create({
+            data: {
+                action: 'CREATED_ASIENTO',
+                requirementId: asiento.id,
+                details: `Asiento contable creado por ${req.user?.email}`
+            }
+        });
 
         res.status(201).json(asiento);
     } catch (error: any) {

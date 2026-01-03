@@ -49,7 +49,7 @@ export default function UsersPage() {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const response = await api.get('/users', {
+            const response = await api.get('/admin/users', {
                 params: {
                     ...(filters.role && { role: filters.role }),
                     ...(filters.areaId && { areaId: filters.areaId }),
@@ -81,7 +81,7 @@ export default function UsersPage() {
 
     const handleToggleStatus = async (userId: string) => {
         try {
-            await api.patch(`/users/${userId}/toggle-status`);
+            await api.patch(`/admin/users/toggle/${userId}`);
             fetchUsers();
         } catch (err: any) {
             alert(err.response?.data?.error || 'Error al cambiar estado');
@@ -96,7 +96,7 @@ export default function UsersPage() {
     const handleConfirmDelete = async () => {
         if (!userToDelete) return;
         try {
-            await api.delete(`/users/${userToDelete.id}`);
+            await api.delete(`/admin/users/${userToDelete.id}`);
             fetchUsers();
             setDeleteModalOpen(false);
             setUserToDelete(null);

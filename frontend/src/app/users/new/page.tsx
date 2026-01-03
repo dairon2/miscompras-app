@@ -65,7 +65,7 @@ export default function NewUserPage() {
 
     const generatePassword = async () => {
         try {
-            const response = await api.get('/users/generate-password');
+            const response = await api.get('/admin/users/generate-password');
             setForm(prev => ({ ...prev, password: response.data.password }));
             setShowPassword(true);
         } catch (err) {
@@ -88,7 +88,7 @@ export default function NewUserPage() {
 
         setLoading(true);
         try {
-            await api.post('/users', form);
+            await api.post('/admin/users', form);
             router.push('/users');
         } catch (err: any) {
             console.error("Error creating user", err);

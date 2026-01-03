@@ -1,7 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.payInvoice = exports.approveInvoice = exports.verifyInvoice = exports.createInvoice = exports.getInvoices = void 0;
 const index_1 = require("../index");
+const blobStorageService_1 = require("../services/blobStorageService");
+const logger_1 = __importDefault(require("../services/logger"));
 // Get Invoices with Filters
 const getInvoices = async (req, res) => {
     const { status, supplierId } = req.query;
@@ -55,6 +60,20 @@ const createInvoice = async (req, res) => {
     if (!file)
         return res.status(400).json({ error: 'Invoice PDF is required' });
     try {
+        // Normalize path for local fallback immediately
+        let fileUrl = file.path.replace(/\\/g, '/');
+        // Upload to Blob Storage if available
+        try {
+            const blobName = `invoices/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+            const blobUrl = await (0, blobStorageService_1.uploadToBlobStorage)(file.path, blobName);
+            if (blobUrl) {
+                fileUrl = blobUrl;
+                logger_1.default.blob('Invoice uploaded to cloud:', blobUrl);
+            }
+        }
+        catch (blobErr) {
+            logger_1.default.error('Failed to upload invoice to blob storage, using local path:', blobErr);
+        }
         const invoice = await index_1.prisma.invoice.create({
             data: {
                 invoiceNumber,
@@ -64,7 +83,7 @@ const createInvoice = async (req, res) => {
                 supplierId,
                 createdById: userId,
                 status: 'RECEIVED',
-                fileUrl: file.path // Azure Blob Storage will return the URL here in the real middleware setup
+                fileUrl: fileUrl
             }
         });
         // Log
