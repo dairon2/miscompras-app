@@ -435,14 +435,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                 </button>
                             )}
 
-                            {canManageProcurement && !isUserOnly && (
-                                <button
-                                    onClick={() => setIsEditing(true)}
-                                    className="flex-1 bg-primary-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Settings size={20} /> Ingresar Datos de Compra
-                                </button>
-                            )}
+
 
                             {canMarkReceived && (
                                 <div className="flex-1 bg-green-50 p-2 rounded-2xl border border-green-100 flex items-center justify-center gap-2 text-center">
@@ -464,7 +457,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             {canFullEdit && (
                                 <button
                                     onClick={() => setIsEditing(true)}
-                                    className="flex-1 bg-primary-50 text-primary-600 py-4 rounded-2xl font-black border border-primary-100 hover:bg-primary-100 transition-all flex items-center justify-center gap-2"
+                                    className="flex-1 bg-primary-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 transition-all flex items-center justify-center gap-2"
                                 >
                                     <Edit3 size={20} /> Editar Detalles
                                 </button>
