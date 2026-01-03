@@ -7,13 +7,30 @@ import { invoiceService } from '@/services/invoiceService';
 import LoadingButton from '@/components/LoadingButton';
 import { ChevronLeft, FileText, CheckCircle, AlertTriangle, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import axios from 'axios';
+import ConfirmModal from '@/components/ConfirmModal';
+import { useToastStore } from '@/store/toastStore';
 
 export default function InvoiceDetailPage() {
     const { token, user } = useAuthStore();
     const params = useParams();
     const router = useRouter();
+    const { addToast } = useToastStore();
     const [invoice, setInvoice] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+
+    const [confirmConfig, setConfirmConfig] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        type: 'danger' | 'warning' | 'success' | 'info';
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+        onConfirm: () => { }
+    });
 
     // Matching State
     const [searchQuery, setSearchQuery] = useState('');
@@ -73,23 +90,34 @@ export default function InvoiceDetailPage() {
         setVerifying(true);
         try {
             await invoiceService.verifyInvoice(token!, invoice.id, selectedReq.id);
-            alert('Factura verificada exitosamente');
+            addToast('Factura vinculada exitosamente', 'success');
             loadInvoice();
             setSelectedReq(null);
         } catch (error: any) {
-            alert(error.response?.data?.error || 'Error al verificar');
+            addToast(error.response?.data?.error || 'Error al vincular', 'error');
         } finally {
             setVerifying(false);
         }
     };
 
-    const handleApprove = async () => {
-        if (!confirm('¿Autorizar pago de esta factura?')) return;
+    const handleApprove = () => {
+        setConfirmConfig({
+            isOpen: true,
+            title: '¿Autorizar Pago?',
+            message: '¿Estás seguro de que deseas autorizar el pago de esta factura? Esta acción es irreversible.',
+            type: 'info',
+            onConfirm: executeApprove
+        });
+    };
+
+    const executeApprove = async () => {
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
         try {
             await invoiceService.approveInvoice(token!, invoice.id);
+            addToast('Pago autorizado con éxito', 'success');
             loadInvoice();
         } catch (error) {
-            alert('Error al aprobar');
+            addToast('Error al autorizar pago', 'error');
         }
     };
 
@@ -99,9 +127,10 @@ export default function InvoiceDetailPage() {
 
         try {
             await invoiceService.payInvoice(token!, invoice.id, { paymentDate: date });
+            addToast('Pago registrado correctamente', 'success');
             loadInvoice();
         } catch (error) {
-            alert('Error al registrar pago');
+            addToast('Error al registrar pago', 'error');
         }
     };
 
@@ -299,6 +328,15 @@ export default function InvoiceDetailPage() {
                     </div>
                 </div>
             </div>
+
+            <ConfirmModal
+                isOpen={confirmConfig.isOpen}
+                onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmConfig.onConfirm}
+                title={confirmConfig.title}
+                message={confirmConfig.message}
+                type={confirmConfig.type}
+            />
         </div>
     );
 }

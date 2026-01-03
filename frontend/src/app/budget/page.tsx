@@ -16,6 +16,7 @@ import { useToastStore } from "@/store/toastStore";
 import VisualDashboard from "./VisualDashboard";
 import YearSelector from "@/components/YearSelector";
 import * as XLSX from 'xlsx';
+import ConfirmModal from "@/components/ConfirmModal";
 
 interface Budget {
     id: string;
@@ -1112,48 +1113,16 @@ export default function BudgetsPage() {
             </AnimatePresence>
 
             {/* Delete Confirmation Modal */}
-            <AnimatePresence>
-                {showDeleteModal && selectedBudget && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-                        onClick={() => setShowDeleteModal(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="text-center mb-6">
-                                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <AlertTriangle className="w-8 h-8 text-red-600" />
-                                </div>
-                                <h3 className="text-xl font-black mb-2">¿Eliminar Presupuesto?</h3>
-                                <p className="text-gray-500 text-sm">Esta acción no se puede deshacer.</p>
-                                <p className="font-bold text-primary-600 mt-2">{selectedBudget.title}</p>
-                            </div>
-                            <div className="flex gap-4">
-                                <button
-                                    onClick={() => setShowDeleteModal(false)}
-                                    className="flex-1 py-3 px-6 rounded-2xl border-2 border-gray-200 font-bold hover:bg-gray-50"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={handleDeleteBudget}
-                                    className="flex-1 py-3 px-6 rounded-2xl bg-red-600 text-white font-bold hover:bg-red-700"
-                                >
-                                    Eliminar
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <ConfirmModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDeleteBudget}
+                title="¿Eliminar Presupuesto?"
+                message={`Esta acción no se puede deshacer. ¿Estás seguro de que deseas eliminar el presupuesto: ${selectedBudget?.title}?`}
+                type="danger"
+                confirmText="Eliminar"
+                cancelText="Cancelar"
+            />
         </div>
     );
 }

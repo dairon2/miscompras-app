@@ -47,7 +47,7 @@ interface BudgetDetail {
     createdBy?: { id: string; name: string };
     approvedBy?: { id: string; name: string };
     subLeaders: Array<{ user: { id: string; name: string; email: string } }>;
-    requirements: Array<{ id: string; title: string; status: string; totalAmount?: number; createdAt: string }>;
+    requirements: Array<{ id: string; title: string; status: string; totalAmount?: number; actualAmount?: number; createdAt: string }>;
     adjustments: Array<{
         id: string;
         code?: string;
@@ -294,7 +294,9 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                                             <span className="font-bold text-sm">{req.title}</span>
                                         </div>
                                         <div className="flex items-center gap-4">
-                                            <span className="text-sm font-bold text-primary-600">{formatCurrency(Number(req.totalAmount || 0))}</span>
+                                            <span className="text-sm font-bold text-primary-600">
+                                                {formatCurrency(Number(req.actualAmount || req.totalAmount || 0))}
+                                            </span>
                                             <Eye size={16} className="text-gray-400" />
                                         </div>
                                     </div>

@@ -337,6 +337,7 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 description,
                 quantity,
                 actualAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : (actualAmount === 'null' ? null : undefined),
+                totalAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : (actualAmount === 'null' ? null : undefined),
                 projectId: (projectId && projectId !== 'null') ? projectId : undefined,
                 areaId: (areaId && areaId !== 'null') ? areaId : undefined,
                 supplierId: (supplierId === 'null' || !supplierId) ? null : supplierId,
@@ -851,19 +852,11 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             pending,
             approved,
             rejected,
-            totals,
             recent
         ] = await Promise.all([
             prisma.requirement.count({ where: { ...where, status: { contains: 'PENDING' } } }),
             prisma.requirement.count({ where: { ...where, status: 'APPROVED' } }),
             prisma.requirement.count({ where: { ...where, status: 'REJECTED' } }),
-            prisma.requirement.aggregate({
-                where,
-                _sum: {
-                    totalAmount: true,
-                    actualAmount: true
-                }
-            }),
             prisma.requirement.findMany({
                 where,
                 include: {
@@ -878,7 +871,15 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             })
         ]);
 
-        const totalAmount = Number(totals._sum.totalAmount || 0) + Number(totals._sum.actualAmount || 0);
+        // Calculate total amount safely by prioritizing actualAmount over totalAmount
+        const allStatsReqs = await prisma.requirement.findMany({
+            where,
+            select: { actualAmount: true, totalAmount: true }
+        });
+
+        const totalAmount = allStatsReqs.reduce((acc, req) => {
+            return acc + Number(req.actualAmount || req.totalAmount || 0);
+        }, 0);
 
         res.json({
             pending,

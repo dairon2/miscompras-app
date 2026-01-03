@@ -99,7 +99,7 @@ export const getBudgetById = async (req: AuthRequest, res: Response) => {
                 requirements: {
                     take: 20,
                     orderBy: { createdAt: 'desc' },
-                    select: { id: true, title: true, status: true, totalAmount: true, createdAt: true }
+                    select: { id: true, title: true, status: true, totalAmount: true, actualAmount: true, estimatedAmount: true, createdAt: true }
                 },
                 adjustments: {
                     orderBy: { requestedAt: 'desc' },

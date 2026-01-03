@@ -20,6 +20,7 @@ import {
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
+import ConfirmModal from "@/components/ConfirmModal";
 
 interface PendingBudget {
     id: string;
@@ -45,6 +46,21 @@ export default function PendingBudgetsPage() {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState<string | null>(null);
 
+    // Confirm Modal State
+    const [confirmConfig, setConfirmConfig] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        type: 'danger' | 'warning' | 'success' | 'info';
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+        onConfirm: () => { }
+    });
+
     useEffect(() => {
         fetchPendingBudgets();
     }, []);
@@ -61,11 +77,23 @@ export default function PendingBudgetsPage() {
         }
     };
 
-    const handleApprove = async (id: string, approve: boolean) => {
+    const handleApprove = (id: string, approve: boolean) => {
         const action = approve ? 'aprobar' : 'rechazar';
-        if (!confirm(`¿Estás seguro de ${action} este presupuesto?`)) return;
 
+        setConfirmConfig({
+            isOpen: true,
+            title: approve ? '¿Aprobar Presupuesto?' : '¿Rechazar Presupuesto?',
+            message: `¿Estás seguro de que deseas ${action} este presupuesto? Esta acción actualizará el estado del presupuesto inmediatamente.`,
+            type: approve ? 'info' : 'danger',
+            onConfirm: () => executeApprove(id, approve)
+        });
+    };
+
+    const executeApprove = async (id: string, approve: boolean) => {
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
         setProcessing(id);
+        const action = approve ? 'aprobar' : 'rechazar';
+
         try {
             await api.patch(`/budgets/${id}/approve`, { approve });
             addToast(`Presupuesto ${approve ? 'aprobado' : 'rechazado'} exitosamente`, 'success');
@@ -254,6 +282,17 @@ export default function PendingBudgetsPage() {
                     </AnimatePresence>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={confirmConfig.isOpen}
+                onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmConfig.onConfirm}
+                title={confirmConfig.title}
+                message={confirmConfig.message}
+                type={confirmConfig.type}
+                confirmText="Confirmar"
+                cancelText="Cancelar"
+            />
         </div>
     );
 }

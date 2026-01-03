@@ -11,7 +11,7 @@ interface ConfirmModalProps {
     message: string;
     confirmText?: string;
     cancelText?: string;
-    type?: 'danger' | 'warning' | 'success';
+    type?: 'danger' | 'warning' | 'success' | 'info';
     isLoading?: boolean;
 }
 
@@ -32,13 +32,15 @@ export default function ConfirmModal({
     const iconConfig = {
         danger: { icon: Trash2, bg: 'bg-red-100 dark:bg-red-900/20', color: 'text-red-600' },
         warning: { icon: AlertTriangle, bg: 'bg-amber-100 dark:bg-amber-900/20', color: 'text-amber-600' },
-        success: { icon: CheckCircle, bg: 'bg-green-100 dark:bg-green-900/20', color: 'text-green-600' }
+        success: { icon: CheckCircle, bg: 'bg-green-100 dark:bg-green-900/20', color: 'text-green-600' },
+        info: { icon: CheckCircle, bg: 'bg-blue-100 dark:bg-blue-900/20', color: 'text-blue-600' }
     };
 
     const buttonConfig = {
         danger: 'bg-red-600 hover:bg-red-700 text-white',
         warning: 'bg-amber-600 hover:bg-amber-700 text-white',
-        success: 'bg-green-600 hover:bg-green-700 text-white'
+        success: 'bg-green-600 hover:bg-green-700 text-white',
+        info: 'bg-blue-600 hover:bg-blue-700 text-white'
     };
 
     const Icon = iconConfig[type].icon;

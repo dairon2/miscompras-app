@@ -366,7 +366,7 @@ export default function RootLayout({
                   <img src="/images/logo-museo.png" alt="Museo de Antioquia" className="h-10 w-auto grayscale group-hover:grayscale-0 transition-all mix-blend-multiply dark:invert dark:mix-blend-screen" />
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Mis Compras</span>
-                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Versión 1.1</span>
+                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Versión 1.2</span>
                   </div>
                 </div>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
