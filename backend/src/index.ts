@@ -15,6 +15,7 @@ import userRoutes from './routes/userRoutes';
 import adminRoutes from './routes/adminRoutes';
 import budgetRoutes from './routes/budgetRoutes';
 import adjustmentRoutes from './routes/adjustmentRoutes';
+import invoiceRoutes from './routes/invoiceRoutes';
 
 dotenv.config();
 
@@ -127,12 +128,6 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
     }
 });
 
-// Protected Routes
-import invoiceRoutes from './routes/invoiceRoutes';
-
-// ... (existing imports)
-
-// ...
 
 // Protected Routes
 app.use('/api/requirements', authMiddleware, requirementRoutes);
