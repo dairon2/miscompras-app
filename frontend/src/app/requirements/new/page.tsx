@@ -168,7 +168,8 @@ export default function NewRequirementPage() {
 
         setLoading(true);
         try {
-            await api.post("/requirements/mass-create", {
+            // First, create the requirements without attachments
+            const response = await api.post("/requirements/mass-create", {
                 requirements: items.map(item => ({
                     title: item.title,
                     description: item.description,
@@ -180,6 +181,30 @@ export default function NewRequirementPage() {
                     manualSupplierName: item.isManualSupplier ? item.manualSupplierName : null
                 }))
             });
+
+            // Then, upload attachments for each item that has them
+            const createdRequirements = response.data.requirements || [];
+
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const createdReq = createdRequirements[i];
+
+                if (item.attachments && item.attachments.length > 0 && createdReq?.id) {
+                    const formData = new FormData();
+                    item.attachments.forEach(file => {
+                        formData.append('attachments', file);
+                    });
+
+                    try {
+                        await api.put(`/requirements/${createdReq.id}`, formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                        });
+                    } catch (attachErr) {
+                        console.error(`Error uploading attachments for ${item.title}:`, attachErr);
+                        // Continue with other uploads even if one fails
+                    }
+                }
+            }
 
             addToast("Solicitud múltiple creada exitosamente", 'success');
             router.push("/requirements");
