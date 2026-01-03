@@ -257,86 +257,91 @@ const approveAdjustment = async (req, res) => {
             return res.status(400).json({ error: 'Esta solicitud ya fue procesada' });
         }
         // ============ APPLY BUDGET CHANGES AUTOMATICALLY ============
-        // 1. If TRANSFER, reduce available and total amount from source budgets
-        if (adjustment.type === 'TRANSFER') {
-            for (const source of adjustment.sources) {
-                await index_1.prisma.budget.update({
-                    where: { id: source.budgetId },
-                    data: {
-                        amount: {
-                            decrement: parseFloat(source.amount.toString())
-                        },
-                        available: {
-                            decrement: parseFloat(source.amount.toString())
-                        },
-                        version: { increment: 1 }
-                    }
-                });
+        const result = await index_1.prisma.$transaction(async (tx) => {
+            // 1. If TRANSFER, reduce available and total amount from source budgets
+            if (adjustment.type === 'TRANSFER') {
+                for (const source of adjustment.sources) {
+                    const beforeSource = await tx.budget.findUnique({ where: { id: source.budgetId } });
+                    console.log(`[ADJUSTMENT] Decrementing Source Budget ${source.budgetId} (${source.budget.title}). Old Available: ${beforeSource?.available}`);
+                    await tx.budget.update({
+                        where: { id: source.budgetId },
+                        data: {
+                            amount: { decrement: parseFloat(source.amount.toString()) },
+                            available: { decrement: parseFloat(source.amount.toString()) },
+                            version: { increment: 1 }
+                        }
+                    });
+                }
             }
-        }
-        // 2. Increase available and amount on target budget
-        await index_1.prisma.budget.update({
-            where: { id: adjustment.budgetId },
-            data: {
-                amount: { increment: parseFloat(adjustment.requestedAmount.toString()) },
-                available: { increment: parseFloat(adjustment.requestedAmount.toString()) },
-                version: { increment: 1 }
-            }
+            // 2. Increase available and amount on target budget
+            const beforeTarget = await tx.budget.findUnique({ where: { id: adjustment.budgetId } });
+            console.log(`[ADJUSTMENT] Incrementing Target Budget ${adjustment.budgetId} (${adjustment.budget.title}). Old Available: ${beforeTarget?.available}, Amount to Add: ${adjustment.requestedAmount}`);
+            const updatedBudget = await tx.budget.update({
+                where: { id: adjustment.budgetId },
+                data: {
+                    amount: { increment: parseFloat(adjustment.requestedAmount.toString()) },
+                    available: { increment: parseFloat(adjustment.requestedAmount.toString()) },
+                    version: { increment: 1 }
+                }
+            });
+            console.log(`[ADJUSTMENT] Target Budget Updated. New Available: ${updatedBudget.available}`);
+            // Get approver name
+            const approver = await tx.user.findUnique({ where: { id: userId }, select: { name: true } });
+            // 3. Update adjustment status with director info
+            const updatedAdjustment = await tx.budgetAdjustment.update({
+                where: { id },
+                data: {
+                    status: 'APPROVED',
+                    reviewedById: userId,
+                    reviewedAt: new Date()
+                },
+                include: {
+                    budget: { include: { project: true, area: true, category: true } },
+                    requestedBy: { select: { name: true, email: true } },
+                    reviewedBy: { select: { name: true } },
+                    sources: { include: { budget: { select: { title: true, category: true } } } }
+                }
+            });
+            return { updatedAdjustment, approver };
         });
-        // Get approver name
-        const approver = await index_1.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
-        // 3. Update adjustment status with director info
-        const updated = await index_1.prisma.budgetAdjustment.update({
-            where: { id },
-            data: {
-                status: 'APPROVED',
-                reviewedById: userId,
-                reviewedAt: new Date()
-            },
-            include: {
-                budget: { include: { project: true, area: true, category: true } },
-                requestedBy: { select: { name: true, email: true } },
-                reviewedBy: { select: { name: true } },
-                sources: { include: { budget: { select: { title: true, category: true } } } }
-            }
-        });
+        const { updatedAdjustment, approver } = result;
         // Generate updated PDF with approval stamp
         try {
             const pdfUrl = await (0, pdfService_1.generateAdjustmentPDF)({
-                code: updated.code || undefined,
-                type: updated.type,
-                requestedAmount: Number(updated.requestedAmount),
-                reason: updated.reason,
+                code: updatedAdjustment.code || undefined,
+                type: updatedAdjustment.type,
+                requestedAmount: Number(updatedAdjustment.requestedAmount),
+                reason: updatedAdjustment.reason,
                 status: 'APPROVED',
                 budget: {
-                    title: updated.budget.title,
-                    code: updated.budget.code || undefined,
-                    project: { name: updated.budget.project.name },
-                    area: { name: updated.budget.area.name },
-                    category: updated.budget.category ? { name: updated.budget.category.name, code: updated.budget.category.code } : undefined
+                    title: updatedAdjustment.budget.title,
+                    code: updatedAdjustment.budget.code || undefined,
+                    project: { name: updatedAdjustment.budget.project.name },
+                    area: { name: updatedAdjustment.budget.area.name },
+                    category: updatedAdjustment.budget.category ? { name: updatedAdjustment.budget.category.name, code: updatedAdjustment.budget.category.code } : undefined
                 },
-                sources: updated.sources?.map(s => ({
+                sources: updatedAdjustment.sources?.map(s => ({
                     budget: { title: s.budget.title, category: s.budget.category ? { name: s.budget.category.name, code: s.budget.category.code } : undefined },
                     amount: Number(s.amount)
                 })),
-                requestedBy: { name: updated.requestedBy.name || '' },
-                reviewedBy: updated.reviewedBy ? { name: updated.reviewedBy.name || '' } : undefined,
-                requestedAt: updated.requestedAt,
-                reviewedAt: updated.reviewedAt || undefined
+                requestedBy: { name: updatedAdjustment.requestedBy.name || '' },
+                reviewedBy: updatedAdjustment.reviewedBy ? { name: updatedAdjustment.reviewedBy.name || '' } : undefined,
+                requestedAt: updatedAdjustment.requestedAt,
+                reviewedAt: updatedAdjustment.reviewedAt || undefined
             });
             await index_1.prisma.budgetAdjustment.update({
                 where: { id },
                 data: { documentUrl: pdfUrl }
             });
             // Notify requester
-            if (updated.requestedBy.email) {
+            if (updatedAdjustment.requestedBy.email) {
                 await (0, emailService_1.sendAdjustmentNotificationEmail)({
-                    to: updated.requestedBy.email,
+                    to: updatedAdjustment.requestedBy.email,
                     type: 'ADJUSTMENT_APPROVED',
-                    adjustmentCode: updated.code || undefined,
-                    adjustmentType: updated.type,
-                    amount: Number(updated.requestedAmount),
-                    budgetTitle: updated.budget.title,
+                    adjustmentCode: updatedAdjustment.code || undefined,
+                    adjustmentType: updatedAdjustment.type,
+                    amount: Number(updatedAdjustment.requestedAmount),
+                    budgetTitle: updatedAdjustment.budget.title,
                     approverName: approver?.name || 'Director'
                 });
             }
@@ -344,7 +349,7 @@ const approveAdjustment = async (req, res) => {
         catch (pdfError) {
             console.error('Error generating approval PDF or sending email:', pdfError);
         }
-        res.json(updated);
+        res.json(updatedAdjustment);
     }
     catch (error) {
         console.error('Error approving adjustment:', error);
