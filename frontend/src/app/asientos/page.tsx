@@ -13,7 +13,8 @@ import {
     Trash2,
     FileSpreadsheet,
     Download,
-    User
+    User,
+    ChevronDown
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -155,6 +156,7 @@ export default function AsientosPage() {
                                 Histórico
                             </span>
                         )}
+                        <ChevronDown size={16} className="text-gray-400" />
                     </div>
                 </div>
 

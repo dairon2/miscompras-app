@@ -16,6 +16,7 @@ import {
     Building,
     DollarSign,
     ChevronRight,
+    ChevronDown,
     Package,
     Download,
     Calendar,
@@ -228,6 +229,7 @@ export default function RequirementsPage() {
                                 Histórico
                             </span>
                         )}
+                        <ChevronDown size={16} className="text-gray-400" />
                     </div>
                 </div>
                 <div className="flex items-center gap-4">

@@ -7,6 +7,7 @@ exports.createAsiento = exports.getAvailableYears = exports.getRequirementGroups
 const index_1 = require("../index");
 const fs_1 = __importDefault(require("fs"));
 const requirementGroupService_1 = require("../services/requirementGroupService");
+const blobStorageService_1 = require("../services/blobStorageService");
 const createRequirement = async (req, res) => {
     const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, budgetId } = req.body;
     const userId = req.user?.id;
@@ -14,6 +15,33 @@ const createRequirement = async (req, res) => {
     if (!userId)
         return res.status(401).json({ error: 'User not authenticated' });
     try {
+        // Process attachments first
+        const attachmentData = await Promise.all((files || []).map(async (file) => {
+            try {
+                const blobName = `requirements/${Date.now()}-${file.originalname}`;
+                const blobUrl = await (0, blobStorageService_1.uploadToBlobStorage)(file.path, blobName);
+                if (blobUrl) {
+                    return {
+                        fileName: file.originalname,
+                        fileUrl: blobUrl
+                    };
+                }
+                else {
+                    console.warn(`Failed to upload ${file.originalname} to Blob Storage, using local path.`);
+                    return {
+                        fileName: file.originalname,
+                        fileUrl: file.path
+                    };
+                }
+            }
+            catch (err) {
+                console.error(`Error processing file ${file.originalname}:`, err);
+                return {
+                    fileName: file.originalname,
+                    fileUrl: file.path
+                };
+            }
+        }));
         const requirement = await index_1.prisma.requirement.create({
             data: {
                 title,
@@ -28,10 +56,7 @@ const createRequirement = async (req, res) => {
                 year: new Date().getFullYear(),
                 status: 'PENDING_APPROVAL',
                 attachments: {
-                    create: files?.map(file => ({
-                        fileName: file.originalname,
-                        fileUrl: file.path
-                    })) || []
+                    create: attachmentData
                 }
             },
             include: {
@@ -640,9 +665,11 @@ exports.rejectRequirementGroup = rejectRequirementGroup;
 const getRequirementGroups = async (req, res) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
+    const year = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
     try {
         const where = {
-            status: 'PENDING_APPROVAL'
+            status: 'PENDING_APPROVAL',
+            year: year
         };
         const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
         // Filter by area if user is not a global viewer

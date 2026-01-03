@@ -172,7 +172,7 @@ export default function VisualDashboard({ budgets }: VisualDashboardProps) {
                             <h4 className="text-xl font-black tracking-tight uppercase">Ejecución por Proyecto</h4>
                         </div>
                     </div>
-                    <div className="h-[350px] w-full">
+                    <div className="h-[350px] w-full min-w-0">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={projectData} layout="vertical" margin={{ left: 20, right: 30 }}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} strokeOpacity={0.1} />
@@ -209,7 +209,7 @@ export default function VisualDashboard({ budgets }: VisualDashboardProps) {
                         </div>
                     </div>
                     <div className="h-[350px] w-full flex flex-col md:flex-row items-center">
-                        <div className="flex-1 w-full h-full">
+                        <div className="flex-1 w-full h-full min-w-0">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie

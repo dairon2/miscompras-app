@@ -5,6 +5,7 @@ import { DateTime } from 'luxon';
 import fs from 'fs';
 import path from 'path';
 import { createRequirementGroup } from '../services/requirementGroupService';
+import { uploadToBlobStorage } from '../services/blobStorageService';
 
 export const createRequirement = async (req: AuthRequest, res: Response) => {
     const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, budgetId } = req.body;
@@ -14,6 +15,33 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
     if (!userId) return res.status(401).json({ error: 'User not authenticated' });
 
     try {
+        // Process attachments first
+        const attachmentData = await Promise.all((files || []).map(async (file) => {
+            try {
+                const blobName = `requirements/${Date.now()}-${file.originalname}`;
+                const blobUrl = await uploadToBlobStorage(file.path, blobName);
+
+                if (blobUrl) {
+                    return {
+                        fileName: file.originalname,
+                        fileUrl: blobUrl
+                    };
+                } else {
+                    console.warn(`Failed to upload ${file.originalname} to Blob Storage, using local path.`);
+                    return {
+                        fileName: file.originalname,
+                        fileUrl: file.path
+                    };
+                }
+            } catch (err) {
+                console.error(`Error processing file ${file.originalname}:`, err);
+                return {
+                    fileName: file.originalname,
+                    fileUrl: file.path
+                };
+            }
+        }));
+
         const requirement = await prisma.requirement.create({
             data: {
                 title,
@@ -28,10 +56,7 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
                 year: new Date().getFullYear(),
                 status: 'PENDING_APPROVAL',
                 attachments: {
-                    create: files?.map(file => ({
-                        fileName: file.originalname,
-                        fileUrl: file.path
-                    })) || []
+                    create: attachmentData
                 }
             },
             include: {
@@ -701,10 +726,12 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
 export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
+    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
 
     try {
         const where: any = {
-            status: 'PENDING_APPROVAL'
+            status: 'PENDING_APPROVAL',
+            year: year
         };
 
         const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');

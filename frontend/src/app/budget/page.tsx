@@ -548,32 +548,6 @@ export default function BudgetsPage() {
                     >
                         <List size={18} />
                     </button>
-                    <button
-                        onClick={() => {
-                            const csvContent = [
-                                ['Código', 'Título', 'Rubro', 'Proyecto', 'Líder', 'Presupuesto', 'Disponible', 'Estado'].join(','),
-                                ...filteredBudgets.map(b => [
-                                    b.code || '',
-                                    `"${b.title}"`,
-                                    `"${b.category?.name || ''}"`,
-                                    `"${b.project?.name || ''}"`,
-                                    `"${b.manager?.name || ''}"`,
-                                    b.amount,
-                                    b.available,
-                                    b.status
-                                ].join(','))
-                            ].join('\n');
-                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                            const link = document.createElement('a');
-                            link.href = URL.createObjectURL(blob);
-                            link.download = `presupuestos_${selectedYear}.csv`;
-                            link.click();
-                        }}
-                        className="p-3 rounded-xl border bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-600 hover:bg-green-100 transition-all"
-                        title="Exportar a Excel"
-                    >
-                        <FileSpreadsheet size={18} />
-                    </button>
                 </div>
             </motion.div>
 
