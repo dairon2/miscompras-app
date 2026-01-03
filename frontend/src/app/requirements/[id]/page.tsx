@@ -312,9 +312,9 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
     const canManage = userRole === 'ADMIN';
 
-    // Full edit: ADMIN/DIRECTOR/LEADER can edit everything
+    // Full edit: ADMIN/DIRECTOR/LEADER can edit ONLY after approval
     // Regular users can ONLY mark received at satisfaction on their own requests
-    const canFullEdit = isAdmin;
+    const canFullEdit = isAdmin && requirement.status === 'APPROVED';
     const canEditObservationsOnly = !isAdmin && isCreator;
 
     // User who created can only see their request status and mark satisfaction
