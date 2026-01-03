@@ -24,20 +24,16 @@ export default function HomePage() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await api.get("/requirements/me");
-      const requirements = response.data.data || response.data || [];
+      const response = await api.get("/requirements/dashboard-stats");
+      const { pending, approved, rejected, totalAmount, recent } = response.data;
 
-      const pending = requirements.filter((r: any) => (r.status || '').includes('PENDING')).length;
-      const approved = requirements.filter((r: any) => r.status === 'APPROVED').length;
-      const rejected = requirements.filter((r: any) => r.status === 'REJECTED').length;
-      const totalAmount = requirements.reduce((acc: number, r: any) => {
-        const amount = r.totalAmount ? parseFloat(r.totalAmount.toString()) :
-          r.actualAmount ? parseFloat(r.actualAmount.toString()) : 0;
-        return acc + (isNaN(amount) ? 0 : amount);
-      }, 0);
-
-      setStats({ pending, approved, rejected, totalAmount });
-      setRecentRequirements(requirements.slice(0, 5));
+      setStats({
+        pending: pending || 0,
+        approved: approved || 0,
+        rejected: rejected || 0,
+        totalAmount: totalAmount || 0
+      });
+      setRecentRequirements(recent || []);
     } catch (err) {
       console.error("Error fetching dashboard data", err);
     } finally {

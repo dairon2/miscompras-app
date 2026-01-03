@@ -814,6 +814,85 @@ export const getAvailableYears = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// Get dashboard stats (counts, sums and recent activity) based on user role
+export const getDashboardStats = async (req: AuthRequest, res: Response) => {
+    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    try {
+        const where: any = {
+            year: year,
+            isAsiento: false // Usually dashboard focuses on actual requirements
+        };
+
+        // Visibility logic (same as getAllRequirements)
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
+
+        if (!isGlobalViewer) {
+            const directedAreas = await prisma.area.findMany({
+                where: { directorId: userId } as any,
+                select: { id: true }
+            });
+            const directedAreaIds = directedAreas.map(a => a.id);
+
+            if (directedAreaIds.length > 0) {
+                where.OR = [
+                    { areaId: { in: directedAreaIds } },
+                    { createdById: userId }
+                ];
+            } else {
+                where.createdById = userId;
+            }
+        }
+
+        // Get stats in parallel
+        const [
+            pending,
+            approved,
+            rejected,
+            totals,
+            recent
+        ] = await Promise.all([
+            prisma.requirement.count({ where: { ...where, status: { contains: 'PENDING' } } }),
+            prisma.requirement.count({ where: { ...where, status: 'APPROVED' } }),
+            prisma.requirement.count({ where: { ...where, status: 'REJECTED' } }),
+            prisma.requirement.aggregate({
+                where,
+                _sum: {
+                    totalAmount: true,
+                    actualAmount: true
+                }
+            }),
+            prisma.requirement.findMany({
+                where,
+                include: {
+                    project: true,
+                    area: true,
+                    createdBy: {
+                        select: { name: true, email: true }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 8 // Show a few more than the frontend 5 just in case
+            })
+        ]);
+
+        const totalAmount = Number(totals._sum.totalAmount || 0) + Number(totals._sum.actualAmount || 0);
+
+        res.json({
+            pending,
+            approved,
+            rejected,
+            totalAmount,
+            recent
+        });
+    } catch (error: any) {
+        console.error("Dashboard stats error:", error);
+        res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+    }
+};
+
 // Create an Asiento (pre-approved requirement)
 export const createAsiento = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
