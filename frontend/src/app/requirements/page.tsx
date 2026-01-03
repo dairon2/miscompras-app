@@ -22,7 +22,8 @@ import {
     Calendar,
     FileSpreadsheet,
     User,
-    Trash2
+    Trash2,
+    BookOpen
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -251,6 +252,15 @@ export default function RequirementsPage() {
                             <TableIcon size={18} />
                         </button>
                     </div>
+                    {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && (
+                        <button
+                            onClick={() => router.push('/asientos')}
+                            className="flex items-center gap-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-6 py-4 rounded-2xl font-black shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 transition-all uppercase text-[10px] tracking-widest"
+                        >
+                            <BookOpen size={18} className="text-indigo-600" />
+                            <span>Asientos</span>
+                        </button>
+                    )}
                     <button
                         onClick={() => router.push('/requirements/new')}
                         className="flex items-center gap-2 bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap uppercase text-[10px] tracking-widest"

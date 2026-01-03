@@ -152,18 +152,12 @@ export default function RootLayout({
                 <nav className="hidden lg:flex items-center gap-10 text-[11px] font-black uppercase tracking-widest text-gray-400">
                   <NavItem href="/" icon={<LayoutDashboard size={14} />} label="Inicio" active={pathname === "/"} />
                   <NavItem icon={<FileText size={14} />} label="Requerimientos" href="/requirements" active={pathname === "/requirements" || pathname.startsWith("/requirements/")} />
+                  <NavItem icon={<Building2 size={14} />} label="Presupuesto" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
+                  <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers" || pathname.startsWith("/suppliers/")} />
                   {['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') && (
                     <NavItem icon={<CheckCircle size={14} />} label="Aprobaciones" href="/approvals" active={pathname === "/approvals" || pathname.startsWith("/approvals/")} />
                   )}
-                  {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && (
-                    <NavItem icon={<BookOpen size={14} />} label="Asientos" href="/asientos" active={pathname === "/asientos" || pathname.startsWith("/asientos/")} />
-                  )}
                   <NavItem icon={<FileText size={14} />} label="Facturas" href="/invoices" active={pathname === "/invoices" || pathname.startsWith("/invoices/")} />
-                  <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers"} />
-                  <NavItem icon={<Building2 size={14} />} label="Presupuestos" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
-                  {(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') || user?.isAreaDirector) && (
-                    <NavItem icon={<Settings size={14} />} label="Configuración" href="/admin" active={pathname === "/admin" || pathname.startsWith("/admin")} />
-                  )}
                 </nav>
 
                 <div className="flex items-center gap-6">
