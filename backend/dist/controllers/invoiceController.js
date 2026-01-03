@@ -19,9 +19,14 @@ const getInvoices = async (req, res) => {
         if (supplierId)
             where.supplierId = supplierId;
         // Role-based visibility
-        // ADMIN, DIRECTOR, AUDITOR see all
-        // LEADER sees their area's invoices (via Requirements or created by them?)
-        // For now, simplificamos: Leaders see everything to facilitate approval
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'AUDITOR', 'DEVELOPER'].includes(userRole || '');
+        if (!isGlobalViewer) {
+            // Users/Leaders see invoices if they uploaded them OR if they own the related requirement
+            where.OR = [
+                { createdById: userId },
+                { requirement: { createdById: userId } }
+            ];
+        }
         const invoices = await index_1.prisma.invoice.findMany({
             where,
             include: {

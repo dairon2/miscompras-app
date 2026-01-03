@@ -378,13 +378,23 @@ const getAllRequirements = async (req, res) => {
                 select: { id: true }
             });
             const directedAreaIds = directedAreas.map(a => a.id);
+            // Check if user is manager of any budget
+            const managedBudgets = await index_1.prisma.budget.findMany({
+                where: { managerId: userId },
+                select: { id: true }
+            });
+            const managedBudgetIds = managedBudgets.map(b => b.id);
+            // Base condition: Created by user
+            const orConditions = [{ createdById: userId }];
+            // Add directed areas
             if (directedAreaIds.length > 0) {
-                // Area Director sees all of their area + their owned ones
-                where.OR = [
-                    { areaId: { in: directedAreaIds } },
-                    { createdById: userId }
-                ];
+                orConditions.push({ areaId: { in: directedAreaIds } });
             }
+            // Add managed budgets
+            if (managedBudgetIds.length > 0) {
+                orConditions.push({ budgetId: { in: managedBudgetIds } });
+            }
+            where.OR = orConditions;
         }
         // Get total count for pagination
         const total = await index_1.prisma.requirement.count({ where });
@@ -652,13 +662,20 @@ const getRequirementGroups = async (req, res) => {
                 select: { id: true }
             });
             const directedAreaIds = directedAreas.map(a => a.id);
+            // Check if user is manager of any budget
+            const managedBudgets = await index_1.prisma.budget.findMany({
+                where: { managerId: userId },
+                select: { id: true }
+            });
+            const managedBudgetIds = managedBudgets.map(b => b.id);
+            const orConditions = [{ createdById: userId }];
             if (directedAreaIds.length > 0) {
-                where.areaId = { in: directedAreaIds };
+                orConditions.push({ areaId: { in: directedAreaIds } });
             }
-            else {
-                // Regular USER should only see what they created
-                where.createdById = userId;
+            if (managedBudgetIds.length > 0) {
+                orConditions.push({ budgetId: { in: managedBudgetIds } });
             }
+            where.OR = orConditions;
         }
         const requirements = await index_1.prisma.requirement.findMany({
             where,
