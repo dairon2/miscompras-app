@@ -160,12 +160,9 @@ export default function RootLayout({
                   )}
                   <NavItem icon={<FileText size={14} />} label="Facturas" href="/invoices" active={pathname === "/invoices" || pathname.startsWith("/invoices/")} />
                   <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers"} />
-                  {['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(user?.role || '') && (
-                    <NavItem icon={<UserCog size={14} />} label="Usuarios" href="/users" active={pathname === "/users" || pathname.startsWith("/users")} />
-                  )}
                   <NavItem icon={<Building2 size={14} />} label="Presupuestos" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
-                  {(['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(user?.role || '') || user?.isAreaDirector) && (
-                    <NavItem icon={<Settings size={14} />} label="Administración" href="/admin" active={pathname === "/admin" || pathname.startsWith("/admin")} />
+                  {(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') || user?.isAreaDirector) && (
+                    <NavItem icon={<Settings size={14} />} label="Configuración" href="/admin" active={pathname === "/admin" || pathname.startsWith("/admin")} />
                   )}
                 </nav>
 
@@ -276,25 +273,16 @@ export default function RootLayout({
                               <span>Mi Cuenta</span>
                             </button>
 
-                            {['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(user?.role || '') && (
+                            {(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') || user?.isAreaDirector) && (
                               <Link
-                                href="/users"
+                                href="/admin"
                                 onClick={() => setShowProfileMenu(false)}
                                 className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
                               >
-                                <UserCog className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
-                                <span>Gestionar Usuarios</span>
+                                <Settings className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
+                                <span>Configuración</span>
                               </Link>
                             )}
-
-                            <Link
-                              href="/admin"
-                              onClick={() => setShowProfileMenu(false)}
-                              className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
-                            >
-                              <Settings className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
-                              <span>Configuración</span>
-                            </Link>
 
                             <div className="h-[1px] bg-slate-800 my-2 mx-4"></div>
 
@@ -426,9 +414,9 @@ function MobileNavbar({ pathname, userRole }: { pathname: string, userRole: stri
     navItems.splice(1, 0, { href: "/approvals", icon: <CheckCircle size={20} />, label: "Aprobar" });
   }
 
-  // Add Users for administrative roles
-  if (['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(userRole)) {
-    navItems.splice(navItems.length - 1, 0, { href: "/users", icon: <UserCog size={20} />, label: "User" });
+  // Add Config for administrative roles
+  if (['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole)) {
+    navItems.splice(navItems.length - 1, 0, { href: "/admin", icon: <Settings size={20} />, label: "Config" });
   }
 
   // Ensure we don't exceed a reasonable count for mobile

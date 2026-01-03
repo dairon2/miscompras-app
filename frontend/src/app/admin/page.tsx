@@ -71,11 +71,11 @@ export default function AdminPage() {
     // Search
     const [searchTerm, setSearchTerm] = useState('');
 
-    // ADMIN, DIRECTOR and Area Directors can access certain management features
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'DEVELOPER' || user?.role === 'LEADER';
-    const isDirector = user?.role === 'DIRECTOR';
+    // ADMIN, DIRECTOR, LEADER and COORDINATOR can access management features
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'DEVELOPER';
+    const isManagement = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '');
     const isAreaDirector = user?.isAreaDirector;
-    const canManageCatalogs = isAdmin || isDirector || isAreaDirector;
+    const canManageCatalogs = isManagement || isAreaDirector;
 
     useEffect(() => {
         if (canManageCatalogs) {
@@ -230,7 +230,7 @@ export default function AdminPage() {
             { id: 'categories', label: 'Categorías', icon: Tag, count: stats.categories },
             { id: 'suppliers', label: 'Proveedores', icon: Users, count: stats.suppliers },
         ] : []),
-        ...(isAdmin ? [{ id: 'users', label: 'Usuarios', icon: Users, count: stats.users }] : []),
+        ...(isManagement ? [{ id: 'users', label: 'Usuarios', icon: Users, count: stats.users }] : []),
         { id: 'account', label: 'Mi Cuenta', icon: User, count: null },
         { id: 'general', label: 'Configuración', icon: Monitor, count: null }
     ];
@@ -273,36 +273,49 @@ export default function AdminPage() {
                 transition={{ delay: 0.1 }}
                 className="flex flex-wrap gap-3 mb-8"
             >
-                <button
-                    onClick={() => { setActiveTab('general'); setSearchTerm(''); }}
-                    className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-black transition-all ${activeTab === 'general'
-                        ? 'bg-primary-600 text-white shadow-lg'
-                        : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-100 dark:border-gray-700'
-                        }`}
-                >
-                    <Monitor size={18} />
-                    <span className="uppercase text-[10px] tracking-widest">General</span>
-                </button>
+                <div className="w-full mb-4">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Administración</p>
+                    <div className="flex flex-wrap gap-3">
+                        {tabs.filter(t => ['areas', 'projects', 'categories', 'suppliers', 'users'].includes(t.id)).map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => { setActiveTab(tab.id as TabType); setSearchTerm(''); }}
+                                className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-black transition-all ${activeTab === tab.id
+                                    ? 'bg-primary-600 text-white shadow-lg'
+                                    : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-100 dark:border-gray-700'
+                                    }`}
+                            >
+                                <tab.icon size={18} />
+                                <span className="uppercase text-[10px] tracking-widest">{tab.label}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === tab.id
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300'
+                                    }`}>
+                                    {tab.count}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                {canManageCatalogs && tabs.map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => { setActiveTab(tab.id as TabType); setSearchTerm(''); }}
-                        className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-black transition-all ${activeTab === tab.id
-                            ? 'bg-primary-600 text-white shadow-lg'
-                            : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-100 dark:border-gray-700'
-                            }`}
-                    >
-                        <tab.icon size={18} />
-                        <span className="uppercase text-[10px] tracking-widest">{tab.label}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === tab.id
-                            ? 'bg-white/20 text-white'
-                            : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300'
-                            }`}>
-                            {tab.count}
-                        </span>
-                    </button>
-                ))}
+                <div className="w-full">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Sistema y Preferencias</p>
+                    <div className="flex flex-wrap gap-3">
+                        {tabs.filter(t => ['general', 'account'].includes(t.id)).map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => { setActiveTab(tab.id as TabType); setSearchTerm(''); }}
+                                className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-black transition-all ${activeTab === tab.id
+                                    ? 'bg-primary-600 text-white shadow-lg'
+                                    : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-100 dark:border-gray-700'
+                                    }`}
+                            >
+                                <tab.icon size={18} />
+                                <span className="uppercase text-[10px] tracking-widest">{tab.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </motion.div>
 
             {/* Content */}
