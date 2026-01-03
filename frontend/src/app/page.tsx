@@ -85,32 +85,55 @@ export default function HomePage() {
             ) : recentRequirements.length === 0 ? (
               <div className="text-center py-12 text-gray-400 font-bold">No hay actividad reciente.</div>
             ) : (
-              recentRequirements.map((req: any) => (
-                <div
-                  key={req.id}
-                  onClick={() => router.push(`/requirements/${req.id}`)}
-                  className="flex items-center justify-between p-5 rounded-3xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-600 group cursor-pointer"
-                >
-                  <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-primary-900/20 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-                      <Package className="text-primary-500 w-7 h-7" />
+              recentRequirements.map((item: any) => {
+                const getIcon = () => {
+                  if (item.type === 'budget') return <BarChart3 className="text-indigo-500 w-7 h-7" />;
+                  if (item.type === 'invoice') return <Building2 className="text-purple-500 w-7 h-7" />;
+                  return <Package className="text-primary-500 w-7 h-7" />;
+                };
+                const getTypeLabel = () => {
+                  if (item.type === 'budget') return 'Presupuesto';
+                  if (item.type === 'invoice') return 'Factura';
+                  return 'Requerimiento';
+                };
+                const getRoute = () => {
+                  if (item.type === 'budget') return `/budget/${item.id}`;
+                  if (item.type === 'invoice') return `/invoices`;
+                  return `/requirements/${item.id}`;
+                };
+                return (
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    onClick={() => router.push(getRoute())}
+                    className="flex items-center justify-between p-5 rounded-3xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-600 group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-primary-900/20 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                        {getIcon()}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-lg">{item.title}</h4>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                          {getTypeLabel()} • {new Date(item.createdAt).toLocaleDateString()}
+                          {item.createdBy && ` • ${item.createdBy}`}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-lg">{req.title}</h4>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">ID: {req.id.substring(0, 8)} • {new Date(req.createdAt).toLocaleDateString()}</p>
+                    <div className="text-right">
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${item.status === 'APPROVED' || item.status === 'PAID' ? 'bg-green-50 text-green-700 border-green-100' :
+                        item.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-100' :
+                          'bg-yellow-50 text-yellow-700 border-yellow-100'
+                        }`}>
+                        {(item.status || 'PENDIENTE').replace('_', ' ')}
+                      </span>
+                      {item.totalAmount > 0 && (
+                        <p className="text-lg font-black mt-2 text-primary-900 dark:text-white">${parseFloat(item.totalAmount).toLocaleString()}</p>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${req.status === 'APPROVED' ? 'bg-green-50 text-green-700 border-green-100' :
-                      req.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-100' :
-                        'bg-yellow-50 text-yellow-700 border-yellow-100'
-                      }`}>
-                      {req.status.replace('_', ' ')}
-                    </span>
-                    <p className="text-lg font-black mt-2 text-primary-900 dark:text-white">${parseFloat(req.totalAmount).toLocaleString()}</p>
-                  </div>
-                </div>
-              ))
+                )
+              })
+
             )}
           </div>
         </div>

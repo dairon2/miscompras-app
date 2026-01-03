@@ -7,6 +7,38 @@ import logger from './logger';
 const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const CONTAINER_NAME = process.env.AZURE_STORAGE_CONTAINER || 'pdfs';
 
+/**
+ * Determine MIME type based on file extension
+ */
+const getMimeType = (filePath: string): string => {
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+        '.pdf': 'application/pdf',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.bmp': 'image/bmp',
+        '.svg': 'image/svg+xml',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.xls': 'application/vnd.ms-excel',
+        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        '.ppt': 'application/vnd.ms-powerpoint',
+        '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        '.txt': 'text/plain',
+        '.csv': 'text/csv',
+        '.zip': 'application/zip',
+        '.rar': 'application/x-rar-compressed',
+        '.7z': 'application/x-7z-compressed',
+        '.mp4': 'video/mp4',
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
+};
+
 let containerClient: ContainerClient | null = null;
 
 /**
@@ -55,13 +87,17 @@ export const uploadToBlobStorage = async (filePath: string, blobName: string): P
             return null;
         }
 
+        // Determine content type based on file extension
+        const contentType = getMimeType(filePath);
+        logger.blob(`Uploading with content type: ${contentType}`);
+
         // Read file and upload
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);
         const fileBuffer = fs.readFileSync(filePath);
 
         await blockBlobClient.upload(fileBuffer, fileBuffer.length, {
             blobHTTPHeaders: {
-                blobContentType: 'application/pdf'
+                blobContentType: contentType
             }
         });
 

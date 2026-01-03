@@ -873,31 +873,97 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             }
         }
 
-        // Get stats in parallel
-        const [
-            pending,
-            approved,
-            rejected,
-            recent
-        ] = await Promise.all([
+        // Get stats in parallel - stats are filtered by year
+        const [pending, approved, rejected] = await Promise.all([
             prisma.requirement.count({ where: { ...where, status: { contains: 'PENDING' } } }),
             prisma.requirement.count({ where: { ...where, status: 'APPROVED' } }),
-            prisma.requirement.count({ where: { ...where, status: 'REJECTED' } }),
-            prisma.requirement.findMany({
-                where,
-                include: {
-                    project: true,
-                    area: true,
-                    createdBy: {
-                        select: { name: true, email: true }
-                    }
-                },
-                orderBy: { createdAt: 'desc' },
-                take: 8 // Show a few more than the frontend 5 just in case
-            })
+            prisma.requirement.count({ where: { ...where, status: 'REJECTED' } })
         ]);
 
-        // Calculate total amount safely by prioritizing actualAmount over totalAmount
+        // For recent activity, we don't filter by year - we want the most recent regardless
+        const recentWhere: any = { isAsiento: false };
+        if (!isGlobalViewer) {
+            if (where.OR) {
+                recentWhere.OR = where.OR;
+            } else {
+                recentWhere.createdById = userId;
+            }
+        }
+
+        // Get recent requirements (without year filter)
+        const recentRequirements = await prisma.requirement.findMany({
+            where: recentWhere,
+            include: {
+                project: true,
+                area: true,
+                createdBy: { select: { name: true, email: true } }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 5
+        });
+
+        // Get recent budgets
+        const recentBudgets = await prisma.budget.findMany({
+            include: {
+                project: true,
+                area: true,
+                createdBy: { select: { name: true, email: true } }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 3
+        });
+
+        // Get recent invoices
+        const recentInvoices = await prisma.invoice.findMany({
+            include: {
+                supplier: true,
+                requirement: { select: { title: true } }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 3
+        });
+
+        // Combine all activity into a unified feed
+        const allActivity: any[] = [
+            ...recentRequirements.map(r => ({
+                id: r.id,
+                type: 'requirement',
+                title: r.title,
+                status: r.status,
+                totalAmount: r.actualAmount || r.totalAmount || 0,
+                createdAt: r.createdAt,
+                project: r.project?.name,
+                area: r.area?.name,
+                createdBy: r.createdBy?.name || r.createdBy?.email
+            })),
+            ...recentBudgets.map(b => ({
+                id: b.id,
+                type: 'budget',
+                title: b.title,
+                status: b.status,
+                totalAmount: b.amount || 0,
+                createdAt: b.createdAt,
+                project: b.project?.name,
+                area: b.area?.name,
+                createdBy: b.createdBy?.name || b.createdBy?.email
+            })),
+            ...recentInvoices.map(i => ({
+                id: i.id,
+                type: 'invoice',
+                title: `Factura ${i.invoiceNumber || i.id.substring(0, 8)}`,
+                status: i.status,
+                totalAmount: i.amount || 0,
+                createdAt: i.createdAt,
+                supplier: i.supplier?.name,
+                requirement: i.requirement?.title
+            }))
+        ];
+
+        // Sort by createdAt descending and take top 8
+        allActivity.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const recent = allActivity.slice(0, 8);
+
+        // Calculate total amount safely
         const allStatsReqs = await prisma.requirement.findMany({
             where,
             select: { actualAmount: true, totalAmount: true }
@@ -917,8 +983,9 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     } catch (error: any) {
         console.error("Dashboard stats error:", error);
         res.status(500).json({ error: 'Failed to fetch dashboard stats' });
-    }
+    };
 };
+
 
 // Create an Asiento (pre-approved requirement)
 export const createAsiento = async (req: AuthRequest, res: Response) => {

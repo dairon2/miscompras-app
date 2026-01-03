@@ -77,15 +77,19 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
     }, [id]);
 
     const fetchSupplier = async () => {
+        console.log('[SupplierDetailPage] Fetching supplier with id:', id);
         try {
             const response = await api.get(`/suppliers/${id}`);
+            console.log('[SupplierDetailPage] Received supplier data:', response.data);
             setSupplier(response.data);
-        } catch (err) {
-            console.error("Error fetching supplier", err);
+        } catch (err: any) {
+            console.error('[SupplierDetailPage] Error fetching supplier:', err);
+            console.error('[SupplierDetailPage] Error response:', err.response?.data);
         } finally {
             setLoading(false);
         }
     };
+
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('es-CO', {

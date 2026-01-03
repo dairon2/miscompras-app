@@ -290,8 +290,9 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     if (!requirement) return <div className="p-12 text-center font-bold text-red-500">Requerimiento no encontrado</div>;
 
     const isFinalState = requirement.status === 'PAID' || requirement.status === 'REJECTED';
-    const isCreator = currentUser?.id === requirement.createdById || currentUser?.email === requirement.createdBy.email;
+    const isCreator = currentUser?.id === requirement.createdById || currentUser?.email === requirement.createdBy?.email;
     const userRole = currentUser?.role || 'USER';
+
 
     // Role-based permissions
     // isAdmin: Can edit details (includes COORDINATOR now)
