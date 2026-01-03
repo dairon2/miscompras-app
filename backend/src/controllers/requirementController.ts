@@ -5,7 +5,7 @@ import { DateTime } from 'luxon';
 import fs from 'fs';
 import path from 'path';
 import { createRequirementGroup } from '../services/requirementGroupService';
-import { uploadToBlobStorage } from '../services/blobStorageService';
+import { uploadToBlobStorage, processFileUploads } from '../services/blobStorageService';
 
 export const createRequirement = async (req: AuthRequest, res: Response) => {
     const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, budgetId } = req.body;
@@ -15,32 +15,8 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
     if (!userId) return res.status(401).json({ error: 'User not authenticated' });
 
     try {
-        // Process attachments first
-        const attachmentData = await Promise.all((files || []).map(async (file) => {
-            try {
-                const blobName = `requirements/${Date.now()}-${file.originalname}`;
-                const blobUrl = await uploadToBlobStorage(file.path, blobName);
-
-                if (blobUrl) {
-                    return {
-                        fileName: file.originalname,
-                        fileUrl: blobUrl
-                    };
-                } else {
-                    console.warn(`Failed to upload ${file.originalname} to Blob Storage, using local path.`);
-                    return {
-                        fileName: file.originalname,
-                        fileUrl: file.path
-                    };
-                }
-            } catch (err) {
-                console.error(`Error processing file ${file.originalname}:`, err);
-                return {
-                    fileName: file.originalname,
-                    fileUrl: file.path
-                };
-            }
-        }));
+        // Process attachments first using the new helper
+        const attachmentData = await processFileUploads(files, 'requirements');
 
         const requirement = await prisma.requirement.create({
             data: {
@@ -375,10 +351,7 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 satisfactionComments: satisfactionComments === 'null' ? null : satisfactionComments,
                 hasMultiplePayments: hasMultiplePayments !== undefined ? (hasMultiplePayments === 'true' || hasMultiplePayments === true) : undefined,
                 attachments: {
-                    create: files?.map(file => ({
-                        fileName: file.originalname,
-                        fileUrl: file.path
-                    })) || []
+                    create: await processFileUploads(files, 'requirements')
                 }
             },
             include: {
@@ -899,12 +872,16 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
                 isAsiento: true,
                 hasMultiplePayments: hasMultiplePayments || false,
                 status: 'APPROVED',  // Auto-approved for asientos
-                procurementStatus: 'EN_TRAMITE'
+                procurementStatus: 'EN_TRAMITE',
+                attachments: {
+                    create: await processFileUploads(req.files as Express.Multer.File[], 'asientos')
+                }
             },
             include: {
                 project: true,
                 area: true,
-                supplier: true
+                supplier: true,
+                attachments: true
             }
         });
 

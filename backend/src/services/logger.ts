@@ -26,21 +26,15 @@ const logger = {
 
     // Service-specific loggers
     pdf: (message: string, ...args: any[]) => {
-        if (isDev) {
-            console.log(`[PDF Service] ${message}`, ...args);
-        }
+        console.log(`[PDF Service] ${message}`, ...args);
     },
 
     blob: (message: string, ...args: any[]) => {
-        if (isDev) {
-            console.log(`[Blob Storage] ${message}`, ...args);
-        }
+        console.log(`[Blob Storage] ${message}`, ...args);
     },
 
     email: (message: string, ...args: any[]) => {
-        if (isDev) {
-            console.log(`[Email Service] ${message}`, ...args);
-        }
+        console.log(`[Email Service] ${message}`, ...args);
     },
 
     db: (message: string, ...args: any[]) => {

@@ -9,6 +9,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
 import { resolveApiUrl } from "@/lib/utils";
+import YearSelector from "@/components/YearSelector";
 
 interface Requirement {
     id: string;
@@ -232,20 +233,12 @@ export default function ApprovalsPage() {
                         </button>
                     </div>
 
-                    <div className="relative">
-                        <select
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                            className="w-full bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 font-bold py-2 px-4 pr-8 rounded-xl border border-gray-200 dark:border-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 shadow-sm"
-                        >
-                            {years.map(y => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                            <ChevronDown size={14} />
-                        </div>
-                    </div>
+                    {/* Year Selector */}
+                    <YearSelector
+                        selectedYear={selectedYear}
+                        availableYears={years}
+                        onChange={setSelectedYear}
+                    />
                 </div >
             </header >
 

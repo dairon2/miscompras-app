@@ -38,16 +38,16 @@ export default function NewUserPage() {
         position: ''
     });
 
-    // Only ADMIN can access this page
-    const isAdmin = user?.role === 'ADMIN';
+    // roles that can manage users
+    const canManage = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '');
 
     useEffect(() => {
-        if (!isAdmin) {
+        if (!canManage) {
             router.push('/users');
             return;
         }
         fetchAreas();
-    }, [isAdmin]);
+    }, [canManage]);
 
     const fetchAreas = async () => {
         try {
@@ -98,7 +98,7 @@ export default function NewUserPage() {
         }
     };
 
-    if (!isAdmin) {
+    if (!canManage) {
         return null;
     }
 
@@ -223,8 +223,11 @@ export default function NewUserPage() {
                                 >
                                     <option value="USER">Usuario</option>
                                     <option value="LEADER">Líder / Auxiliar de Compra</option>
+                                    <option value="COORDINATOR">Coordinador</option>
                                     <option value="DIRECTOR">Director</option>
                                     <option value="ADMIN">Administrador</option>
+                                    <option value="AUDITOR">Auditor</option>
+                                    <option value="DEVELOPER">Desarrollador</option>
                                 </select>
                             </div>
 

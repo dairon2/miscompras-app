@@ -24,7 +24,8 @@ import {
     Moon,
     Monitor,
     AlertTriangle,
-    Hash
+    Hash,
+    Power
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -710,7 +711,7 @@ export default function AdminPage() {
                                                                     className={`p-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all ${item.isActive !== false ? 'text-amber-600 hover:bg-amber-600' : 'text-green-600 hover:bg-green-600'} hover:text-white bg-white dark:bg-slate-800`}
                                                                     title={item.isActive !== false ? 'Desactivar' : 'Activar'}
                                                                 >
-                                                                    <Hash size={14} />
+                                                                    <Power size={14} />
                                                                 </button>
                                                             )}
                                                             <button

@@ -19,6 +19,7 @@ import {
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import YearSelector from "@/components/YearSelector";
 
 interface Asiento {
     id: string;
@@ -140,24 +141,11 @@ export default function AsientosPage() {
                     </div>
 
                     {/* Year Selector */}
-                    <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                        <Calendar size={18} className="text-primary-600" />
-                        <select
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                            className="bg-transparent font-black text-lg appearance-none cursor-pointer pr-6 focus:outline-none"
-                        >
-                            {availableYears.map(year => (
-                                <option key={year} value={year}>{year}</option>
-                            ))}
-                        </select>
-                        {selectedYear !== currentYear && (
-                            <span className="text-[8px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
-                                Histórico
-                            </span>
-                        )}
-                        <ChevronDown size={16} className="text-gray-400" />
-                    </div>
+                    <YearSelector
+                        selectedYear={selectedYear}
+                        availableYears={availableYears}
+                        onChange={setSelectedYear}
+                    />
                 </div>
 
                 <div className="flex items-center gap-4">

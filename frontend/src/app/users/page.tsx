@@ -38,7 +38,8 @@ export default function UsersPage() {
 
     // Role-based permissions
     const userRole = user?.role || 'USER';
-    const isAdmin = userRole === 'ADMIN';
+    const canManage = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
+    const canDelete = ['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(userRole);
 
     useEffect(() => {
         fetchUsers();
@@ -109,6 +110,9 @@ export default function UsersPage() {
             'ADMIN': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
             'DIRECTOR': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
             'LEADER': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+            'COORDINATOR': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+            'AUDITOR': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+            'DEVELOPER': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
             'USER': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
         };
         return colors[role] || colors['USER'];
@@ -138,7 +142,7 @@ export default function UsersPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {isAdmin && (
+                    {canManage && (
                         <button
                             onClick={() => router.push('/users/new')}
                             className="flex items-center gap-2 bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap uppercase text-[10px] tracking-widest"
@@ -169,38 +173,50 @@ export default function UsersPage() {
                         />
                     </form>
 
-                    <select
-                        value={filters.role}
-                        onChange={(e) => setFilters({ ...filters, role: e.target.value })}
-                        className="bg-gray-50 dark:bg-slate-900 border-none p-4 rounded-2xl font-bold min-w-[150px]"
-                    >
-                        <option value="">Todos los roles</option>
-                        <option value="ADMIN">Admin</option>
-                        <option value="DIRECTOR">Director</option>
-                        <option value="LEADER">Líder</option>
-                        <option value="USER">Usuario</option>
-                    </select>
+                    <div className="relative">
+                        <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <select
+                            value={filters.role}
+                            onChange={(e) => setFilters({ ...filters, role: e.target.value })}
+                            className="bg-gray-50 dark:bg-slate-900 border-none p-4 pl-12 rounded-2xl font-bold min-w-[170px] appearance-none outline-none focus:ring-2 ring-primary-500"
+                        >
+                            <option value="">Todos los roles</option>
+                            <option value="ADMIN">Administrador</option>
+                            <option value="DIRECTOR">Director</option>
+                            <option value="LEADER">Líder</option>
+                            <option value="COORDINATOR">Coordinador</option>
+                            <option value="AUDITOR">Auditor</option>
+                            <option value="DEVELOPER">Desarrollador</option>
+                            <option value="USER">Usuario</option>
+                        </select>
+                    </div>
 
-                    <select
-                        value={filters.areaId}
-                        onChange={(e) => setFilters({ ...filters, areaId: e.target.value })}
-                        className="bg-gray-50 dark:bg-slate-900 border-none p-4 rounded-2xl font-bold min-w-[150px]"
-                    >
-                        <option value="">Todas las áreas</option>
-                        {areas.map((a: any) => (
-                            <option key={a.id} value={a.id}>{a.name}</option>
-                        ))}
-                    </select>
+                    <div className="relative">
+                        <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <select
+                            value={filters.areaId}
+                            onChange={(e) => setFilters({ ...filters, areaId: e.target.value })}
+                            className="bg-gray-50 dark:bg-slate-900 border-none p-4 pl-12 rounded-2xl font-bold min-w-[170px] appearance-none outline-none focus:ring-2 ring-primary-500"
+                        >
+                            <option value="">Todas las áreas</option>
+                            {areas.map((a: any) => (
+                                <option key={a.id} value={a.id}>{a.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                    <select
-                        value={filters.isActive}
-                        onChange={(e) => setFilters({ ...filters, isActive: e.target.value })}
-                        className="bg-gray-50 dark:bg-slate-900 border-none p-4 rounded-2xl font-bold min-w-[130px]"
-                    >
-                        <option value="">Todos</option>
-                        <option value="true">Activos</option>
-                        <option value="false">Inactivos</option>
-                    </select>
+                    <div className="relative">
+                        <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <select
+                            value={filters.isActive}
+                            onChange={(e) => setFilters({ ...filters, isActive: e.target.value })}
+                            className="bg-gray-50 dark:bg-slate-900 border-none p-4 pl-12 rounded-2xl font-bold min-w-[140px] appearance-none outline-none focus:ring-2 ring-primary-500"
+                        >
+                            <option value="">Todos</option>
+                            <option value="true">Activos</option>
+                            <option value="false">Inactivos</option>
+                        </select>
+                    </div>
                 </div>
 
                 {/* Users Table */}
@@ -212,7 +228,7 @@ export default function UsersPage() {
                                 <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Rol</th>
                                 <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Área</th>
                                 <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Estado</th>
-                                {isAdmin && (
+                                {canManage && (
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Acciones</th>
                                 )}
                             </tr>
@@ -273,7 +289,7 @@ export default function UsersPage() {
                                                 </span>
                                             )}
                                         </td>
-                                        {isAdmin && (
+                                        {canManage && (
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-2">
                                                     <button
@@ -286,14 +302,14 @@ export default function UsersPage() {
                                                     <button
                                                         onClick={() => handleToggleStatus(u.id)}
                                                         className={`p-3 rounded-xl shadow-sm border transition-all ${u.isActive !== false
-                                                                ? 'bg-white dark:bg-slate-800 hover:bg-amber-500 hover:text-white border-gray-100 dark:border-gray-700 text-amber-500'
-                                                                : 'bg-green-50 dark:bg-green-900/20 hover:bg-green-500 hover:text-white border-green-200 dark:border-green-800 text-green-600'
+                                                            ? 'bg-white dark:bg-slate-800 hover:bg-amber-500 hover:text-white border-gray-100 dark:border-gray-700 text-amber-500'
+                                                            : 'bg-green-50 dark:bg-green-900/20 hover:bg-green-500 hover:text-white border-green-200 dark:border-green-800 text-green-600'
                                                             }`}
                                                         title={u.isActive !== false ? 'Desactivar' : 'Activar'}
                                                     >
                                                         <Power size={16} />
                                                     </button>
-                                                    {u.id !== user?.id && (
+                                                    {canDelete && u.id !== user?.id && (
                                                         <button
                                                             onClick={() => handleDeleteClick(u)}
                                                             className="p-3 bg-white dark:bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-red-500"

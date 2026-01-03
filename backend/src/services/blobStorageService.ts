@@ -65,7 +65,7 @@ export const uploadToBlobStorage = async (filePath: string, blobName: string): P
             }
         });
 
-        const blobUrl = blockBlobClient.url;
+        const blobUrl = `https://miscomprasstorage.blob.core.windows.net/${CONTAINER_NAME}/${blobName}`;
         logger.blob('Uploaded successfully:', blobUrl);
 
         // Delete local file after successful upload
@@ -113,7 +113,7 @@ export const uploadBufferToBlobStorage = async (
             }
         });
 
-        const blobUrl = blockBlobClient.url;
+        const blobUrl = `https://miscomprasstorage.blob.core.windows.net/${CONTAINER_NAME}/${blobName}`;
         console.log('[Blob Storage] Buffer uploaded successfully:', blobUrl);
         return blobUrl;
     } catch (error) {
@@ -144,6 +144,45 @@ export const deleteFromBlobStorage = async (blobName: string): Promise<boolean> 
         console.error('[Blob Storage] Delete failed:', error);
         return false;
     }
+};
+
+/**
+ * Process multiple files from Multer and upload them to Blob Storage
+ * @param files - Array of Multer files
+ * @param folder - Folder name in blob (e.g. 'requirements')
+ * @returns Array of attachment objects for Prisma
+ */
+export const processFileUploads = async (files: Express.Multer.File[] | undefined, folder: string = 'requirements') => {
+    if (!files || !Array.isArray(files) || files.length === 0) return [];
+
+    return await Promise.all(files.map(async (file) => {
+        try {
+            const blobName = `${folder}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+            const blobUrl = await uploadToBlobStorage(file.path, blobName);
+
+            if (blobUrl) {
+                return {
+                    fileName: file.originalname,
+                    fileUrl: blobUrl
+                };
+            } else {
+                logger.warn(`Failed to upload ${file.originalname} to Blob Storage, using local path.`);
+                // Normalize path for web: replace backslashes and ensure it starts correctly
+                const normalizedPath = file.path.replace(/\\/g, '/');
+                return {
+                    fileName: file.originalname,
+                    fileUrl: normalizedPath
+                };
+            }
+        } catch (err) {
+            logger.error(`Error processing file ${file.originalname}:`, err);
+            const normalizedPath = file.path.replace(/\\/g, '/');
+            return {
+                fileName: file.originalname,
+                fileUrl: normalizedPath
+            };
+        }
+    }));
 };
 
 /**

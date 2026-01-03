@@ -82,6 +82,7 @@ app.use(helmet());
 app.use(compression());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
+app.use('/api/uploads', express.static('uploads'));
 
 // Public Routes (No auth needed)
 app.use('/api/auth', authRoutes);

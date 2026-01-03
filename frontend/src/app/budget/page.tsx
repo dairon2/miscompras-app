@@ -14,6 +14,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
 import VisualDashboard from "./VisualDashboard";
+import YearSelector from "@/components/YearSelector";
 import * as XLSX from 'xlsx';
 
 interface Budget {
@@ -409,18 +410,11 @@ export default function BudgetsPage() {
                     </button>
 
                     {/* Year selector */}
-                    <div className="relative group">
-                        <select
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                            className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-2xl px-6 py-4 text-sm font-black text-slate-800 dark:text-white appearance-none cursor-pointer pr-12 focus:ring-4 focus:ring-primary-500/10 transition-all shadow-sm group-hover:border-primary-400"
-                        >
-                            {years.map(y => (
-                                <option key={y} value={y} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-bold">{y}</option>
-                            ))}
-                        </select>
-                        <Calendar size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-500 pointer-events-none group-hover:scale-110 transition-transform" />
-                    </div>
+                    <YearSelector
+                        selectedYear={selectedYear}
+                        availableYears={years}
+                        onChange={setSelectedYear}
+                    />
 
                     {/* Pending approval button - for all users who might have assigned budgets */}
                     <button

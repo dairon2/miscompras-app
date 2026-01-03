@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../index';
 import path from 'path';
+import { uploadToBlobStorage } from '../services/blobStorageService';
+import logger from '../services/logger';
 
 // Get Invoices with Filters
 export const getInvoices = async (req: AuthRequest, res: Response) => {
@@ -56,7 +58,23 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
     if (!userId) return res.status(401).json({ error: 'User not authenticated' });
     if (!file) return res.status(400).json({ error: 'Invoice PDF is required' });
 
+
     try {
+        // Normalize path for local fallback immediately
+        let fileUrl = file.path.replace(/\\/g, '/');
+
+        // Upload to Blob Storage if available
+        try {
+            const blobName = `invoices/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+            const blobUrl = await uploadToBlobStorage(file.path, blobName);
+            if (blobUrl) {
+                fileUrl = blobUrl;
+                logger.blob('Invoice uploaded to cloud:', blobUrl);
+            }
+        } catch (blobErr) {
+            logger.error('Failed to upload invoice to blob storage, using local path:', blobErr);
+        }
+
         const invoice = await prisma.invoice.create({
             data: {
                 invoiceNumber,
@@ -66,7 +84,7 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
                 supplierId,
                 createdById: userId,
                 status: 'RECEIVED',
-                fileUrl: file.path // Azure Blob Storage will return the URL here in the real middleware setup
+                fileUrl: fileUrl
             }
         });
 

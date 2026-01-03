@@ -42,17 +42,17 @@ export default function EditUserPage() {
 
     const [userInfo, setUserInfo] = useState<any>(null);
 
-    // Only ADMIN can access this page
-    const isAdmin = user?.role === 'ADMIN';
+    // roles that can manage users
+    const canManage = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '');
 
     useEffect(() => {
-        if (!isAdmin) {
+        if (!canManage) {
             router.push('/users');
             return;
         }
         fetchUser();
         fetchAreas();
-    }, [isAdmin, params.id]);
+    }, [canManage, params.id]);
 
     const fetchUser = async () => {
         setFetching(true);
@@ -130,7 +130,7 @@ export default function EditUserPage() {
         }
     };
 
-    if (!isAdmin || fetching) {
+    if (!canManage || fetching) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
@@ -264,8 +264,11 @@ export default function EditUserPage() {
                                 >
                                     <option value="USER">Usuario</option>
                                     <option value="LEADER">Líder / Auxiliar de Compra</option>
+                                    <option value="COORDINATOR">Coordinador</option>
                                     <option value="DIRECTOR">Director</option>
                                     <option value="ADMIN">Administrador</option>
+                                    <option value="AUDITOR">Auditor</option>
+                                    <option value="DEVELOPER">Desarrollador</option>
                                 </select>
                             </div>
 
