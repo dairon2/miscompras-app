@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Search, Filter, Plus, Truck, Mail, Phone,
@@ -13,11 +14,10 @@ import { useAuthStore } from "@/store/authStore";
 
 export default function SuppliersPage() {
     const { user } = useAuthStore();
+    const router = useRouter();
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-    const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
-    const [supplierRequirements, setSupplierRequirements] = useState([]);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
@@ -47,14 +47,8 @@ export default function SuppliersPage() {
         }
     };
 
-    const fetchSupplierDetails = async (supplier: any) => {
-        setSelectedSupplier(supplier);
-        try {
-            const res = await api.get(`/requirements?supplierId=${supplier.id}`);
-            setSupplierRequirements(res.data);
-        } catch (err) {
-            console.error("Error fetching supplier requirements", err);
-        }
+    const navigateToSupplier = (supplierId: string) => {
+        router.push(`/suppliers/${supplierId}`);
     };
 
     const handleCreateSupplier = async (e: React.FormEvent) => {
@@ -134,7 +128,7 @@ export default function SuppliersPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
                             {suppliers.map((supp: any, index) => (
-                                <SupplierCard key={supp.id} supplier={supp} index={index} onClick={() => fetchSupplierDetails(supp)} />
+                                <SupplierCard key={supp.id} supplier={supp} index={index} onClick={() => navigateToSupplier(supp.id)} />
                             ))}
                         </div>
                     ) : (
@@ -165,7 +159,7 @@ export default function SuppliersPage() {
                                             </td>
                                             <td className="p-6 text-right">
                                                 <button
-                                                    onClick={() => fetchSupplierDetails(supp)}
+                                                    onClick={() => navigateToSupplier(supp.id)}
                                                     className="p-2 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-gray-400 hover:text-primary-600 rounded-xl transition-all"
                                                 >
                                                     <ArrowRightCircle size={20} />
@@ -179,102 +173,6 @@ export default function SuppliersPage() {
                     )}
                 </>
             )}
-
-            {/* Supplier History Modal */}
-            <AnimatePresence>
-                {selectedSupplier && (
-                    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6">
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            onClick={() => setSelectedSupplier(null)}
-                            className="absolute inset-0 bg-slate-900/80 backdrop-blur-md"
-                        />
-                        <motion.div
-                            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-                            className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-t-[3rem] sm:rounded-[3rem] shadow-3xl overflow-hidden flex flex-col h-[90vh] sm:h-auto sm:max-h-[85vh]"
-                        >
-                            <div className="p-8 pb-0 flex justify-between items-start">
-                                <div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-500">
-                                            <Truck size={16} />
-                                        </div>
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ficha del Proveedor</span>
-                                    </div>
-                                    <h3 className="text-3xl font-black tracking-tight">{selectedSupplier.name}</h3>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">NIT: {selectedSupplier.taxId}</p>
-                                </div>
-                                <button onClick={() => setSelectedSupplier(null)} className="p-3 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-2xl transition-all">
-                                    <X size={24} />
-                                </button>
-                            </div>
-
-                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="p-6 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 rounded-3xl flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center border border-gray-100 dark:border-gray-700 text-primary-400">
-                                        <Mail size={18} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[9px] font-black uppercase text-gray-400 mb-0.5">Correo de Contacto</p>
-                                        <p className="text-sm font-bold">{selectedSupplier.contactEmail || 'No disponible'}</p>
-                                    </div>
-                                </div>
-                                <div className="p-6 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 rounded-3xl flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center border border-gray-100 dark:border-gray-700 text-primary-400">
-                                        <Phone size={18} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[9px] font-black uppercase text-gray-400 mb-0.5">Teléfono Directo</p>
-                                        <p className="text-sm font-bold">{selectedSupplier.contactPhone || 'No disponible'}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 overflow-hidden flex flex-col p-8 pt-0">
-                                <div className="flex items-center justify-between mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
-                                    <h4 className="font-black uppercase text-[10px] tracking-widest text-gray-400 flex items-center gap-2">
-                                        <FileText size={14} /> Historial de Operaciones
-                                    </h4>
-                                    <span className="text-[10px] font-black bg-gray-100 dark:bg-slate-800 px-3 py-1 rounded-full">{supplierRequirements.length} procesos</span>
-                                </div>
-
-                                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                                    {supplierRequirements.length === 0 ? (
-                                        <div className="text-center py-20 bg-gray-50/50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
-                                            <p className="text-gray-400 font-bold text-xs uppercase">No hay compras registradas con este proveedor aún</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3 pb-8">
-                                            {supplierRequirements.map((req: any) => (
-                                                <div key={req.id} className="p-5 bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-gray-700 rounded-2xl flex items-center justify-between group hover:border-primary-200 transition-all">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center text-primary-500 shadow-sm">
-                                                            <Package size={18} />
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-bold text-sm leading-none mb-1">{req.title}</p>
-                                                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{req.project?.name} • {new Date(req.createdAt).toLocaleDateString()}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-6">
-                                                        <div className="text-right">
-                                                            <p className="text-sm font-black text-slate-800 dark:text-white">${parseFloat(req.totalAmount).toLocaleString()}</p>
-                                                            <span className="text-[8px] px-2 py-0.5 bg-primary-100 text-primary-600 rounded font-black uppercase">{req.status}</span>
-                                                        </div>
-                                                        <button className="p-2 text-primary-500 hover:bg-primary-50 rounded-lg transition-colors">
-                                                            <ArrowRightCircle size={18} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
 
             {/* Create Supplier Modal */}
             <AnimatePresence>

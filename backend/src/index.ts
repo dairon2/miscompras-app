@@ -129,6 +129,59 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
     }
 });
 
+// Supplier detail route
+app.get('/api/suppliers/:id', authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const supplier = await prisma.supplier.findUnique({
+            where: { id },
+            include: {
+                requirements: {
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        area: true,
+                        project: true,
+                        budget: { include: { category: true } }
+                    }
+                },
+                invoices: {
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        requirement: true
+                    }
+                }
+            }
+        });
+
+        if (!supplier) {
+            return res.status(404).json({ error: 'Supplier not found' });
+        }
+
+        // Calculate totals
+        const totalRequirements = supplier.requirements.length;
+        const totalInvoices = supplier.invoices.length;
+        const totalAmount = supplier.requirements.reduce((sum, req) => {
+            return sum + (Number(req.actualAmount) || Number(req.totalAmount) || 0);
+        }, 0);
+        const approvedRequirements = supplier.requirements.filter(r => r.status === 'APPROVED').length;
+        const pendingRequirements = supplier.requirements.filter(r => r.status === 'PENDING_APPROVAL').length;
+
+        res.json({
+            ...supplier,
+            stats: {
+                totalRequirements,
+                totalInvoices,
+                totalAmount,
+                approvedRequirements,
+                pendingRequirements
+            }
+        });
+    } catch (e) {
+        console.error('Error fetching supplier detail:', e);
+        res.status(500).json({ error: 'Error fetching supplier detail' });
+    }
+});
+
 
 // Protected Routes
 app.use('/api/requirements', authMiddleware, requirementRoutes);
