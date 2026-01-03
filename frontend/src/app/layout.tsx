@@ -194,16 +194,16 @@ export default function RootLayout({
                               <button onClick={markAllRead} className="text-[10px] font-black text-primary-600 hover:underline uppercase">Marcar todas</button>
                             )}
                           </div>
-                          <div className="flex flex-col gap-1">
-                            {notifications.length === 0 ? (
+                          <div className="flex flex-col gap-1 max-h-[60vh] overflow-y-auto custom-scrollbar p-2">
+                            {notifications.filter(n => !n.isRead).length === 0 ? (
                               <div className="py-12 text-center">
                                 <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
                                   <Bell className="text-gray-300" size={32} />
                                 </div>
-                                <p className="text-gray-500 font-bold">No tienes notificaciones</p>
+                                <p className="text-gray-500 font-bold">No tienes notificaciones nuevas</p>
                               </div>
                             ) : (
-                              notifications.map((n: Notification) => (
+                              notifications.filter(n => !n.isRead).map((n: Notification) => (
                                 <div
                                   key={n.id}
                                   onClick={() => markRead(n.id, n.requirementId, n.title, n.type)}
