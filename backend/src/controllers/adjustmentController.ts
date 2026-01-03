@@ -288,61 +288,56 @@ export const approveAdjustment = async (req: AuthRequest, res: Response) => {
 
         // ============ APPLY BUDGET CHANGES AUTOMATICALLY ============
 
-        const result = await prisma.$transaction(async (tx) => {
-            // 1. If TRANSFER, reduce available and total amount from source budgets
-            if (adjustment.type === 'TRANSFER') {
-                for (const source of adjustment.sources) {
-                    const beforeSource = await tx.budget.findUnique({ where: { id: source.budgetId } });
-                    console.log(`[ADJUSTMENT] Decrementing Source Budget ${source.budgetId} (${source.budget.title}). Old Available: ${beforeSource?.available}`);
+        // ============ APPLY BUDGET CHANGES AUTOMATICALLY ============
 
-                    await tx.budget.update({
-                        where: { id: source.budgetId },
-                        data: {
-                            amount: { decrement: parseFloat(source.amount.toString()) },
-                            available: { decrement: parseFloat(source.amount.toString()) },
-                            version: { increment: 1 }
-                        }
-                    });
-                }
+        // 1. If TRANSFER, reduce available and total amount from source budgets
+        if (adjustment.type === 'TRANSFER') {
+            for (const source of adjustment.sources) {
+                await prisma.budget.update({
+                    where: { id: source.budgetId },
+                    data: {
+                        amount: {
+                            decrement: parseFloat(source.amount.toString())
+                        },
+                        available: {
+                            decrement: parseFloat(source.amount.toString())
+                        },
+                        version: { increment: 1 }
+                    }
+                });
             }
+        }
 
-            // 2. Increase available and amount on target budget
-            const beforeTarget = await tx.budget.findUnique({ where: { id: adjustment.budgetId } });
-            console.log(`[ADJUSTMENT] Incrementing Target Budget ${adjustment.budgetId} (${adjustment.budget.title}). Old Available: ${beforeTarget?.available}, Amount to Add: ${adjustment.requestedAmount}`);
-
-            const updatedBudget = await tx.budget.update({
-                where: { id: adjustment.budgetId },
-                data: {
-                    amount: { increment: parseFloat(adjustment.requestedAmount.toString()) },
-                    available: { increment: parseFloat(adjustment.requestedAmount.toString()) },
-                    version: { increment: 1 }
-                }
-            });
-            console.log(`[ADJUSTMENT] Target Budget Updated. New Available: ${updatedBudget.available}`);
-
-            // Get approver name
-            const approver = await tx.user.findUnique({ where: { id: userId }, select: { name: true } });
-
-            // 3. Update adjustment status with director info
-            const updatedAdjustment = await tx.budgetAdjustment.update({
-                where: { id },
-                data: {
-                    status: 'APPROVED',
-                    reviewedById: userId,
-                    reviewedAt: new Date()
-                },
-                include: {
-                    budget: { include: { project: true, area: true, category: true } },
-                    requestedBy: { select: { name: true, email: true } },
-                    reviewedBy: { select: { name: true } },
-                    sources: { include: { budget: { select: { title: true, category: true } } } }
-                }
-            });
-
-            return { updatedAdjustment, approver };
+        // 2. Increase available and amount on target budget
+        await prisma.budget.update({
+            where: { id: adjustment.budgetId },
+            data: {
+                amount: { increment: parseFloat(adjustment.requestedAmount.toString()) },
+                available: { increment: parseFloat(adjustment.requestedAmount.toString()) },
+                version: { increment: 1 }
+            }
         });
 
-        const { updatedAdjustment, approver } = result;
+        // Get approver name
+        const approver = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+
+        // 3. Update adjustment status with director info
+        const updated = await prisma.budgetAdjustment.update({
+            where: { id },
+            data: {
+                status: 'APPROVED',
+                reviewedById: userId,
+                reviewedAt: new Date()
+            },
+            include: {
+                budget: { include: { project: true, area: true, category: true } },
+                requestedBy: { select: { name: true, email: true } },
+                reviewedBy: { select: { name: true } },
+                sources: { include: { budget: { select: { title: true, category: true } } } }
+            }
+        });
+
+        const updatedAdjustment = updated;
 
         // Generate updated PDF with approval stamp
         try {
