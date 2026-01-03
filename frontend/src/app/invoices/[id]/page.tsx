@@ -108,73 +108,100 @@ export default function InvoiceDetailPage() {
     if (loading) return <div className="p-12 text-center">Cargando...</div>;
     if (!invoice) return <div className="p-12 text-center">Factura no encontrada</div>;
 
+    const getFileUrl = (url: string) => {
+        if (!url) return "";
+        if (url.startsWith('http')) return url;
+        const baseUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace('/api', '');
+        return `${baseUrl}/${url.replace(/\\/g, '/')}`;
+    };
+
     const isMatchCorrect = selectedReq && Math.abs(parseFloat(invoice.amount) - (parseFloat(selectedReq.actualAmount || '0'))) < 1.0;
 
     return (
-        <div className="p-6 max-w-5xl mx-auto space-y-6">
+        <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
             <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-900 flex items-center gap-1">
                 <ChevronLeft className="w-4 h-4" /> Volver
             </button>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Invoice Details */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                {/* PDF Viewer (Main Panel) */}
+                <div className="xl:col-span-2 space-y-4">
+                    <div className="bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 h-[800px] flex flex-col">
+                        <div className="p-4 flex justify-between items-center border-b dark:border-gray-700">
+                            <h3 className="font-bold flex items-center gap-2">
+                                <FileText className="w-5 h-5 text-blue-600" />
+                                Visor de Documento
+                            </h3>
+                            {invoice.fileUrl && (
+                                <a
+                                    href={getFileUrl(invoice.fileUrl)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+                                >
+                                    Abrir en ventana nueva <ExternalLink className="w-3 h-3" />
+                                </a>
+                            )}
+                        </div>
+                        <div className="flex-1 bg-gray-100 dark:bg-gray-900 rounded-b-xl overflow-hidden">
+                            {invoice.fileUrl ? (
+                                <iframe
+                                    src={`${getFileUrl(invoice.fileUrl)}#toolbar=0`}
+                                    className="w-full h-full border-none"
+                                    title="Invoice PDF"
+                                />
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                                    <AlertTriangle className="w-12 h-12 mb-2" />
+                                    <p>No hay documento adjunto</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sidebar: Details & Matching */}
                 <div className="space-y-6">
+                    {/* Invoice Details Card */}
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                         <div className="flex justify-between items-start mb-4">
                             <div>
-                                <h2 className="text-2xl font-bold flex items-center gap-2">
-                                    <FileText className="text-blue-600" />
-                                    Factura #{invoice.invoiceNumber}
-                                </h2>
-                                <p className="text-gray-500">{invoice.supplier?.name}</p>
+                                <h2 className="text-xl font-bold">Factura #{invoice.invoiceNumber}</h2>
+                                <p className="text-gray-500 text-sm">{invoice.supplier?.name}</p>
                             </div>
-                            <span className="px-3 py-1 rounded-full text-sm font-bold bg-gray-100 dark:bg-gray-700">
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                                 {invoice.status}
                             </span>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 text-sm mb-6">
                             <div>
-                                <label className="block text-gray-500">Monto Factura</label>
-                                <p className="text-xl font-mono font-bold">${Number(invoice.amount).toLocaleString()}</p>
+                                <label className="block text-gray-500 text-xs">Monto Factura</label>
+                                <p className="text-lg font-mono font-bold">${Number(invoice.amount).toLocaleString()}</p>
                             </div>
                             <div>
-                                <label className="block text-gray-500">Fecha Emisión</label>
+                                <label className="block text-gray-500 text-xs">Fecha Emisión</label>
                                 <p className="font-medium">{new Date(invoice.issueDate).toLocaleDateString()}</p>
                             </div>
                         </div>
 
-                        {invoice.fileUrl && (
-                            <a
-                                href={`${(process.env.NEXT_PUBLIC_API_URL || '').replace('/api', '')}/${invoice.fileUrl.replace(/\\/g, '/')}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-2 text-blue-600 hover:underline p-3 bg-blue-50 rounded-lg"
-                            >
-                                <ExternalLink className="w-4 h-4" />
-                                Ver Documento PDF
-                            </a>
-                        )}
-
-                        {/* Actions for Leaders/Admins */}
-                        <div className="mt-8 flex gap-2">
+                        {/* Actions */}
+                        <div className="space-y-2">
                             {invoice.status === 'VERIFIED' && (
-                                <button onClick={handleApprove} className="flex-1 bg-amber-500 text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-colors">
+                                <button onClick={handleApprove} className="w-full bg-amber-500 text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-sm">
                                     Autorizar Pago
                                 </button>
                             )}
                             {invoice.status === 'APPROVED' && (
-                                <button onClick={handlePay} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition-colors">
+                                <button onClick={handlePay} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition-colors shadow-sm">
                                     Registrar Pago
                                 </button>
                             )}
                         </div>
                     </div>
-                </div>
 
-                {/* 3-Way Match Section */}
-                <div className="space-y-6">
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 h-full">
+                    {/* 3-Way Match Section */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                             <LinkIcon className="w-5 h-5 text-purple-600" />
                             Vinculación (3-Way Match)
@@ -182,16 +209,21 @@ export default function InvoiceDetailPage() {
 
                         {invoice.status === 'RECEIVED' ? (
                             <div className="space-y-4">
-                                <p className="text-sm text-gray-500">Busca la Orden de Compra (Requerimiento) aprobada para vincular.</p>
+                                <p className="text-xs text-gray-500">Busca el requerimiento aprobado para vincular.</p>
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
-                                        placeholder="Buscar por ID o Título..."
-                                        className="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 max-w-xs"
+                                        placeholder="ID o Título..."
+                                        className="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
                                     />
-                                    <button onClick={searchRequirements} className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Buscar</button>
+                                    <button
+                                        onClick={searchRequirements}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold transition-colors"
+                                    >
+                                        Buscar
+                                    </button>
                                 </div>
 
                                 {requirements.length > 0 && (
@@ -200,12 +232,12 @@ export default function InvoiceDetailPage() {
                                             <div
                                                 key={req.id}
                                                 onClick={() => setSelectedReq(req)}
-                                                className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedReq?.id === req.id ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:bg-gray-50'}`}
+                                                className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedReq?.id === req.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                                             >
                                                 <p className="font-bold text-sm">{req.title}</p>
                                                 <div className="flex justify-between text-xs mt-1">
                                                     <span className={req.status === 'APPROVED' ? 'text-green-600' : 'text-amber-600'}>{req.status}</span>
-                                                    <span className="font-mono">${Number(req.actualAmount || 0).toLocaleString()}</span>
+                                                    <span className="font-mono font-bold">${Number(req.actualAmount || 0).toLocaleString()}</span>
                                                 </div>
                                             </div>
                                         ))}
@@ -213,54 +245,53 @@ export default function InvoiceDetailPage() {
                                 )}
 
                                 {selectedReq && (
-                                    <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                                        <h4 className="font-bold text-sm mb-2">Resumen de coincidencia</h4>
+                                    <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                                        <h4 className="font-bold text-xs mb-2 uppercase text-gray-500">Resumen</h4>
                                         <div className="space-y-2 text-sm">
                                             <div className="flex justify-between">
                                                 <span>Factura:</span>
                                                 <span className="font-mono font-bold">${Number(invoice.amount).toLocaleString()}</span>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span>Orden de Compra:</span>
+                                                <span>Requerimiento:</span>
                                                 <span className="font-mono font-bold">${Number(selectedReq.actualAmount || 0).toLocaleString()}</span>
                                             </div>
-                                            <div className="pt-2 border-t flex justify-between items-center">
+                                            <div className="pt-2 border-t dark:border-gray-700 flex justify-between items-center font-bold">
                                                 <span>Diferencia:</span>
-                                                <span className={`font-mono font-bold ${isMatchCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                                                <span className={isMatchCorrect ? 'text-green-600' : 'text-red-600'}>
                                                     ${(Number(invoice.amount) - Number(selectedReq.actualAmount || 0)).toLocaleString()}
                                                 </span>
                                             </div>
                                         </div>
 
                                         {!isMatchCorrect && (
-                                            <div className="mt-2 flex items-center gap-2 text-amber-600 text-xs bg-amber-50 p-2 rounded">
-                                                <AlertTriangle className="w-4 h-4" />
-                                                <span>Los montos no coinciden exactamente. Revisa antes de verificar.</span>
+                                            <div className="mt-3 flex items-start gap-2 text-amber-600 text-[10px] bg-amber-50 dark:bg-amber-900/10 p-2 rounded">
+                                                <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                                                <span>Los montos no coinciden. Revisa antes de verificar.</span>
                                             </div>
                                         )}
 
                                         <LoadingButton
                                             isLoading={verifying}
                                             onClick={handleVerify}
-                                            className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-bold shadow-sm"
+                                            className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-bold shadow-md transition-all active:scale-[0.98]"
                                         >
-                                            Verificar y Vincular
+                                            Vincular Factura
                                         </LoadingButton>
                                     </div>
                                 )}
                             </div>
                         ) : (
-                            // Linked View
-                            <div className="text-center py-8 bg-green-50 rounded-xl border border-green-100">
+                            <div className="text-center py-8 bg-green-50 dark:bg-green-900/10 rounded-xl border border-green-100 dark:border-green-800/30">
                                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
-                                <p className="font-bold text-green-800">Factura Vinculada</p>
+                                <p className="font-bold text-green-800 dark:text-green-400">Vinculación Exitosa</p>
                                 {invoice.requirement && (
-                                    <div className="mt-4 p-4 bg-white mx-4 rounded-lg shadow-sm text-left">
-                                        <p className="text-xs text-gray-500 uppercase">Orden de Compra</p>
+                                    <div className="mt-4 p-4 bg-white dark:bg-gray-800 mx-4 rounded-lg shadow-sm text-left border dark:border-gray-700">
+                                        <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Orden de Compra</p>
                                         <p className="font-bold text-sm text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/requirements/${invoice.requirement.id}`)}>
                                             {invoice.requirement.title}
                                         </p>
-                                        <p className="text-xs mt-1">ID: {invoice.requirement.id}</p>
+                                        <p className="text-[10px] text-gray-400 mt-1">ID: {invoice.requirement.id}</p>
                                     </div>
                                 )}
                             </div>
