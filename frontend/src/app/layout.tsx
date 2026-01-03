@@ -160,6 +160,9 @@ export default function RootLayout({
                   )}
                   <NavItem icon={<FileText size={14} />} label="Facturas" href="/invoices" active={pathname === "/invoices" || pathname.startsWith("/invoices/")} />
                   <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers"} />
+                  {['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(user?.role || '') && (
+                    <NavItem icon={<UserCog size={14} />} label="Usuarios" href="/users" active={pathname === "/users" || pathname.startsWith("/users")} />
+                  )}
                   <NavItem icon={<Building2 size={14} />} label="Presupuestos" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
                   {(['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(user?.role || '') || user?.isAreaDirector) && (
                     <NavItem icon={<Settings size={14} />} label="Administración" href="/admin" active={pathname === "/admin" || pathname.startsWith("/admin")} />
@@ -273,7 +276,7 @@ export default function RootLayout({
                               <span>Mi Cuenta</span>
                             </button>
 
-                            {user?.role === 'ADMIN' && (
+                            {['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(user?.role || '') && (
                               <Link
                                 href="/users"
                                 onClick={() => setShowProfileMenu(false)}
@@ -421,7 +424,19 @@ function MobileNavbar({ pathname, userRole }: { pathname: string, userRole: stri
   // If user is ADMIN/DIRECTOR/LEADER/COORDINATOR/DEVELOPER and there's space, add Approvals
   if (['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole)) {
     navItems.splice(1, 0, { href: "/approvals", icon: <CheckCircle size={20} />, label: "Aprobar" });
-    if (navItems.length > 5) navItems.pop();
+  }
+
+  // Add Users for administrative roles
+  if (['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(userRole)) {
+    navItems.splice(navItems.length - 1, 0, { href: "/users", icon: <UserCog size={20} />, label: "User" });
+  }
+
+  // Ensure we don't exceed a reasonable count for mobile
+  while (navItems.length > 5) {
+    // Prefer removing "Prov" or "Presu" if we have too many items
+    const indexToRemove = navItems.findIndex(i => i.label === "Prov" || i.label === "Presu");
+    if (indexToRemove !== -1) navItems.splice(indexToRemove, 1);
+    else navItems.pop();
   }
 
   return (
