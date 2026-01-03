@@ -19,6 +19,7 @@ const upload = (0, multer_1.default)({ storage });
 const router = (0, express_1.Router)();
 router.use(auth_1.authMiddleware);
 // Asientos Routes (must be before /:id to avoid conflicts)
+router.get('/years', requirementController_1.getAvailableYears);
 router.get('/asientos', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), requirementController_1.getAsientos);
 router.post('/asientos', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), requirementController_1.createAsiento);
 // Requirements Routes

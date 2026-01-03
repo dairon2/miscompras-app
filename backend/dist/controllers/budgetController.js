@@ -187,27 +187,13 @@ const createBudget = async (req, res) => {
         }
         // Generate or validate unique code
         let budgetCode = code;
-        if (budgetCode) {
-            // Check if code already exists
-            const existingBudget = await index_1.prisma.budget.findUnique({ where: { code: budgetCode } });
-            if (existingBudget) {
-                // Append a unique suffix to make it unique
-                const timestamp = Date.now().toString(36).slice(-4);
-                budgetCode = `${budgetCode}-${timestamp}`;
-            }
-        }
-        else {
+        if (!budgetCode) {
             // Generate automatic code: PRJ-CAT-YYYY-NNN
             const budgetCount = await index_1.prisma.budget.count({
                 where: { year: year || new Date().getFullYear() }
             });
             const sequenceNum = (budgetCount + 1).toString().padStart(3, '0');
             budgetCode = `BUD-${year || new Date().getFullYear()}-${sequenceNum}`;
-            // Ensure uniqueness
-            const existingAuto = await index_1.prisma.budget.findUnique({ where: { code: budgetCode } });
-            if (existingAuto) {
-                budgetCode = `BUD-${year || new Date().getFullYear()}-${Date.now().toString(36).slice(-6)}`;
-            }
         }
         // Create budget with PENDING status
         const budget = await index_1.prisma.budget.create({

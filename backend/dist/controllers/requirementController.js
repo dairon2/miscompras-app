@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createAsiento = exports.getRequirementGroups = exports.rejectRequirementGroup = exports.approveRequirementGroup = exports.getAsientos = exports.deleteRequirement = exports.updateObservations = exports.getAllRequirements = exports.updateRequirement = exports.updateRequirementStatus = exports.getRequirementById = exports.getMyRequirements = exports.createMassRequirements = exports.createRequirement = void 0;
+exports.createAsiento = exports.getAvailableYears = exports.getRequirementGroups = exports.rejectRequirementGroup = exports.approveRequirementGroup = exports.getAsientos = exports.deleteRequirement = exports.updateObservations = exports.getAllRequirements = exports.updateRequirement = exports.updateRequirementStatus = exports.getRequirementById = exports.getMyRequirements = exports.createMassRequirements = exports.createRequirement = void 0;
 const index_1 = require("../index");
 const fs_1 = __importDefault(require("fs"));
 const requirementGroupService_1 = require("../services/requirementGroupService");
@@ -636,6 +636,7 @@ const rejectRequirementGroup = async (req, res) => {
 };
 exports.rejectRequirementGroup = rejectRequirementGroup;
 // Get pending requirements for approval view (returns requirements with status PENDING_APPROVAL)
+// Get pending requirements for approval view (returns requirements with status PENDING_APPROVAL)
 const getRequirementGroups = async (req, res) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
@@ -676,20 +677,43 @@ const getRequirementGroups = async (req, res) => {
                         name: true,
                         email: true
                     }
-                }
+                },
+                group: true // Include group details if available
             },
             orderBy: { createdAt: 'desc' }
         });
-        // Transform to format expected by frontend (wrap in group-like structure for compatibility)
-        const groupedData = [{
-                id: 1,
-                creator: requirements[0]?.createdBy || { id: '', name: 'Sistema', email: '' },
+        // Group requirements by groupId
+        const groupsMap = new Map();
+        const individualReqs = [];
+        requirements.forEach(req => {
+            if (req.groupId) {
+                if (!groupsMap.has(req.groupId)) {
+                    groupsMap.set(req.groupId, {
+                        id: req.groupId,
+                        creator: req.group?.creatorId ? { ...req.createdBy } : req.createdBy, // Fallback to req creator
+                        pdfUrl: req.group?.pdfUrl || null,
+                        createdAt: req.group?.createdAt || req.createdAt,
+                        requirements: []
+                    });
+                }
+                groupsMap.get(req.groupId).requirements.push(req);
+            }
+            else {
+                individualReqs.push(req);
+            }
+        });
+        const result = Array.from(groupsMap.values());
+        // Add individual requirements as a separate group if any
+        if (individualReqs.length > 0) {
+            result.push({
+                id: 0, // ID 0 for "Individual/Miscellaneous"
+                creator: { id: 'system', name: 'Solicitudes Individuales', email: '' },
                 pdfUrl: null,
                 createdAt: new Date().toISOString(),
-                requirements: requirements
-            }];
-        // If no requirements, return empty array
-        res.json(requirements.length > 0 ? groupedData : []);
+                requirements: individualReqs
+            });
+        }
+        res.json(result);
     }
     catch (error) {
         console.error("Error fetching pending requirements:", error);
@@ -697,6 +721,29 @@ const getRequirementGroups = async (req, res) => {
     }
 };
 exports.getRequirementGroups = getRequirementGroups;
+// Get available years for requirements history
+const getAvailableYears = async (req, res) => {
+    try {
+        const result = await index_1.prisma.requirement.findMany({
+            select: { year: true },
+            distinct: ['year'],
+            orderBy: { year: 'desc' }
+        });
+        const years = result.map(r => r.year).filter(y => y !== null);
+        const currentYear = new Date().getFullYear();
+        // Ensure current year is always available
+        if (!years.includes(currentYear)) {
+            years.unshift(currentYear);
+            years.sort((a, b) => b - a); // Re-sort descending
+        }
+        res.json(years);
+    }
+    catch (error) {
+        console.error("Error fetching available years:", error);
+        res.status(500).json({ error: 'Failed to fetch years' });
+    }
+};
+exports.getAvailableYears = getAvailableYears;
 // Create an Asiento (pre-approved requirement)
 const createAsiento = async (req, res) => {
     const userId = req.user?.id;
@@ -745,13 +792,8 @@ const createAsiento = async (req, res) => {
             }
         });
         // Log creation
-        await index_1.prisma.historyLog.create({
-            data: {
-                action: 'ASIENTO_CREATED',
-                requirementId: asiento.id,
-                details: `Asiento creado por ${req.user?.email} - Monto: $${totalAmount?.toLocaleString() || 0}`
-            }
-        });
+        // History Log removed: Table does not exist in schema.
+        // The record is already tracked by the IsAsiento=true flag in Requirements table.
         res.status(201).json(asiento);
     }
     catch (error) {

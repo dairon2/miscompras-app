@@ -20,6 +20,7 @@ const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const budgetRoutes_1 = __importDefault(require("./routes/budgetRoutes"));
 const adjustmentRoutes_1 = __importDefault(require("./routes/adjustmentRoutes"));
+const invoiceRoutes_1 = __importDefault(require("./routes/invoiceRoutes"));
 dotenv_1.default.config();
 // Validate critical environment variables
 const validateEnv = () => {
@@ -119,10 +120,6 @@ app.get('/api/suppliers', auth_1.authMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Error fetching suppliers' });
     }
 });
-// Protected Routes
-const invoiceRoutes_1 = __importDefault(require("./routes/invoiceRoutes"));
-// ... (existing imports)
-// ...
 // Protected Routes
 app.use('/api/requirements', auth_1.authMiddleware, requirementRoutes_1.default);
 app.use('/api/notifications', auth_1.authMiddleware, notificationRoutes_1.default);
