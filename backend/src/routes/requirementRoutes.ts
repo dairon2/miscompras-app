@@ -13,7 +13,8 @@ import {
     createMassRequirements,
     approveRequirementGroup,
     rejectRequirementGroup,
-    getRequirementGroups
+    getRequirementGroups,
+    getAvailableYears
 } from '../controllers/requirementController';
 import { authMiddleware, roleCheck } from '../middlewares/auth';
 import multer from 'multer';
@@ -35,6 +36,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // Asientos Routes (must be before /:id to avoid conflicts)
+router.get('/years', getAvailableYears);
 router.get('/asientos', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getAsientos);
 router.post('/asientos', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), createAsiento);
 

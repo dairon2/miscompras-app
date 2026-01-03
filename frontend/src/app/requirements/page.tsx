@@ -68,7 +68,13 @@ export default function RequirementsPage() {
     // Year filter - default to current year
     const currentYear = new Date().getFullYear();
     const [selectedYear, setSelectedYear] = useState(currentYear);
-    const availableYears = Array.from({ length: 5 }, (_, i) => currentYear - i);
+    const [availableYears, setAvailableYears] = useState<number[]>([currentYear]);
+
+    useEffect(() => {
+        api.get('/requirements/years')
+            .then(res => setAvailableYears(res.data))
+            .catch(err => console.error("Error loading years:", err));
+    }, []);
 
     const [filters, setFilters] = useState({
         status: '',

@@ -789,6 +789,31 @@ export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// Get available years for requirements history
+export const getAvailableYears = async (req: AuthRequest, res: Response) => {
+    try {
+        const result = await prisma.requirement.findMany({
+            select: { year: true },
+            distinct: ['year'],
+            orderBy: { year: 'desc' }
+        });
+
+        const years = result.map(r => r.year).filter(y => y !== null);
+        const currentYear = new Date().getFullYear();
+
+        // Ensure current year is always available
+        if (!years.includes(currentYear)) {
+            years.unshift(currentYear);
+            years.sort((a, b) => b - a); // Re-sort descending
+        }
+
+        res.json(years);
+    } catch (error: any) {
+        console.error("Error fetching available years:", error);
+        res.status(500).json({ error: 'Failed to fetch years' });
+    }
+};
+
 // Create an Asiento (pre-approved requirement)
 export const createAsiento = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
