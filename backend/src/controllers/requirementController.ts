@@ -348,9 +348,20 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
             return (d instanceof Date && !isNaN(d.getTime())) ? d : undefined;
         };
 
-        const updatedRequirement = await prisma.requirement.update({
-            where: { id },
-            data: {
+        // Prepare data based on role
+        let updateData: any = {};
+        const uploadedAttachments = await processFileUploads(files, 'requirements');
+
+        if (req.user?.role === 'USER') {
+            // USER can ONLY add attachments, nothing else
+            updateData = {
+                attachments: {
+                    create: uploadedAttachments
+                }
+            };
+        } else {
+            // ADMIN/LEADER/etc can update everything
+            updateData = {
                 title,
                 description,
                 quantity,
@@ -370,9 +381,14 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 satisfactionComments: satisfactionComments === 'null' ? null : satisfactionComments,
                 hasMultiplePayments: hasMultiplePayments !== undefined ? (hasMultiplePayments === 'true' || hasMultiplePayments === true) : undefined,
                 attachments: {
-                    create: await processFileUploads(files, 'requirements')
+                    create: uploadedAttachments
                 }
-            },
+            };
+        }
+
+        const updatedRequirement = await prisma.requirement.update({
+            where: { id },
+            data: updateData,
             include: {
                 project: true,
                 area: true,

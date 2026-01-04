@@ -48,6 +48,7 @@ interface Requirement {
     quantity?: string;
     estimatedAmount?: number;
     actualAmount?: number;
+    totalAmount?: number;
     status: string;
     procurementStatus: string;
     projectId: string;
@@ -60,6 +61,7 @@ interface Requirement {
     deliveryDate?: string;
     receivedDate?: string;
     reqCategory: string;
+    hasMultiplePayments?: boolean;
     createdAt: string;
     project: { name: string };
     area: { name: string };
