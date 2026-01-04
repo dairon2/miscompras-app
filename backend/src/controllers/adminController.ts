@@ -384,6 +384,128 @@ export const deleteSupplier = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// Bulk import suppliers from CSV/XLSX
+export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
+    try {
+        const { suppliers } = req.body;
+
+        if (!suppliers || !Array.isArray(suppliers) || suppliers.length === 0) {
+            return res.status(400).json({ error: 'No se proporcionaron proveedores para importar' });
+        }
+
+        const results = {
+            success: 0,
+            duplicates: 0,
+            errors: 0,
+            details: [] as string[]
+        };
+
+        // Field mapping from common Excel column names to database fields
+        const fieldMapping: Record<string, string> = {
+            'nombre': 'name',
+            'name': 'name',
+            'nit': 'nit',
+            'rut': 'nit',
+            'taxid': 'taxId',
+            'tax_id': 'taxId',
+            'email': 'email',
+            'correo': 'email',
+            'contactemail': 'contactEmail',
+            'contact_email': 'contactEmail',
+            'emailcontacto': 'contactEmail',
+            'telefono': 'phone',
+            'phone': 'phone',
+            'tel': 'phone',
+            'contactphone': 'contactPhone',
+            'contact_phone': 'contactPhone',
+            'telefonocontacto': 'contactPhone',
+            'contactname': 'contactName',
+            'contact_name': 'contactName',
+            'nombrecontacto': 'contactName',
+            'contacto': 'contactName',
+            'direccion': 'address',
+            'address': 'address',
+            'dir': 'address'
+        };
+
+        for (const rawSupplier of suppliers) {
+            try {
+                // Map fields from input to database format
+                const mappedSupplier: any = {};
+
+                for (const [key, value] of Object.entries(rawSupplier)) {
+                    // Skip ID field - let database auto-generate
+                    if (key.toLowerCase() === 'id') continue;
+
+                    const normalizedKey = key.toLowerCase().replace(/\s+/g, '').replace(/_/g, '');
+                    const dbField = fieldMapping[normalizedKey] || key;
+
+                    // Only set non-empty values
+                    if (value !== null && value !== undefined && value !== '') {
+                        mappedSupplier[dbField] = String(value).trim();
+                    }
+                }
+
+                // Validate required fields
+                if (!mappedSupplier.name) {
+                    results.errors++;
+                    results.details.push(`Fila sin nombre de proveedor`);
+                    continue;
+                }
+
+                // Check for existing supplier by NIT or taxId
+                const existingConditions: any[] = [];
+                if (mappedSupplier.nit) {
+                    existingConditions.push({ nit: mappedSupplier.nit });
+                }
+                if (mappedSupplier.taxId) {
+                    existingConditions.push({ taxId: mappedSupplier.taxId });
+                }
+
+                if (existingConditions.length > 0) {
+                    const existing = await prisma.supplier.findFirst({
+                        where: { OR: existingConditions }
+                    });
+
+                    if (existing) {
+                        results.duplicates++;
+                        results.details.push(`Duplicado: ${mappedSupplier.name} (NIT/TaxId ya existe)`);
+                        continue;
+                    }
+                }
+
+                // Create supplier
+                await prisma.supplier.create({
+                    data: {
+                        name: mappedSupplier.name,
+                        nit: mappedSupplier.nit || null,
+                        taxId: mappedSupplier.taxId || null,
+                        email: mappedSupplier.email || null,
+                        contactEmail: mappedSupplier.contactEmail || null,
+                        phone: mappedSupplier.phone || null,
+                        contactPhone: mappedSupplier.contactPhone || null,
+                        contactName: mappedSupplier.contactName || null,
+                        address: mappedSupplier.address || null
+                    }
+                });
+
+                results.success++;
+            } catch (err: any) {
+                results.errors++;
+                results.details.push(`Error: ${err.message}`);
+            }
+        }
+
+        res.json({
+            message: `Importación completada: ${results.success} creados, ${results.duplicates} duplicados, ${results.errors} errores`,
+            results
+        });
+    } catch (error: any) {
+        console.error('Error in bulk import:', error);
+        res.status(500).json({ error: 'Error al importar proveedores', details: error.message });
+    }
+};
+
 // ==================== USERS ====================
 
 export const getUsers = async (req: AuthRequest, res: Response) => {

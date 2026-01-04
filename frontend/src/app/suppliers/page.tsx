@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Search, Filter, Plus, Truck, Mail, Phone,
     ExternalLink, Building2, List, LayoutGrid, X,
-    Package, ArrowRightCircle, FileText, Briefcase, User, Download, FileSpreadsheet, Save, Hash, MapPin
+    Package, ArrowRightCircle, FileText, Briefcase, User, Download, FileSpreadsheet, Save, Hash, MapPin, Upload
 } from "lucide-react";
 import api from "@/lib/api";
 import { exportSuppliers } from "@/lib/excelExport";
@@ -27,6 +27,12 @@ export default function SuppliersPage() {
         phone: "",
         address: ""
     });
+
+    // Import modal state
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [importing, setImporting] = useState(false);
+    const [importResult, setImportResult] = useState<any>(null);
 
     // Role-based permissions for supplier management
     const userRole = user?.role || 'USER';
@@ -64,6 +70,46 @@ export default function SuppliersPage() {
         } catch (error) {
             console.error("Error creating supplier", error);
             alert("Error al registrar proveedor");
+        }
+    };
+
+    const handleImportFile = async () => {
+        if (!importFile) return;
+
+        setImporting(true);
+        setImportResult(null);
+
+        try {
+            // Dynamic import of xlsx library
+            const XLSX = (await import('xlsx')).default;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = e.target?.result;
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                    // Send to backend
+                    const response = await api.post('/admin/suppliers/bulk-import', {
+                        suppliers: jsonData
+                    });
+
+                    setImportResult(response.data);
+                    fetchSuppliers(); // Refresh list
+                } catch (err: any) {
+                    setImportResult({ error: err.message || 'Error al procesar archivo' });
+                } finally {
+                    setImporting(false);
+                }
+            };
+
+            reader.readAsBinaryString(importFile);
+        } catch (err: any) {
+            setImporting(false);
+            setImportResult({ error: 'Error al leer archivo' });
         }
     };
 
@@ -108,10 +154,19 @@ export default function SuppliersPage() {
                     </button>
 
                     {canManageSuppliers && (
-                        <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 bg-slate-900 dark:bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-xl hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap">
-                            <Plus className="w-5 h-5" />
-                            Registrar Proveedor
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setShowImportModal(true)}
+                                className="flex items-center gap-2 bg-teal-600 text-white px-6 py-4 rounded-2xl font-black shadow-xl hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap"
+                            >
+                                <Upload className="w-5 h-5" />
+                                Importar
+                            </button>
+                            <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 bg-slate-900 dark:bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-xl hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap">
+                                <Plus className="w-5 h-5" />
+                                Registrar Proveedor
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -293,6 +348,129 @@ export default function SuppliersPage() {
                                     Guardar Proveedor
                                 </button>
                             </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Import Modal */}
+            <AnimatePresence>
+                {showImportModal && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="bg-white dark:bg-slate-800 rounded-[2rem] p-8 w-full max-w-lg shadow-2xl relative"
+                        >
+                            <button
+                                onClick={() => {
+                                    setShowImportModal(false);
+                                    setImportFile(null);
+                                    setImportResult(null);
+                                }}
+                                className="absolute top-6 right-6 text-gray-400 hover:text-gray-600"
+                            >
+                                <X size={24} />
+                            </button>
+
+                            <h3 className="text-2xl font-black mb-6">Importar Proveedores</h3>
+                            <p className="text-gray-500 mb-6 text-sm">
+                                Sube un archivo CSV o Excel (.xlsx) con los datos de los proveedores.
+                                La columna ID será ignorada (se genera automáticamente).
+                            </p>
+
+                            {/* File Drop Zone */}
+                            <div
+                                className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${importFile
+                                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
+                                        : 'border-gray-300 hover:border-gray-400'
+                                    }`}
+                            >
+                                {importFile ? (
+                                    <div className="flex items-center justify-center gap-3">
+                                        <FileSpreadsheet className="text-teal-600" size={32} />
+                                        <div className="text-left">
+                                            <p className="font-bold text-gray-800 dark:text-gray-200">{importFile.name}</p>
+                                            <p className="text-sm text-gray-500">{(importFile.size / 1024).toFixed(1)} KB</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setImportFile(null)}
+                                            className="ml-4 text-gray-400 hover:text-red-500"
+                                        >
+                                            <X size={20} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Upload className="mx-auto text-gray-400 mb-3" size={40} />
+                                        <p className="text-gray-500 mb-2">Arrastra un archivo aquí o</p>
+                                        <label className="cursor-pointer inline-block bg-gray-100 dark:bg-slate-700 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
+                                            Seleccionar archivo
+                                            <input
+                                                type="file"
+                                                accept=".csv,.xlsx,.xls"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    if (e.target.files?.[0]) {
+                                                        setImportFile(e.target.files[0]);
+                                                    }
+                                                }}
+                                            />
+                                        </label>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Import Result */}
+                            {importResult && (
+                                <div className={`mt-6 p-4 rounded-xl ${importResult.error
+                                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600'
+                                        : 'bg-green-50 dark:bg-green-900/20 text-green-600'
+                                    }`}>
+                                    {importResult.error ? (
+                                        <p className="font-bold">{importResult.error}</p>
+                                    ) : (
+                                        <>
+                                            <p className="font-bold mb-2">{importResult.message}</p>
+                                            {importResult.results && (
+                                                <div className="text-sm space-y-1">
+                                                    <p>✅ Creados: {importResult.results.success}</p>
+                                                    <p>⚠️ Duplicados: {importResult.results.duplicates}</p>
+                                                    <p>❌ Errores: {importResult.results.errors}</p>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="flex gap-4 mt-6">
+                                <button
+                                    onClick={() => {
+                                        setShowImportModal(false);
+                                        setImportFile(null);
+                                        setImportResult(null);
+                                    }}
+                                    className="flex-1 py-4 rounded-2xl border border-gray-200 font-bold hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleImportFile}
+                                    disabled={!importFile || importing}
+                                    className="flex-1 py-4 rounded-2xl bg-teal-600 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-teal-700 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {importing ? (
+                                        <>Importando...</>
+                                    ) : (
+                                        <>
+                                            <Upload size={18} />
+                                            Importar
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </motion.div>
                     </div>
                 )}

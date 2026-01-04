@@ -20,6 +20,7 @@ import {
     createSupplier,
     updateSupplier,
     deleteSupplier,
+    bulkImportSuppliers,
     // Users moved to userController
     // Config
     getSystemConfig,
@@ -70,6 +71,7 @@ router.get('/suppliers', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR'
 router.post('/suppliers', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), createSupplier);
 router.put('/suppliers/:id', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), updateSupplier);
 router.delete('/suppliers/:id', roleCheck(['ADMIN', 'DIRECTOR', 'DEVELOPER']), deleteSupplier);
+router.post('/suppliers/bulk-import', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), bulkImportSuppliers);
 
 // Users Management
 router.get('/users', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), getUsers);
