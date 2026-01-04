@@ -10,7 +10,12 @@ const getEmailClient = () => {
     return new EmailClient(connectionString);
 };
 
-const FROM_EMAIL = process.env.AZURE_EMAIL_SENDER || 'DoNotReply@64ee9d58-18ec-428c-9d01-ff68c1303bc6.azurecomm.net';
+// Get sender email at runtime (not at module load time)
+const getSenderEmail = () => {
+    const sender = process.env.AZURE_EMAIL_SENDER || 'DoNotReply@64ee9d58-18ec-428c-9d01-ff68c1303bc6.azurecomm.net';
+    console.log(`[Email] Using sender: ${sender}`);
+    return sender;
+};
 const APP_NAME = 'MisCompras - Museo de Antioquia';
 
 // Format currency for emails
@@ -79,7 +84,7 @@ const sendEmail = async (to: string, subject: string, htmlContent: string) => {
     }
 
     const message: EmailMessage = {
-        senderAddress: FROM_EMAIL,
+        senderAddress: getSenderEmail(),
         content: {
             subject,
             html: htmlContent
@@ -90,7 +95,7 @@ const sendEmail = async (to: string, subject: string, htmlContent: string) => {
     };
 
     try {
-        console.log(`[Email] Sending email from: ${FROM_EMAIL}`);
+        console.log(`[Email] Sending from: ${getSenderEmail()}`);
         const poller = await client.beginSend(message);
         const result: any = await poller.pollUntilDone();
         console.log(`[Email] ✅ Email sent successfully to ${to}, Status: ${result.status}, ID: ${result.id || 'N/A'}`);
