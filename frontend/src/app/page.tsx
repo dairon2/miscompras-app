@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
 import { Plus, CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3, Users, Building2, Package, ArrowRight } from "lucide-react";
 import api from "@/lib/api";
+import { translateStatus } from "@/lib/translations";
 
 export default function HomePage() {
   const { user, isAuthenticated } = useAuthStore();
@@ -124,7 +125,7 @@ export default function HomePage() {
                         item.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-100' :
                           'bg-yellow-50 text-yellow-700 border-yellow-100'
                         }`}>
-                        {(item.status || 'PENDIENTE').replace('_', ' ')}
+                        {translateStatus(item.status || 'PENDIENTE')}
                       </span>
                       {item.totalAmount > 0 && (
                         <p className="text-lg font-black mt-2 text-primary-900 dark:text-white">${parseFloat(item.totalAmount).toLocaleString()}</p>

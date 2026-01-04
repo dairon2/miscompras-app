@@ -9,6 +9,7 @@ import { ChevronLeft, FileText, CheckCircle, AlertTriangle, Link as LinkIcon, Ex
 import axios from 'axios';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useToastStore } from '@/store/toastStore';
+import { translateStatus } from '@/lib/translations';
 
 export default function InvoiceDetailPage() {
     const { token, user } = useAuthStore();
@@ -199,7 +200,7 @@ export default function InvoiceDetailPage() {
                                 <p className="text-gray-500 text-sm">{invoice.supplier?.name}</p>
                             </div>
                             <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                {invoice.status}
+                                {translateStatus(invoice.status)}
                             </span>
                         </div>
 
@@ -265,7 +266,7 @@ export default function InvoiceDetailPage() {
                                             >
                                                 <p className="font-bold text-sm">{req.title}</p>
                                                 <div className="flex justify-between text-xs mt-1">
-                                                    <span className={req.status === 'APPROVED' ? 'text-green-600' : 'text-amber-600'}>{req.status}</span>
+                                                    <span className={req.status === 'APPROVED' ? 'text-green-600' : 'text-amber-600'}>{translateStatus(req.status)}</span>
                                                     <span className="font-mono font-bold">${Number(req.actualAmount || 0).toLocaleString()}</span>
                                                 </div>
                                             </div>

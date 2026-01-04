@@ -30,6 +30,7 @@ import {
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { resolveApiUrl } from "@/lib/utils";
+import { translateAction, translateLogDetails } from "@/lib/translations";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -666,8 +667,8 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                     <p className="text-[10px] font-black uppercase tracking-widest text-primary-600 mb-1">
                                         {new Date(log.createdAt).toLocaleString()}
                                     </p>
-                                    <p className="font-bold text-sm mb-1">{log.action}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{log.details}</p>
+                                    <p className="font-bold text-sm mb-1">{translateAction(log.action)}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{translateLogDetails(log.details)}</p>
                                 </div>
                             ))}
                         </div>
