@@ -14,21 +14,27 @@ import {
     Loader2,
     CreditCard,
     ToggleLeft,
-    ToggleRight
+    ToggleRight,
+    Upload,
+    Paperclip,
+    X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { BudgetCascadeSelector } from "@/components";
+import { useToastStore } from "@/store/toastStore";
 
 export default function NewAsientoPage() {
     const router = useRouter();
     const { user } = useAuthStore();
+    const { addToast } = useToastStore();
     const [loading, setLoading] = useState(false);
     const [projects, setProjects] = useState([]);
     const [areas, setAreas] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [budgets, setBudgets] = useState([]);
+    const [files, setFiles] = useState<File[]>([]);
 
     const [form, setForm] = useState({
         title: '',
@@ -39,7 +45,6 @@ export default function NewAsientoPage() {
         projectId: '',
         areaId: '',
         supplierId: '',
-        manualSupplierName: '',
         budgetId: '',
         reqCategory: 'COMPRA',
         purchaseOrderNumber: '',
@@ -100,20 +105,45 @@ export default function NewAsientoPage() {
         e.preventDefault();
 
         if (!form.title || !form.projectId || !form.areaId) {
-            alert('Por favor completa los campos obligatorios: Título, Proyecto y Área');
+            addToast('Por favor completa los campos obligatorios: Título, Proyecto y Área', 'error');
             return;
         }
 
         setLoading(true);
         try {
-            await api.post('/requirements/asientos', form);
+            const formData = new FormData();
+            // Add form fields
+            Object.entries(form).forEach(([key, value]) => {
+                if (value !== '' && value !== null && value !== undefined) {
+                    formData.append(key, String(value));
+                }
+            });
+            // Add files
+            files.forEach(file => {
+                formData.append('files', file);
+            });
+
+            await api.post('/requirements/asientos', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            addToast('Asiento creado exitosamente', 'success');
             router.push('/asientos');
         } catch (err: any) {
             console.error("Error creating asiento", err);
-            alert(err.response?.data?.error || 'Error al crear el asiento');
+            addToast(err.response?.data?.error || 'Error al crear el asiento', 'error');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+        }
+    };
+
+    const removeFile = (index: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
     };
 
     return (
@@ -248,18 +278,6 @@ export default function NewAsientoPage() {
                                     ))}
                                 </select>
                             </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-gray-600">Proveedor Manual</label>
-                                <input
-                                    type="text"
-                                    name="manualSupplierName"
-                                    value={form.manualSupplierName}
-                                    onChange={handleChange}
-                                    placeholder="Si no está en la lista..."
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                />
-                            </div>
                         </div>
                     </div>
 
@@ -353,7 +371,72 @@ export default function NewAsientoPage() {
                         </div>
                     </div>
 
+                    {/* Attachments Section */}
+                    <div className="space-y-6">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
+                            <Paperclip size={14} /> Documentos Adjuntos
+                        </h3>
+
+                        <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-3xl p-8 text-center hover:border-primary-400 transition-colors">
+                            <input
+                                type="file"
+                                id="fileInput"
+                                multiple
+                                onChange={handleFileChange}
+                                className="hidden"
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                            />
+                            <label
+                                htmlFor="fileInput"
+                                className="cursor-pointer flex flex-col items-center gap-4"
+                            >
+                                <div className="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600">
+                                    <Upload size={28} />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-700 dark:text-gray-300">
+                                        Arrastra archivos o haz clic para seleccionar
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        PDF, Word, Excel o imágenes (máx. 10MB cada uno)
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+
+                        {files.length > 0 && (
+                            <div className="space-y-3">
+                                {files.map((file, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600">
+                                                <FileText size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-sm">{file.name}</p>
+                                                <p className="text-xs text-gray-400">
+                                                    {(file.size / 1024).toFixed(1)} KB
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeFile(index)}
+                                            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                                        >
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     {/* Submit Button */}
+
                     <div className="flex justify-end gap-4 pt-6 border-t border-gray-50 dark:border-gray-700">
                         <button
                             type="button"
