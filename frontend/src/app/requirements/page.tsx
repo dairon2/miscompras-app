@@ -462,9 +462,9 @@ export default function RequirementsPage() {
 
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Solicitud</th>
                                                     {isAdmin && <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hidden xl:table-cell">Creado por</th>}
-                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Detalles</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Presupuesto</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Categoría</th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Monto</th>
-                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado</th>
                                                     {canDelete && (
                                                         <th className="px-6 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] w-24">
                                                             <div className="flex items-center justify-end">
@@ -489,7 +489,7 @@ export default function RequirementsPage() {
 
 
                                                         <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-4 text-left">
+                                                            <div className="flex items-start gap-4 text-left">
                                                                 <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 shrink-0">
                                                                     <FileText className="w-5 h-5" />
                                                                 </div>
@@ -501,6 +501,16 @@ export default function RequirementsPage() {
                                                                         </span>
                                                                         <span className="text-gray-300">|</span>
                                                                         <span className="text-[10px] text-gray-500">{new Date(req.createdAt).toLocaleDateString()}</span>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                                        <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold ${getStatusStyle(req.status)}`}>
+                                                                            {getStatusLabel(req.status)}
+                                                                        </span>
+                                                                        {req.procurementStatus && (
+                                                                            <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 dark:bg-slate-800">
+                                                                                {req.procurementStatus}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -519,41 +529,32 @@ export default function RequirementsPage() {
                                                             </td>
                                                         )}
 
+                                                        {/* Presupuesto Column */}
                                                         <td className="px-6 py-4">
                                                             <div className="space-y-1">
-                                                                <div className="flex gap-2">
-                                                                    <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-[10px] font-bold text-gray-600 dark:text-gray-300">
-                                                                        {req.area?.name}
-                                                                    </span>
-                                                                    <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-[10px] font-bold text-blue-600 dark:text-blue-400">
-                                                                        {req.reqCategory?.replace('_', ' ') || 'REQ'}
-                                                                    </span>
-                                                                </div>
+                                                                <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                                                    {req.budget?.category?.name || req.area?.name || 'Sin categoría'}
+                                                                </span>
                                                                 <p className="text-[10px] font-medium text-gray-400 truncate max-w-[150px]">
                                                                     {req.budget?.title || 'Sin presupuesto'}
                                                                 </p>
                                                             </div>
                                                         </td>
 
+                                                        {/* Categoria Column */}
+                                                        <td className="px-6 py-4">
+                                                            <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                                                                {req.reqCategory?.replace('_', ' ') || 'COMPRA'}
+                                                            </span>
+                                                        </td>
+
+                                                        {/* Monto Column */}
                                                         <td className="px-6 py-4">
                                                             <p className="font-black text-sm text-gray-900 dark:text-white">
                                                                 {req.actualAmount && parseFloat(req.actualAmount) > 0
                                                                     ? `$${parseFloat(req.actualAmount).toLocaleString()}`
                                                                     : <span className="text-gray-400 text-xs font-medium">Por definir</span>}
                                                             </p>
-                                                        </td>
-
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex flex-col gap-1.5 items-start">
-                                                                <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold ${getStatusStyle(req.status)}`}>
-                                                                    {getStatusLabel(req.status)}
-                                                                </span>
-                                                                {req.procurementStatus && (
-                                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 dark:bg-slate-800`}>
-                                                                        {req.procurementStatus}
-                                                                    </span>
-                                                                )}
-                                                            </div>
                                                         </td>
 
                                                         {canDelete && (
