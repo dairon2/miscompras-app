@@ -41,6 +41,7 @@ export default function RootLayout({
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
 
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -56,6 +57,19 @@ export default function RootLayout({
       console.error("Error fetching notifications", err);
     }
   }, [isAuthenticated]);
+
+  const fetchPendingApprovals = useCallback(async () => {
+    if (!isAuthenticated) return;
+    // Only fetch for relevant roles
+    if (!['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '')) return;
+
+    try {
+      const res = await api.get('/requirements/pending-count');
+      setPendingApprovals(res.data.count || 0);
+    } catch (err) {
+      console.error("Error fetching pending approvals", err);
+    }
+  }, [isAuthenticated, user?.role]);
 
   const { theme } = useThemeStore();
 
@@ -74,10 +88,14 @@ export default function RootLayout({
   useEffect(() => {
     if (isAuthenticated) {
       fetchNotifications();
-      const interval = setInterval(fetchNotifications, 30000); // Polling every 30s
+      fetchPendingApprovals();
+      const interval = setInterval(() => {
+        fetchNotifications();
+        fetchPendingApprovals();
+      }, 30000); // Polling every 30s
       return () => clearInterval(interval);
     }
-  }, [isAuthenticated, fetchNotifications]);
+  }, [isAuthenticated, fetchNotifications, fetchPendingApprovals]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -155,12 +173,21 @@ export default function RootLayout({
                   <NavItem icon={<Building2 size={14} />} label="Presupuesto" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
                   <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers" || pathname.startsWith("/suppliers/")} />
                   {['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') && (
-                    <NavItem icon={<CheckCircle size={14} />} label="Aprobaciones" href="/approvals" active={pathname === "/approvals" || pathname.startsWith("/approvals/")} />
+                    <NavItem
+                      icon={<CheckCircle size={14} />}
+                      label="Aprobaciones"
+                      href="/approvals"
+                      active={pathname === "/approvals" || pathname.startsWith("/approvals/")}
+                      badge={pendingApprovals}
+                    />
                   )}
                   <NavItem icon={<FileText size={14} />} label="Facturas" href="/invoices" active={pathname === "/invoices" || pathname.startsWith("/invoices/")} />
                 </nav>
 
                 <div className="flex items-center gap-6">
+                  {/* ... notifications ... */}
+// ... existing code ...
+                  {/* ... notifications ... */}
                   <div className="relative" ref={notifRef}>
                     <button
                       onClick={() => setShowNotifs(!showNotifs)}
@@ -377,16 +404,21 @@ export default function RootLayout({
   );
 }
 
-function NavItem({ href, icon, label, active }: any) {
+function NavItem({ href, icon, label, active, badge }: any) {
   const router = useRouter();
 
   return (
     <button
       onClick={() => router.push(href)}
-      className={`flex items-center gap-2 group transition-all ${active ? 'text-primary-600' : 'hover:text-primary-500'}`}
+      className={`flex items-center gap-2 group transition-all relative ${active ? 'text-primary-600' : 'hover:text-primary-500'}`}
     >
-      <div className={`p-1.5 rounded-lg transition-colors ${active ? 'bg-primary-50 dark:bg-primary-900/30' : 'bg-transparent group-hover:bg-gray-50 dark:group-hover:bg-slate-800'}`}>
+      <div className={`p-1.5 rounded-lg transition-colors relative ${active ? 'bg-primary-50 dark:bg-primary-900/30' : 'bg-transparent group-hover:bg-gray-50 dark:group-hover:bg-slate-800'}`}>
         {icon}
+        {badge > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
       </div>
       <span>{label}</span>
     </button>

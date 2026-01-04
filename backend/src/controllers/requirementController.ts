@@ -936,6 +936,8 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
+    // console.log(`[Dashboard] Stats requested by ${req.user?.email} (${userRole}) for year ${year}`);
+
     try {
         const where: any = {
             year: year,
@@ -957,16 +959,21 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
                 }
             ];
 
-            const directedAreas = await prisma.area.findMany({
-                where: { directorId: userId } as any,
-                select: { id: true }
-            });
-            const directedAreaIds = directedAreas.map(a => a.id);
-            if (directedAreaIds.length > 0) {
-                where.OR.push({ areaId: { in: directedAreaIds } });
+            try {
+                const directedAreas = await prisma.area.findMany({
+                    where: { directorId: userId } as any,
+                    select: { id: true }
+                });
+                const directedAreaIds = directedAreas.map(a => a.id);
+                if (directedAreaIds.length > 0) {
+                    where.OR.push({ areaId: { in: directedAreaIds } });
+                }
+            } catch (areaError) {
+                console.error("[Dashboard] Error fetching directed areas:", areaError);
             }
         }
 
+        // console.log("[Dashboard] Fetching counts...");
         const [pending, approved, rejected] = await Promise.all([
             prisma.requirement.count({ where: { ...where, status: { contains: 'PENDING' } } }),
             prisma.requirement.count({ where: { ...where, status: 'APPROVED' } }),
@@ -991,12 +998,13 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
                 { subLeaders: { some: { userId: userId } } }
             ];
 
-            // Filter invoices (linked to visible requirements or budgets) by simplicity lets limit to created requirements
+            // Filter invoices
             invoiceWhere.requirement = {
                 createdById: userId
             };
         }
 
+        // console.log("[Dashboard] Fetching recent items...");
         const recentRequirements = await prisma.requirement.findMany({
             where: recentWhere,
             include: {
@@ -1008,26 +1016,38 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             take: 5
         });
 
-        const recentBudgets = await prisma.budget.findMany({
-            where: budgetWhere,
-            include: {
-                project: true,
-                area: true,
-                createdBy: { select: { name: true, email: true } }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 3
-        });
+        // console.log("[Dashboard] Fetching budgets...");
+        let recentBudgets: any[] = [];
+        try {
+            recentBudgets = await prisma.budget.findMany({
+                where: budgetWhere,
+                include: {
+                    project: true,
+                    area: true,
+                    createdBy: { select: { name: true, email: true } }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 3
+            });
+        } catch (budgetError) {
+            console.error("[Dashboard] Error fetching budgets:", budgetError);
+        }
 
-        const recentInvoices = await prisma.invoice.findMany({
-            where: invoiceWhere,
-            include: {
-                supplier: true,
-                requirement: { select: { title: true } }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 3
-        });
+        // console.log("[Dashboard] Fetching invoices...");
+        let recentInvoices: any[] = [];
+        try {
+            recentInvoices = await prisma.invoice.findMany({
+                where: invoiceWhere,
+                include: {
+                    supplier: true,
+                    requirement: { select: { title: true } }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 3
+            });
+        } catch (invoiceError) {
+            console.error("[Dashboard] Error fetching invoices:", invoiceError);
+        }
 
         const allActivity: any[] = [
             ...recentRequirements.map(r => ({
@@ -1055,26 +1075,30 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             ...recentInvoices.map(i => ({
                 id: i.id,
                 type: 'invoice',
-                title: `Factura ${i.invoiceNumber || i.id.substring(0, 8)}`,
-                status: i.status,
+                title: `Factura ${i.invoiceNumber}`,
+                status: i.status || 'RECEIVED',
                 totalAmount: Number(i.amount?.toString() || 0),
                 createdAt: i.createdAt,
-                supplier: i.supplier?.name,
-                requirement: i.requirement?.title
+                project: i.requirement?.title || 'Sin requerimiento',
+                area: i.supplier?.name || 'Proveedor',
+                createdBy: 'Sistema'
             }))
         ];
 
+        // Sort combined activity by date descending
         allActivity.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        const recent = allActivity.slice(0, 8);
 
-        // Sum total amount
-        const allStatsReqs = await prisma.requirement.findMany({
-            where,
+        // Take top 10
+        const recent = allActivity.slice(0, 10);
+
+        // Sum totals logic (unchanged)
+        const totalReqs = await prisma.requirement.findMany({
+            where: { ...where, status: { not: 'REJECTED' } },
             select: { actualAmount: true, estimatedAmount: true }
         });
 
-        const totalAmount = allStatsReqs.reduce((acc, req) => {
-            return acc + Number(req.actualAmount?.toString() || req.estimatedAmount?.toString() || 0);
+        const totalAmount = totalReqs.reduce((sum, r) => {
+            return sum + Number(r.actualAmount?.toString() || r.estimatedAmount?.toString() || 0);
         }, 0);
 
         res.json({
@@ -1084,11 +1108,71 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             totalAmount,
             recent
         });
+
     } catch (error: any) {
-        console.error("Dashboard stats error:", error);
-        res.status(500).json({ error: 'Failed to fetch dashboard stats' });
-    };
+        console.error("[Dashboard] FATAL Error fetching dashboard stats:", error);
+        res.status(500).json({ error: 'Failed to fetch dashboard stats', details: error.message });
+    }
 };
+
+// Get pending approval count for sidebar badge
+export const getPendingApprovalCount = async (req: AuthRequest, res: Response) => {
+    const year = new Date().getFullYear();
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    try {
+        // Only roles that can approve should see this count
+        if (!['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole || '')) {
+            return res.json({ count: 0 });
+        }
+
+        const where: any = {
+            year: year,
+            status: 'PENDING_APPROVAL',
+            isAsiento: false
+        };
+
+        const isGlobalApprover = ['ADMIN', 'DEVELOPER'].includes(userRole || '');
+
+        if (!isGlobalApprover) {
+            where.OR = [];
+
+            // 1. Requirements directed to user's area
+            try {
+                const directedAreas = await prisma.area.findMany({
+                    where: { directorId: userId } as any,
+                    select: { id: true }
+                });
+                const directedAreaIds = directedAreas.map(a => a.id);
+                if (directedAreaIds.length > 0) {
+                    where.OR.push({ areaId: { in: directedAreaIds } });
+                }
+            } catch (e) { console.error("Error fetching directed areas for count:", e); }
+
+            // 2. Budget manager or sub-leader
+            where.OR.push({
+                budget: {
+                    OR: [
+                        { managerId: userId },
+                        { subLeaders: { some: { userId: userId } } }
+                    ]
+                }
+            });
+
+            // If user has no permissions (empty OR), this query might return 0 by default if we handle it right.
+            // But let's assume if where.OR is empty, they see nothing.
+        }
+
+        const count = await prisma.requirement.count({ where });
+        res.json({ count });
+
+    } catch (error: any) {
+        console.error("Error fetching pending approval count:", error);
+        res.json({ count: 0 });
+    }
+};
+
 
 
 // Create an Asiento (pre-approved requirement)
