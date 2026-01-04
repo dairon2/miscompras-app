@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Search, Filter, Plus, Truck, Mail, Phone,
     ExternalLink, Building2, List, LayoutGrid, X,
-    Package, ArrowRightCircle, FileText, Briefcase, User, Download, FileSpreadsheet, Save
+    Package, ArrowRightCircle, FileText, Briefcase, User, Download, FileSpreadsheet, Save, Hash, MapPin
 } from "lucide-react";
 import api from "@/lib/api";
 import { exportSuppliers } from "@/lib/excelExport";
@@ -21,9 +21,11 @@ export default function SuppliersPage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
-        taxId: "",
-        contactEmail: "",
-        contactPhone: ""
+        nit: "",
+        contactName: "",
+        email: "",
+        phone: "",
+        address: ""
     });
 
     // Role-based permissions for supplier management
@@ -54,9 +56,9 @@ export default function SuppliersPage() {
     const handleCreateSupplier = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.post("/suppliers", formData);
+            await api.post("/admin/suppliers", formData);
             setShowCreateModal(false);
-            setFormData({ name: "", taxId: "", contactEmail: "", contactPhone: "" });
+            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "" });
             fetchSuppliers();
             alert("Proveedor registrado exitosamente");
         } catch (error) {
@@ -207,56 +209,80 @@ export default function SuppliersPage() {
                             <form onSubmit={handleCreateSupplier} className="space-y-6">
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Razón Social</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">NIT</label>
                                         <div className="relative">
-                                            <Building2 className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                            <Hash className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                                             <input
-                                                type="text" required
-                                                value={formData.name}
-                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                                type="text"
+                                                value={formData.nit}
+                                                onChange={e => setFormData({ ...formData, nit: e.target.value })}
                                                 className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 pl-14 pr-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                                placeholder="Nombre de la empresa"
+                                                placeholder="900123456-7"
                                             />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">NIT / Identificación</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Nombre *</label>
+                                        <input
+                                            type="text" required
+                                            value={formData.name}
+                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                            placeholder="Razón social"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Contacto</label>
+                                        <input
+                                            type="text"
+                                            value={formData.contactName}
+                                            onChange={e => setFormData({ ...formData, contactName: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                            placeholder="Nombre del contacto"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Email</label>
                                         <div className="relative">
-                                            <FileText className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                            <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                                             <input
-                                                type="text" required
-                                                value={formData.taxId}
-                                                onChange={e => setFormData({ ...formData, taxId: e.target.value })}
+                                                type="email"
+                                                value={formData.email}
+                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
                                                 className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 pl-14 pr-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                                placeholder="900.000.000-0"
+                                                placeholder="correo@proveedor.co"
                                             />
                                         </div>
                                     </div>
                                 </div>
+
                                 <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Correo Electrónico</label>
-                                        <div className="relative">
-                                            <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                            <input
-                                                type="email" required
-                                                value={formData.contactEmail}
-                                                onChange={e => setFormData({ ...formData, contactEmail: e.target.value })}
-                                                className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 pl-14 pr-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                                placeholder="contacto@empresa.com"
-                                            />
-                                        </div>
-                                    </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Teléfono</label>
                                         <div className="relative">
                                             <Phone className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                                             <input
-                                                type="text" required
-                                                value={formData.contactPhone}
-                                                onChange={e => setFormData({ ...formData, contactPhone: e.target.value })}
+                                                type="tel"
+                                                value={formData.phone}
+                                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                                 className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 pl-14 pr-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                                placeholder="(604) 123 4567"
+                                                placeholder="(604) 123-4567"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Dirección</label>
+                                        <div className="relative">
+                                            <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                            <input
+                                                type="text"
+                                                value={formData.address}
+                                                onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 pl-14 pr-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                                placeholder="Calle 00 # 00-00"
                                             />
                                         </div>
                                     </div>
@@ -271,7 +297,7 @@ export default function SuppliersPage() {
                     </div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 }
 

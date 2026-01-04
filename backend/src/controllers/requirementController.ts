@@ -145,8 +145,18 @@ export const getMyRequirements = async (req: AuthRequest, res: Response) => {
     const skip = (page - 1) * limit;
 
     try {
-        const where = {
-            createdById: userId,
+        const where: any = {
+            OR: [
+                { createdById: userId },
+                {
+                    budget: {
+                        OR: [
+                            { managerId: userId },
+                            { subLeaders: { some: { userId: userId } } }
+                        ]
+                    }
+                }
+            ],
             year: year,
             isAsiento: includeAsientos ? undefined : false
         };

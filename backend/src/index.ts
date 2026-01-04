@@ -122,7 +122,36 @@ app.get('/api/categories', authMiddleware, async (req, res) => {
 // Suppliers route (real DB)
 app.get('/api/suppliers', authMiddleware, async (req, res) => {
     try {
-        const suppliers = await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
+        const userId = (req as any).user?.id;
+        const userRole = (req as any).user?.role;
+
+        let whereClause: any = {};
+
+        // If USER role, filter suppliers by visibility (only those linked to visible requirements)
+        if (userRole === 'USER' && userId) {
+            whereClause = {
+                requirements: {
+                    some: {
+                        OR: [
+                            { createdById: userId },
+                            {
+                                budget: {
+                                    OR: [
+                                        { managerId: userId },
+                                        { subLeaders: { some: { userId: userId } } }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            };
+        }
+
+        const suppliers = await prisma.supplier.findMany({
+            where: whereClause,
+            orderBy: { name: 'asc' }
+        });
         res.json(suppliers);
     } catch (e) {
         console.error('Error fetching suppliers:', e);
