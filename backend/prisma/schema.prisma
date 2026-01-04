@@ -177,6 +177,7 @@ model Requirement {
   areaId                 String
   supplierId             String?
   manualSupplierName     String?
+  suggestedSupplier      String?
   createdById            String
   currentOwnerId         String?
   budgetId               String?
@@ -190,7 +191,7 @@ model Requirement {
   updatedAt              DateTime            @updatedAt
   hasMultiplePayments    Boolean             @default(false)
   isAsiento              Boolean             @default(false)
-  reqCategory            RequirementCategory @default(COMPRA)
+  reqCategory            RequirementCategory @default(ORDEN_COMPRA)
   totalAmount            Decimal?            @db.Decimal(15, 2)
   year                   Int                 @default(2026)
   groupId                Int?

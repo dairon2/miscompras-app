@@ -9,7 +9,7 @@ import { uploadToBlobStorage, processFileUploads } from '../services/blobStorage
 import { checkSubmissionAllowed } from '../services/submissionRulesService';
 
 export const createRequirement = async (req: AuthRequest, res: Response) => {
-    const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, budgetId } = req.body;
+    const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, suggestedSupplier, budgetId } = req.body;
     const userId = req.user?.id;
     const userRole = req.user?.role || 'USER';
     const files = req.files as Express.Multer.File[];
@@ -37,6 +37,7 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
                 description,
                 quantity: quantity || "1",
                 manualSupplierName: manualSupplierName || null,
+                suggestedSupplier: suggestedSupplier || null,
                 projectId,
                 areaId,
                 budgetId: budgetId || null,
@@ -286,7 +287,7 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
         purchaseOrderNumber, invoiceNumber, deliveryDate,
         receivedDate, reqCategory, procurementStatus,
         receivedAtSatisfaction, satisfactionComments,
-        deleteAttachmentIds, hasMultiplePayments
+        deleteAttachmentIds, hasMultiplePayments, suggestedSupplier
     } = req.body;
     const files = req.files as Express.Multer.File[];
 
@@ -360,6 +361,7 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 areaId: (areaId && areaId !== 'null') ? areaId : undefined,
                 supplierId: (supplierId === 'null' || !supplierId) ? null : supplierId,
                 manualSupplierName: manualSupplierName === 'null' ? null : manualSupplierName,
+                suggestedSupplier: suggestedSupplier === 'null' ? null : suggestedSupplier,
                 purchaseOrderNumber: purchaseOrderNumber === 'null' ? null : purchaseOrderNumber,
                 invoiceNumber: invoiceNumber === 'null' ? null : invoiceNumber,
                 deliveryDate: parseSafeDate(deliveryDate),

@@ -36,9 +36,7 @@ interface RequirementItem {
     projectId: string;
     areaId: string;
     budgetId: string;
-    supplierId: string;
-    manualSupplierName: string;
-    isManualSupplier: boolean;
+    suggestedSupplier?: string;
     projectName: string;
     areaName: string;
     budgetName: string;
@@ -61,20 +59,17 @@ export default function NewRequirementPage() {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        quantity: '',
+        quantity: '1',
         projectId: '',
         areaId: '',
         budgetId: '',
-        supplierId: '',
-        manualSupplierName: '',
-        isManualSupplier: false
+        suggestedSupplier: ''
     });
 
     // Options for selects
     const [options, setOptions] = useState({
         projects: [] as Project[],
         areas: [] as Area[],
-        suppliers: [] as Supplier[],
         budgets: [] as Budget[]
     });
     const [budgetError, setBudgetError] = useState<string | null>(null);
@@ -86,17 +81,15 @@ export default function NewRequirementPage() {
 
     const fetchCatalogs = useCallback(async () => {
         try {
-            const [p, a, s, b] = await Promise.all([
+            const [p, a, b] = await Promise.all([
                 api.get('/projects'),
                 api.get('/areas'),
-                api.get('/suppliers'),
                 api.get('/budgets')
             ]);
 
             setOptions({
                 projects: p.data,
                 areas: a.data,
-                suppliers: s.data,
                 budgets: b.data
             });
         } catch (err) {
@@ -137,6 +130,7 @@ export default function NewRequirementPage() {
             projectName: project?.name || '',
             areaName: area?.name || '',
             budgetName: budget?.category?.name ? `${budget.category.name} ($${parseFloat(budget.amount).toLocaleString()})` : 'Presupuesto',
+            suggestedSupplier: formData.suggestedSupplier || undefined,
             attachments: currentAttachments.length > 0 ? currentAttachments : undefined
         };
 
@@ -146,9 +140,8 @@ export default function NewRequirementPage() {
             ...prev,
             title: '',
             description: '',
-            quantity: '',
-            supplierId: '',
-            manualSupplierName: ''
+            quantity: '1',
+            suggestedSupplier: ''
         }));
         // Clear attachments for next item
         setCurrentAttachments([]);
@@ -178,10 +171,8 @@ export default function NewRequirementPage() {
                 formData.append('areaId', item.areaId);
                 formData.append('budgetId', item.budgetId);
 
-                if (item.isManualSupplier && item.manualSupplierName) {
-                    formData.append('manualSupplierName', item.manualSupplierName);
-                } else if (item.supplierId) {
-                    formData.append('supplierId', item.supplierId);
+                if (item.suggestedSupplier) {
+                    formData.append('suggestedSupplier', item.suggestedSupplier);
                 }
 
                 // Append attachments if any
@@ -291,35 +282,16 @@ export default function NewRequirementPage() {
                                 </div>
                                 <div>
                                     <div className="flex justify-between items-center mb-2 ml-1">
-                                        <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Proveedor</label>
-                                        <button
-                                            type="button"
-                                            onClick={() => setFormData(p => ({ ...p, isManualSupplier: !p.isManualSupplier }))}
-                                            className="text-[10px] font-bold text-primary-600"
-                                        >
-                                            {formData.isManualSupplier ? "Elegir de lista" : "Escribir nombre"}
-                                        </button>
+                                        <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Proveedor (Opcional)</label>
                                     </div>
-                                    {formData.isManualSupplier ? (
-                                        <input
-                                            type="text"
-                                            name="manualSupplierName"
-                                            value={formData.manualSupplierName}
-                                            onChange={handleChange}
-                                            className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold"
-                                            placeholder="Nombre del proveedor sugerido"
-                                        />
-                                    ) : (
-                                        <select
-                                            name="supplierId"
-                                            value={formData.supplierId}
-                                            onChange={handleChange}
-                                            className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold"
-                                        >
-                                            <option value="">Selecciona proveedor...</option>
-                                            {options.suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </select>
-                                    )}
+                                    <input
+                                        type="text"
+                                        name="suggestedSupplier"
+                                        value={formData.suggestedSupplier}
+                                        onChange={handleChange}
+                                        className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold"
+                                        placeholder="Proveedor sugerido..."
+                                    />
                                 </div>
                             </div>
 
