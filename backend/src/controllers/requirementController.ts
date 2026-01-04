@@ -891,6 +891,10 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         }
 
         // Get recent requirements (without year filter)
+        console.log('[Dashboard] Fetching recent activity for user:', userId, 'role:', userRole);
+        console.log('[Dashboard] isGlobalViewer:', isGlobalViewer);
+        console.log('[Dashboard] recentWhere:', JSON.stringify(recentWhere));
+
         const recentRequirements = await prisma.requirement.findMany({
             where: recentWhere,
             include: {
@@ -901,6 +905,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             orderBy: { createdAt: 'desc' },
             take: 5
         });
+        console.log('[Dashboard] Found requirements:', recentRequirements.length);
 
         // Get recent budgets
         const recentBudgets = await prisma.budget.findMany({
@@ -912,6 +917,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             orderBy: { createdAt: 'desc' },
             take: 3
         });
+        console.log('[Dashboard] Found budgets:', recentBudgets.length);
 
         // Get recent invoices
         const recentInvoices = await prisma.invoice.findMany({
@@ -922,6 +928,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             orderBy: { createdAt: 'desc' },
             take: 3
         });
+        console.log('[Dashboard] Found invoices:', recentInvoices.length);
 
         // Combine all activity into a unified feed
         const allActivity: any[] = [
@@ -962,6 +969,8 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         // Sort by createdAt descending and take top 8
         allActivity.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         const recent = allActivity.slice(0, 8);
+        console.log('[Dashboard] Total recent activity items:', recent.length);
+
 
         // Calculate total amount safely
         const allStatsReqs = await prisma.requirement.findMany({
