@@ -43,9 +43,10 @@ router.get('/asientos', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR',
 router.post('/asientos', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), createAsiento);
 
 // Requirements Routes
+router.put('/mass-update', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), updateMassRequirements);
 router.post('/', upload.array('attachments'), createRequirement);
 router.post('/mass-create', createMassRequirements);
-router.put('/mass-update', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), updateMassRequirements);
+
 router.get('/me', getMyRequirements);
 router.get('/dashboard-stats', getDashboardStats);
 router.get('/all', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getAllRequirements);
