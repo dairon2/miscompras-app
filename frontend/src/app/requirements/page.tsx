@@ -459,9 +459,15 @@ export default function RequirementsPage() {
 
                                             <thead className="bg-gray-50/50 dark:bg-slate-900/50">
                                                 <tr className="border-b border-gray-100 dark:border-white/5">
-                                                    {isAdminOrLeader && (
-                                                        <th className="group px-4 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-[40px]">
-                                                            <div className="flex items-center justify-center">
+
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Solicitud</th>
+                                                    {isAdmin && <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hidden xl:table-cell">Creado por</th>}
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Detalles</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Monto</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado</th>
+                                                    {canDelete && (
+                                                        <th className="px-6 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] w-24">
+                                                            <div className="flex items-center justify-end">
                                                                 <input
                                                                     type="checkbox"
                                                                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
@@ -471,12 +477,6 @@ export default function RequirementsPage() {
                                                             </div>
                                                         </th>
                                                     )}
-                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Solicitud</th>
-                                                    {isAdmin && <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hidden xl:table-cell">Creado por</th>}
-                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Detalles</th>
-                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Monto</th>
-                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado</th>
-                                                    {canDelete && <th className="px-6 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] w-10"></th>}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
@@ -486,18 +486,7 @@ export default function RequirementsPage() {
                                                         onClick={() => router.push(`/requirements/${req.id}`)}
                                                         className="hover:bg-gray-50/80 dark:hover:bg-slate-700/30 transition-all cursor-pointer group border-b border-gray-50 dark:border-gray-800 last:border-0"
                                                     >
-                                                        {isAdminOrLeader && (
-                                                            <td className="px-4 py-4 w-[40px]" onClick={(e) => e.stopPropagation()}>
-                                                                <div className="flex items-center justify-center">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer w-4 h-4"
-                                                                        checked={selectedIds.includes(req.id)}
-                                                                        onChange={() => handleSelectOne(req.id)}
-                                                                    />
-                                                                </div>
-                                                            </td>
-                                                        )}
+
 
                                                         <td className="px-6 py-4">
                                                             <div className="flex items-center gap-4 text-left">
@@ -568,14 +557,22 @@ export default function RequirementsPage() {
                                                         </td>
 
                                                         {canDelete && (
-                                                            <td className="px-6 py-4 text-right w-10" onClick={(e) => e.stopPropagation()}>
-                                                                <button
-                                                                    onClick={() => handleDeleteClick(req)}
-                                                                    className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
-                                                                    title="Eliminar"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
+                                                            <td className="px-6 py-4 text-right w-24" onClick={(e) => e.stopPropagation()}>
+                                                                <div className="flex items-center justify-end gap-3">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer w-4 h-4"
+                                                                        checked={selectedIds.includes(req.id)}
+                                                                        onChange={() => handleSelectOne(req.id)}
+                                                                    />
+                                                                    <button
+                                                                        onClick={() => handleDeleteClick(req)}
+                                                                        className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
+                                                                        title="Eliminar"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </div>
                                                             </td>
                                                         )}
                                                     </tr>
