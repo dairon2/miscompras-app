@@ -33,6 +33,7 @@ import { resolveApiUrl } from "@/lib/utils";
 import { translateAction, translateLogDetails } from "@/lib/translations";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import PaymentsSection from "@/components/PaymentsSection";
 
 interface Attachment {
     id: string;
@@ -653,6 +654,19 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
                 {/* Timeline / Logs */}
                 <div className="lg:col-span-1 space-y-6">
+                    {/* Payments Section - Only for requirements with multiple payments */}
+                    {requirement.hasMultiplePayments && (
+                        <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-700">
+                            <PaymentsSection
+                                requirementId={requirement.id}
+                                hasMultiplePayments={requirement.hasMultiplePayments}
+                                totalAmount={parseFloat(requirement.totalAmount?.toString() || requirement.actualAmount?.toString() || '0')}
+                                canEdit={['ADMIN', 'DIRECTOR', 'LEADER', 'FINANCE'].includes(currentUser?.role || '')}
+                                onPaymentsChange={() => fetchRequirement()}
+                            />
+                        </div>
+                    )}
+
                     <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-700">
                         <div className="flex items-center gap-3 mb-8 border-b border-gray-50 dark:border-gray-700 pb-6">
                             <History className="text-primary-500" size={20} />

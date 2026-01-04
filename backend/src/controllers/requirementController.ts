@@ -298,6 +298,11 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
 
         if (!currentReq) return res.status(404).json({ error: 'Requirement not found' });
 
+        // Security check: USER role can only edit own requirements
+        if (req.user?.role === 'USER' && currentReq.createdById !== req.user.id) {
+            return res.status(403).json({ error: 'No tienes permiso para editar este requerimiento' });
+        }
+
         // Budget Deduction Logic
         let budgetAdjustment = 0;
         if (actualAmount !== undefined && currentReq.budgetId) {

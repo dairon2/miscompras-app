@@ -41,7 +41,6 @@ export default function NewAsientoPage() {
         description: '',
         quantity: '',
         totalAmount: '',
-        actualAmount: '',
         projectId: '',
         areaId: '',
         supplierId: '',
@@ -120,7 +119,7 @@ export default function NewAsientoPage() {
             });
             // Add files
             files.forEach(file => {
-                formData.append('files', file);
+                formData.append('attachments', file);
             });
 
             await api.post('/requirements/asientos', formData, {
@@ -302,21 +301,6 @@ export default function NewAsientoPage() {
                                     />
                                 </div>
                                 <p className="text-[10px] text-gray-400 font-medium">Este monto se descontará del presupuesto inmediatamente</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-gray-600">Monto Real (si difiere)</label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                    <input
-                                        type="number"
-                                        name="actualAmount"
-                                        value={form.actualAmount}
-                                        onChange={handleChange}
-                                        placeholder="0"
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 pl-12 rounded-2xl font-black focus:ring-2 ring-primary-500 outline-none"
-                                    />
-                                </div>
                             </div>
 
                             <div className="space-y-2">
