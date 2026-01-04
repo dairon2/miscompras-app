@@ -711,8 +711,10 @@ export default function BudgetsPage() {
                         return (
                             <div
                                 key={budget.id}
-                                className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all"
+                                onClick={() => router.push(`/budget/${budget.id}`)}
+                                className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer"
                             >
+
                                 <div className="flex items-start justify-between mb-4">
                                     <div>
                                         <span className="text-[10px] font-black text-primary-600">{budget.code || 'SIN CÓDIGO'}</span>
@@ -750,14 +752,14 @@ export default function BudgetsPage() {
                                     </div>
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => openAdjustmentModal(budget)}
+                                            onClick={(e) => { e.stopPropagation(); openAdjustmentModal(budget); }}
                                             className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl"
                                         >
                                             <TrendingUp size={16} />
                                         </button>
                                         {canManageBudgets && (
                                             <button
-                                                onClick={() => openEditModal(budget)}
+                                                onClick={(e) => { e.stopPropagation(); openEditModal(budget); }}
                                                 className="p-2 text-primary-600 hover:bg-primary-50 rounded-xl"
                                             >
                                                 <Edit size={16} />
