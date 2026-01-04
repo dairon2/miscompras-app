@@ -887,19 +887,27 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
 
         if (!isGlobalViewer) {
+            // New logic: Include requirements created by user OR related to budgets they manage
+            where.OR = [
+                { createdById: userId },
+                {
+                    budget: {
+                        OR: [
+                            { managerId: userId },
+                            { subLeaders: { some: { userId: userId } } }
+                        ]
+                    }
+                }
+            ];
+
+            // Also include directed areas if any (kept from original logic if still relevant, otherwise just the budget rule covers most)
             const directedAreas = await prisma.area.findMany({
                 where: { directorId: userId } as any,
                 select: { id: true }
             });
             const directedAreaIds = directedAreas.map(a => a.id);
-
             if (directedAreaIds.length > 0) {
-                where.OR = [
-                    { areaId: { in: directedAreaIds } },
-                    { createdById: userId }
-                ];
-            } else {
-                where.createdById = userId;
+                where.OR.push({ areaId: { in: directedAreaIds } });
             }
         }
 
