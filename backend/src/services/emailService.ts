@@ -70,8 +70,13 @@ const getEmailTemplate = (title: string, content: string, actionButton?: { text:
 
 // Send email using Azure Communication Services
 const sendEmail = async (to: string, subject: string, htmlContent: string) => {
+    console.log(`[Email] Attempting to send email to: ${to}, subject: "${subject}"`);
+
     const client = getEmailClient();
-    if (!client) return;
+    if (!client) {
+        console.warn('[Email] ⚠️ Email client not configured - AZURE_COMMUNICATION_CONNECTION_STRING is missing');
+        return;
+    }
 
     const message: EmailMessage = {
         senderAddress: FROM_EMAIL,
@@ -85,11 +90,13 @@ const sendEmail = async (to: string, subject: string, htmlContent: string) => {
     };
 
     try {
+        console.log(`[Email] Sending email from: ${FROM_EMAIL}`);
         const poller = await client.beginSend(message);
-        await poller.pollUntilDone();
-        console.log(`Email sent to ${to}`);
-    } catch (error) {
-        console.error('Error sending email via Azure:', error);
+        const result: any = await poller.pollUntilDone();
+        console.log(`[Email] ✅ Email sent successfully to ${to}, Status: ${result.status}, ID: ${result.id || 'N/A'}`);
+    } catch (error: any) {
+        console.error(`[Email] ❌ Error sending email to ${to}:`, error.message);
+        if (error.code) console.error(`[Email] Error code: ${error.code}`);
     }
 };
 
