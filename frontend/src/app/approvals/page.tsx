@@ -93,7 +93,7 @@ export default function ApprovalsPage() {
         try {
             setLoading(true);
             const [groupsRes, adjRes] = await Promise.allSettled([
-                api.get(`/ requirements / groups ? year = ${selectedYear} `),
+                api.get(`/requirements/groups?year=${selectedYear}`),
                 api.get('/adjustments/pending')
             ]);
 
@@ -302,7 +302,7 @@ export default function ApprovalsPage() {
                                         </div>
 
                                         <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
-                                            {group.pdfUrl && (
+                                            {group.pdfUrl ? (
                                                 <a
                                                     href={resolveApiUrl(group.pdfUrl)}
                                                     target="_blank"
@@ -312,11 +312,11 @@ export default function ApprovalsPage() {
                                                 >
                                                     <Download size={20} />
                                                 </a>
-                                            ) || (
-                                                    <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl text-gray-300 border border-gray-100 dark:border-gray-700 italic text-[10px] font-bold">
-                                                        PDF No Disponible
-                                                    </div>
-                                                )}
+                                            ) : (
+                                                <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl text-gray-300 border border-gray-100 dark:border-gray-700 italic text-[10px] font-bold">
+                                                    PDF No Disponible
+                                                </div>
+                                            )}
                                             <button
                                                 onClick={() => setCommentModal({ id: group.id, type: 'REJECT' })}
                                                 className="px-6 py-4 bg-red-50 text-red-600 rounded-2xl font-black text-xs hover:bg-red-100 transition-colors uppercase tracking-widest"
