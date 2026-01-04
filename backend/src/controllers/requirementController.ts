@@ -682,6 +682,96 @@ export const approveRequirementGroup = async (req: AuthRequest, res: Response) =
     const userId = req.user?.id;
 
     try {
+        // Handle Individual Requirements (Virtual Group 0)
+        if (id === '0') {
+            const where: any = {
+                status: 'PENDING_APPROVAL',
+                groupId: null
+            };
+
+            const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
+
+            if (!isGlobalViewer) {
+                const directedAreas = await prisma.area.findMany({
+                    where: { directorId: userId } as any,
+                    select: { id: true }
+                });
+                const directedAreaIds = directedAreas.map(a => a.id);
+
+                const managedBudgets = await prisma.budget.findMany({
+                    where: { managerId: userId },
+                    select: { id: true }
+                });
+                const managedBudgetIds = managedBudgets.map(b => b.id);
+
+                const orConditions: any[] = [{ createdById: userId }];
+                if (directedAreaIds.length > 0) orConditions.push({ areaId: { in: directedAreaIds } });
+                if (managedBudgetIds.length > 0) orConditions.push({ budgetId: { in: managedBudgetIds } });
+
+                where.OR = orConditions;
+            }
+
+            const updateData: any = {};
+            let actionLabel = '';
+
+            if (userRole === 'COORDINATOR') {
+                updateData.coordinatorApproval = true;
+                updateData.coordinatorComment = comments;
+                actionLabel = 'Coordinador';
+            } else if (userRole === 'DIRECTOR' || userRole === 'ADMIN' || userRole === 'DEVELOPER') {
+                updateData.directorApproval = true;
+                updateData.directorComment = comments;
+                actionLabel = 'Dirección';
+            } else {
+                return res.status(403).json({ error: 'No tienes permisos para aprobar' });
+            }
+
+            // Update all matching individual requirements
+            await prisma.requirement.updateMany({
+                where,
+                data: updateData
+            });
+
+            // Check for full approval
+            const updatedReqs = await prisma.requirement.findMany({ where });
+
+            for (const req of updatedReqs) {
+                const isApproved = (req.coordinatorApproval && req.directorApproval) ||
+                    (userRole === 'DIRECTOR' || userRole === 'ADMIN' || userRole === 'DEVELOPER');
+
+                if (isApproved) {
+                    await prisma.requirement.update({
+                        where: { id: req.id },
+                        data: { status: 'APPROVED' }
+                    });
+
+                    // Notify
+                    await prisma.historyLog.create({
+                        data: {
+                            action: 'APPROVED',
+                            details: `Requerimiento individual ${req.id} aprobado por ${actionLabel} (${req.createdById}). ${comments || ''}`,
+                            requirementId: req.id
+                        }
+                    });
+
+                    // Fetch creator to notify
+                    // Note: This might be slow if many requirements. optimization possible.
+                    const creator = await prisma.user.findUnique({ where: { id: req.createdById } });
+                    if (creator) {
+                        await sendRequirementNotificationEmail({
+                            to: creator.email,
+                            type: 'REQUIREMENT_APPROVED',
+                            requirementId: req.id,
+                            requirementTitle: req.title,
+                            requesterName: creator.name || creator.email,
+                            approverName: (req as any)?.user?.name || 'Aprobador'
+                        });
+                    }
+                }
+            }
+            return res.json({ message: `Solicitudes individuales procesadas por ${actionLabel}` });
+        }
+
         const group = await prisma.requirementGroup.findUnique({
             where: { id: parseInt(id) },
             include: { requirements: true }
@@ -761,8 +851,68 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
     const { id } = req.params;
     const { comments } = req.body;
     const userRole = req.user?.role;
+    const userId = req.user?.id;
 
     try {
+        if (id === '0') {
+            const where: any = {
+                status: 'PENDING_APPROVAL',
+                groupId: null
+            };
+
+            const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
+
+            if (!isGlobalViewer) {
+                const directedAreas = await prisma.area.findMany({
+                    where: { directorId: userId } as any,
+                    select: { id: true }
+                });
+                const directedAreaIds = directedAreas.map(a => a.id);
+
+                const managedBudgets = await prisma.budget.findMany({
+                    where: { managerId: userId },
+                    select: { id: true }
+                });
+                const managedBudgetIds = managedBudgets.map(b => b.id);
+
+                const orConditions: any[] = [{ createdById: userId }];
+                if (directedAreaIds.length > 0) orConditions.push({ areaId: { in: directedAreaIds } });
+                if (managedBudgetIds.length > 0) orConditions.push({ budgetId: { in: managedBudgetIds } });
+
+                where.OR = orConditions;
+            }
+
+            // Reject all matching individual requirements
+            await prisma.requirement.updateMany({
+                where,
+                data: {
+                    status: 'REJECTED',
+                    coordinatorComment: userRole === 'COORDINATOR' ? comments : undefined,
+                    directorComment: (userRole === 'DIRECTOR' || userRole === 'ADMIN') ? comments : undefined
+                }
+            });
+
+            // Notify Rejection
+            const rejectedReqs = await prisma.requirement.findMany({ where, select: { id: true, createdById: true, title: true } });
+            for (const req of rejectedReqs) {
+                const creator = await prisma.user.findUnique({ where: { id: req.createdById } });
+                if (creator) {
+                    await sendRequirementNotificationEmail({
+                        to: creator.email,
+                        type: 'REQUIREMENT_REJECTED',
+                        requirementId: req.id,
+                        requirementTitle: req.title,
+                        rejectReason: comments,
+                        groupId: 0,
+                        requesterName: creator.name || creator.email,
+                        approverName: 'Aprobador' // Ideally fetch user name
+                    });
+                }
+            }
+
+            return res.json({ message: 'Solicitudes individuales rechazadas' });
+        }
+
         await prisma.requirement.updateMany({
             where: { groupId: parseInt(id) },
             data: {
