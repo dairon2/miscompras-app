@@ -456,27 +456,44 @@ export const generateRequirementGroupPDF = async (group: RequirementGroupData): 
             const pageWidth = doc.page.width - 100;
 
             // ===== HEADER =====
-            // Logo placeholder (left)
-            doc.rect(50, 50, 100, 60).stroke();
-            doc.fontSize(7).font('Helvetica-Bold').text('MUSEO DE', 55, 65, { width: 90, align: 'center' });
-            doc.fontSize(7).text('ANTIOQUIA', 55, 75, { width: 90, align: 'center' });
+            const col1Width = 120;
+            const col3Width = 110;
+            const col2Width = pageWidth - col1Width - col3Width;
+            const headerHeight = 60;
+            const startY = 50;
 
-            // Title (center)
-            doc.fontSize(12).font('Helvetica-Bold')
-                .text('REQUERIMIENTO DE BIENES Y SERVICIOS', 160, 55, { width: 280, align: 'center' });
-            doc.fontSize(9).font('Helvetica')
-                .text(group.project?.name || 'Museo de Antioquia', 160, 75, { width: 280, align: 'center' });
+            // Box 1: Logo (Left)
+            doc.rect(50, startY, col1Width, headerHeight).stroke();
+            if (fs.existsSync(LOGO_PATH)) {
+                doc.image(LOGO_PATH, 55, startY + 5, { fit: [col1Width - 10, headerHeight - 10], align: 'center', valign: 'center' });
+            } else {
+                // Placeholder if no logo
+                doc.fontSize(7).font('Helvetica-Bold').text('MUSEO DE', 50, startY + 20, { width: col1Width, align: 'center' });
+                doc.fontSize(7).text('ANTIOQUIA', 50, startY + 30, { width: col1Width, align: 'center' });
+            }
 
-            // Code box (right)
-            doc.rect(450, 50, 110, 60).stroke();
-            doc.fontSize(8).font('Helvetica-Bold').text('Código', 455, 55);
-            doc.fontSize(9).font('Helvetica').text(group.code || `REQ-${group.id}`, 455, 66);
-            doc.fontSize(8).font('Helvetica-Bold').text('VERSIÓN:', 455, 78);
-            doc.fontSize(9).font('Helvetica').text(`${group.version || '01'}`, 500, 78);
-            // Format date with month name and year only (e.g., "Enero 2026")
+            // Box 2: Title (Center)
+            doc.rect(50 + col1Width, startY, col2Width, headerHeight).stroke();
+            doc.fontSize(10).font('Helvetica-Bold')
+                .text('REQUERIMIENTO DE BIENES Y SERVICIOS', 50 + col1Width, startY + 15, { width: col2Width, align: 'center' });
+            doc.fontSize(10).font('Helvetica-Bold')
+                .text((group.project?.name || 'MUSEO DE ANTIOQUIA').toUpperCase(), 50 + col1Width, startY + 30, { width: col2Width, align: 'center' });
+
+            // Box 3: Meta (Right)
+            doc.rect(50 + col1Width + col2Width, startY, col3Width, headerHeight).stroke();
+
+            // Format: Código \n FA-4.2-01 \n VERSIÓN:02 \n [Fecha]
+            const rightColX = 50 + col1Width + col2Width;
+
+            doc.fontSize(8).font('Helvetica-Bold').text('Código', rightColX, startY + 5, { width: col3Width, align: 'center' });
+            doc.fontSize(9).font('Helvetica').text('FA-4.2-01', rightColX, startY + 15, { width: col3Width, align: 'center' });
+
+            doc.fontSize(8).font('Helvetica-Bold').text('VERSIÓN:02', rightColX, startY + 30, { width: col3Width, align: 'center' });
+
+            // Format date: "Agosto 25 2023"
             const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-            const dateStr = `${monthNames[group.createdAt.getMonth()]} ${group.createdAt.getFullYear()}`;
-            doc.fontSize(8).text(dateStr, 455, 92);
+            const dateStr = `${monthNames[group.createdAt.getMonth()]} ${group.createdAt.getDate()} ${group.createdAt.getFullYear()}`;
+            doc.fontSize(8).font('Helvetica-Bold').text(dateStr, rightColX, startY + 45, { width: col3Width, align: 'center' });
 
             // ===== REQUESTER INFO =====
             doc.moveTo(50, 125).lineTo(560, 125).stroke();
