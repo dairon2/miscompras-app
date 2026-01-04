@@ -465,6 +465,7 @@ export default function RequirementsPage() {
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Presupuesto</th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Categoría</th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Monto</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado</th>
                                                     {canDelete && (
                                                         <th className="px-6 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] w-24">
                                                             <div className="flex items-center justify-end">
@@ -532,9 +533,16 @@ export default function RequirementsPage() {
                                                         {/* Presupuesto Column */}
                                                         <td className="px-6 py-4">
                                                             <div className="space-y-1">
-                                                                <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-[10px] font-bold text-gray-600 dark:text-gray-300">
-                                                                    {req.budget?.category?.name || req.area?.name || 'Sin categoría'}
-                                                                </span>
+                                                                <div className="flex gap-1 flex-wrap">
+                                                                    {req.project?.name && (
+                                                                        <span className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-900/20 text-[10px] font-bold text-purple-600 dark:text-purple-400">
+                                                                            {req.project.name}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                                                        {req.budget?.category?.name || req.area?.name || 'Sin categoría'}
+                                                                    </span>
+                                                                </div>
                                                                 <p className="text-[10px] font-medium text-gray-400 truncate max-w-[150px]">
                                                                     {req.budget?.title || 'Sin presupuesto'}
                                                                 </p>
@@ -555,6 +563,32 @@ export default function RequirementsPage() {
                                                                     ? `$${parseFloat(req.actualAmount).toLocaleString()}`
                                                                     : <span className="text-gray-400 text-xs font-medium">Por definir</span>}
                                                             </p>
+                                                        </td>
+
+                                                        {/* Estado del Tramite Column */}
+                                                        <td className="px-6 py-4">
+                                                            {(() => {
+                                                                const status = req.procurementStatus?.toUpperCase() || '';
+                                                                let colorClass = 'text-gray-600 bg-gray-100 dark:bg-slate-800 dark:text-gray-300';
+
+                                                                if (status.includes('PENDIENTE')) {
+                                                                    colorClass = 'text-orange-600 bg-orange-50 dark:bg-orange-900/20';
+                                                                } else if (status.includes('TRAMITE') || status.includes('PROCESO')) {
+                                                                    colorClass = 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20';
+                                                                } else if (status.includes('ENTREGADO')) {
+                                                                    colorClass = 'text-blue-600 bg-blue-50 dark:bg-blue-900/20';
+                                                                } else if (status.includes('FINALIZADO') || status.includes('COMPLETADO')) {
+                                                                    colorClass = 'text-green-600 bg-green-50 dark:bg-green-900/20';
+                                                                } else if (status.includes('ANULADO') || status.includes('CANCELADO')) {
+                                                                    colorClass = 'text-red-600 bg-red-50 dark:bg-red-900/20';
+                                                                }
+
+                                                                return (
+                                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${colorClass}`}>
+                                                                        {req.procurementStatus || 'PENDIENTE'}
+                                                                    </span>
+                                                                );
+                                                            })()}
                                                         </td>
 
                                                         {canDelete && (
