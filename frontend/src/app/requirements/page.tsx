@@ -23,7 +23,10 @@ import {
     FileSpreadsheet,
     User,
     Trash2,
-    BookOpen
+    BookOpen,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -73,6 +76,7 @@ export default function RequirementsPage() {
     const currentYear = new Date().getFullYear();
     const [selectedYear, setSelectedYear] = useState(currentYear);
     const [availableYears, setAvailableYears] = useState<number[]>([currentYear]);
+    const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // desc = más nuevo primero
 
     useEffect(() => {
         api.get('/requirements/years')
@@ -200,6 +204,10 @@ export default function RequirementsPage() {
         const matchesDate = (!start || createdAt >= start) && (!end || createdAt <= end);
 
         return matchesSearch && matchesProc && matchesArea && matchesUser && matchesProject && matchesCategory && matchesDate;
+    }).sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
     });
 
     return (
@@ -375,6 +383,36 @@ export default function RequirementsPage() {
                     </div>
                 </div>
 
+                {/* Counter and Sort Controls */}
+                <div className="px-6 py-4 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-500">
+                            {filteredReqs.length} {filteredReqs.length === 1 ? 'solicitud' : 'solicitudes'}
+                        </span>
+                        {filteredReqs.length !== requirements.length && (
+                            <span className="text-xs text-gray-400">
+                                (de {requirements.length} total)
+                            </span>
+                        )}
+                    </div>
+                    <button
+                        onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                    >
+                        {sortOrder === 'desc' ? (
+                            <>
+                                <ArrowDown size={16} className="text-primary-600" />
+                                Más reciente primero
+                            </>
+                        ) : (
+                            <>
+                                <ArrowUp size={16} className="text-primary-600" />
+                                Más antiguo primero
+                            </>
+                        )}
+                    </button>
+                </div>
+
                 <AnimatePresence mode="wait">
                     {loading ? (
                         <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-20 text-center font-black uppercase text-gray-400 tracking-widest text-[10px]">Cargando solicitudes...</motion.div>
@@ -389,9 +427,10 @@ export default function RequirementsPage() {
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: -20 }}
-                                        className="hidden lg:block overflow-x-auto"
+                                        className="hidden lg:block overflow-x-auto max-h-[600px] overflow-y-auto"
                                     >
                                         <table className="w-full">
+
                                             <thead className="bg-gray-50/50 dark:bg-slate-900/50">
                                                 <tr>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Solicitud</th>
