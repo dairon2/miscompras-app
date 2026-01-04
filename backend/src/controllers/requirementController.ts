@@ -7,6 +7,7 @@ import path from 'path';
 import { createRequirementGroup } from '../services/requirementGroupService';
 import { uploadToBlobStorage, processFileUploads } from '../services/blobStorageService';
 import { checkSubmissionAllowed } from '../services/submissionRulesService';
+import { sendRequirementNotificationEmail } from '../services/emailService';
 
 export const createRequirement = async (req: AuthRequest, res: Response) => {
     const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, suggestedSupplier, budgetId } = req.body;
@@ -72,10 +73,16 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
 
         const adminEmails = admins.map((admin: { email: string }) => admin.email).join(',');
 
-        // TODO: Re-enable email notification with Azure Communication Services
-        // Email notification temporarily disabled
-        console.log(`[INFO] New requirement created. Would notify: ${adminEmails}`);
-
+        // Notify Admins/Leaders via Email
+        for (const admin of admins) {
+            await sendRequirementNotificationEmail({
+                to: admin.email,
+                type: 'REQUIREMENT_CREATED',
+                requirementId: requirement.id,
+                requirementTitle: title,
+                requesterName: (req.user as any)?.name || req.user?.email || 'Desconocido'
+            });
+        }
 
         // --- IN-APP NOTIFICATION FOR ADMINS ---
         for (const admin of admins) {
@@ -124,6 +131,20 @@ export const createMassRequirements = async (req: AuthRequest, res: Response) =>
                     message: `Se ha creado una solicitud agrupada (ID: ${result.group.id}) con ${requirements.length} items.`,
                     type: 'INFO'
                 }
+            });
+
+            // Calculate total amount from results
+            const totalAmt = result.requirements.reduce((acc: number, r: any) => acc + Number(r.estimatedAmount || 0), 0);
+
+            // Send Email Notification for Mass Create
+            await sendRequirementNotificationEmail({
+                to: approver.email,
+                type: 'REQUIREMENT_CREATED',
+                requirementId: result.group.id.toString(), // Using group ID as ID display
+                groupId: result.group.id,
+                requirementTitle: `Solicitud Agrupada de ${(req.user as any)?.name || req.user?.email}`,
+                requesterName: (req.user as any)?.name || req.user?.email || 'Desconocido',
+                amount: totalAmt
             });
         }
 
@@ -712,6 +733,24 @@ export const approveRequirementGroup = async (req: AuthRequest, res: Response) =
             }
         });
 
+        // Notify Creator via Email
+        const creator = await prisma.user.findUnique({
+            where: { id: group.creatorId },
+            select: { email: true, name: true }
+        });
+
+        if (creator && allApproved) {
+            await sendRequirementNotificationEmail({
+                to: creator.email,
+                type: 'REQUIREMENT_APPROVED',
+                requirementId: group.requirements[0].id.toString(),
+                groupId: group.id,
+                requirementTitle: `Solicitud Agrupada Aprobada`,
+                requesterName: creator.name || creator.email,
+                approverName: (req.user as any)?.name || req.user?.email
+            });
+        }
+
         res.json({ message: `Solicitud aprobada por ${actionLabel}`, allApproved });
     } catch (error: any) {
         res.status(500).json({ error: 'Approval failed', details: error.message });
@@ -732,6 +771,26 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
                 directorComment: (userRole === 'DIRECTOR' || userRole === 'ADMIN') ? comments : undefined
             }
         });
+
+        // Notify Creator of Rejection
+        const groupInfo = await prisma.requirementGroup.findUnique({
+            where: { id: parseInt(id) },
+            select: { creatorId: true, requirements: { select: { id: true, title: true }, take: 1 } }
+        });
+
+        if (groupInfo) {
+            const creatorUser = await prisma.user.findUnique({ where: { id: groupInfo.creatorId } });
+            if (creatorUser) {
+                await sendRequirementNotificationEmail({
+                    to: creatorUser.email,
+                    type: 'REQUIREMENT_REJECTED',
+                    requirementId: groupInfo.requirements[0]?.id || '',
+                    groupId: parseInt(id),
+                    requirementTitle: `Solicitud Rechazada`,
+                    rejectReason: comments
+                });
+            }
+        }
 
         res.json({ message: 'Solicitud rechazada' });
     } catch (error: any) {

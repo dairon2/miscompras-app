@@ -261,3 +261,70 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string) 
 
     await sendEmail(email, subject, getEmailTemplate(subject, content));
 };
+
+// ==================== REQUIREMENT NOTIFICATIONS ====================
+
+export interface RequirementEmailData {
+    to: string;
+    type: 'REQUIREMENT_CREATED' | 'REQUIREMENT_APPROVED' | 'REQUIREMENT_REJECTED';
+    requirementTitle: string;
+    requirementId: string;
+    groupId?: number;
+    amount?: number;
+    project?: string;
+    requesterName?: string;
+    approverName?: string;
+    rejectReason?: string;
+}
+
+export const sendRequirementNotificationEmail = async (data: RequirementEmailData) => {
+    let subject = '';
+    let content = '';
+    const appUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const reqLabel = data.groupId ? `Solicitud #${data.groupId}` : `Requerimiento`;
+
+    switch (data.type) {
+        case 'REQUIREMENT_CREATED':
+            subject = `Nueva Solicitud Creada: ${data.groupId ? '#' + data.groupId : data.requirementTitle}`;
+            content = `
+                <p style="color: #333; line-height: 1.6;">Se ha creado una nueva solicitud que requiere su atención:</p>
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>ID:</strong> ${data.groupId ? '#' + data.groupId : data.requirementId.substring(0, 8)}</p>
+                    <p style="margin: 5px 0;"><strong>Título:</strong> ${data.requirementTitle}</p>
+                    <p style="margin: 5px 0;"><strong>Solicitante:</strong> ${data.requesterName}</p>
+                    ${data.amount ? `<p style="margin: 5px 0;"><strong>Monto Estimado:</strong> <span style="color: #667eea; font-weight: bold;">${formatCurrency(data.amount)}</span></p>` : ''}
+                    ${data.project ? `<p style="margin: 5px 0;"><strong>Proyecto:</strong> ${data.project}</p>` : ''}
+                </div>
+                <p style="color: #333; line-height: 1.6;">Por favor ingrese al sistema para revisar y aprobar/rechazar.</p>
+            `;
+            break;
+
+        case 'REQUIREMENT_APPROVED':
+            subject = `Solicitud Aprobada: ${data.groupId ? '#' + data.groupId : data.requirementTitle}`;
+            content = `
+                <p style="color: #333; line-height: 1.6;">Su solicitud ha sido <span style="color: #28a745; font-weight: bold;">APROBADA</span>:</p>
+                <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>ID:</strong> ${data.groupId ? '#' + data.groupId : data.requirementId.substring(0, 8)}</p>
+                    <p style="margin: 5px 0;"><strong>Título:</strong> ${data.requirementTitle}</p>
+                    ${data.approverName ? `<p style="margin: 5px 0;"><strong>Aprobado por:</strong> ${data.approverName}</p>` : ''}
+                </div>
+                <p style="color: #333; line-height: 1.6;">El proceso de compras continuará automáticamente.</p>
+            `;
+            break;
+
+        case 'REQUIREMENT_REJECTED':
+            subject = `Solicitud Rechazada: ${data.groupId ? '#' + data.groupId : data.requirementTitle}`;
+            content = `
+                <p style="color: #333; line-height: 1.6;">Su solicitud ha sido <span style="color: #dc3545; font-weight: bold;">RECHAZADA</span>:</p>
+                <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>ID:</strong> ${data.groupId ? '#' + data.groupId : data.requirementId.substring(0, 8)}</p>
+                    <p style="margin: 5px 0;"><strong>Título:</strong> ${data.requirementTitle}</p>
+                    ${data.rejectReason ? `<p style="margin: 10px 0 5px 0;"><strong>Motivo:</strong></p><p style="margin: 0; font-style: italic;">${data.rejectReason}</p>` : ''}
+                </div>
+                <p style="color: #333; line-height: 1.6;">Puede revisar los detalles en el sistema.</p>
+            `;
+            break;
+    }
+
+    await sendEmail(data.to, subject, getEmailTemplate(subject, content, { text: 'Ver Solicitud', url: `${appUrl}/requirements/${data.requirementId}` }));
+};
