@@ -33,6 +33,7 @@ import api from "@/lib/api";
 import { exportRequirements } from "@/lib/excelExport";
 import { useAuthStore } from "@/store/authStore";
 import YearSelector from "@/components/YearSelector";
+import { translateStatus } from "@/lib/translations";
 
 interface Requirement {
     id: string;
@@ -540,7 +541,7 @@ export default function RequirementsPage() {
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
-                                    className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                                    className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[600px] overflow-y-auto"
                                 >
                                     {filteredReqs.map((req: any) => (
                                         <RequirementCard key={req.id} req={req} onClick={() => router.push(`/requirements/${req.id}`)} />
@@ -606,15 +607,22 @@ export default function RequirementsPage() {
 function RequirementCard({ req, onClick }: { req: Requirement, onClick: () => void }) {
     const getStatusStyle = (status: string) => {
         switch (status) {
+            case 'APPROVED':
             case 'RECEIVED_SATISFACTION':
-            case 'PAID': return 'bg-green-500 text-white';
-            case 'REJECTED': return 'bg-red-500 text-white';
+            case 'PAID':
+                return 'bg-green-500 text-white';
+            case 'REJECTED':
+                return 'bg-red-500 text-white';
+            case 'PENDING_APPROVAL':
             case 'PENDING_COORDINATION':
-            case 'PENDING_FINANCE': return 'bg-yellow-500 text-white';
+            case 'PENDING_FINANCE':
+                return 'bg-amber-500 text-white';
             case 'APPROVED_FOR_PURCHASE':
             case 'PURCHASING':
-            case 'DELIVERED': return 'bg-blue-500 text-white';
-            default: return 'bg-gray-400 text-white';
+            case 'DELIVERED':
+                return 'bg-blue-500 text-white';
+            default:
+                return 'bg-gray-400 text-white';
         }
     };
 
@@ -632,7 +640,7 @@ function RequirementCard({ req, onClick }: { req: Requirement, onClick: () => vo
                 </div>
                 <div className="flex flex-col items-end gap-2">
                     <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${getStatusStyle(req.status)}`}>
-                        {req.status?.replace('_', ' ') || 'PENDIENTE'}
+                        {translateStatus(req.status || 'PENDIENTE')}
                     </span>
                     {req.isAsiento && (
                         <span className="px-2 py-0.5 rounded outline outline-1 outline-purple-200 dark:outline-purple-800 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-[8px] font-black uppercase tracking-wider">
