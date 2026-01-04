@@ -2,8 +2,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    CheckCircle, XCircle, Clock, FileText, User, Calendar,
-    ChevronDown, ChevronUp, Download, MessageSquare, AlertCircle, Search, Filter
+    CheckCircle, XCircle, Clock, FileText, User, Calendar, ChevronDown, ChevronUp, AlertCircle, Search, Filter,
+    Image as ImageIcon, FileSpreadsheet, File, MessageSquare, Download
 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
@@ -93,7 +93,7 @@ export default function ApprovalsPage() {
         try {
             setLoading(true);
             const [groupsRes, adjRes] = await Promise.allSettled([
-                api.get(`/requirements/groups?year=${selectedYear}`),
+                api.get(`/ requirements / groups ? year = ${selectedYear} `),
                 api.get('/adjustments/pending')
             ]);
 
@@ -156,7 +156,7 @@ export default function ApprovalsPage() {
         try {
             if (commentModal.isAdj) {
                 const endpoint = commentModal.type === 'APPROVE' ? 'approve' : 'reject';
-                await api.patch(`/adjustments/${commentModal.id}/${endpoint}`, {
+                await api.patch(`/ adjustments / ${commentModal.id}/${endpoint}`, {
                     comment: comments
                 });
                 addToast(`Ajuste ${commentModal.type === 'APPROVE' ? 'aprobado' : 'rechazado'} correctamente`, "success");
@@ -219,20 +219,7 @@ export default function ApprovalsPage() {
                     <p className="text-gray-500 font-medium">Gestiona las solicitudes administrativas de compra y ajustes.</p>
                 </div>
                 <div className="flex flex-col gap-4">
-                    <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-2xl border border-gray-200 dark:border-gray-700">
-                        <button
-                            onClick={() => setFilterStatus('pending')}
-                            className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${filterStatus === 'pending' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-gray-400'}`}
-                        >
-                            PENDIENTES
-                        </button>
-                        <button
-                            onClick={() => setFilterStatus('all')}
-                            className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${filterStatus === 'all' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-gray-400'}`}
-                        >
-                            TODAS
-                        </button>
-                    </div>
+
 
                     {/* Year Selector */}
                     <YearSelector
@@ -361,12 +348,12 @@ export default function ApprovalsPage() {
                                                     <table className="w-full text-left">
                                                         <thead>
                                                             <tr className="text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                                                                <th className="pb-4 px-4 w-1/3">Ítem / Descripción</th>
+                                                                <th className="pb-4 px-4">Ítem</th>
+                                                                <th className="pb-4 px-4 w-1/3">Descripción/Justificación</th>
                                                                 <th className="pb-4 px-4">Proyecto / Área</th>
                                                                 <th className="pb-4 px-4">Presupuesto</th>
                                                                 <th className="pb-4 px-4">Cant.</th>
                                                                 <th className="pb-4 px-4 text-center">Adjuntos</th>
-                                                                <th className="pb-4 px-4 text-center">Estado</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -374,7 +361,9 @@ export default function ApprovalsPage() {
                                                                 <tr key={req.id} className={`${idx !== group.requirements.length - 1 ? 'border-b border-gray-50 dark:border-gray-800' : ''}`}>
                                                                     <td className="py-6 px-4">
                                                                         <div className="font-black text-gray-800 dark:text-gray-200">{req.title}</div>
-                                                                        <div className="text-xs text-gray-500 mt-1 line-clamp-1">{req.description}</div>
+                                                                    </td>
+                                                                    <td className="py-6 px-4">
+                                                                        <div className="text-xs text-gray-500 line-clamp-2">{req.description}</div>
                                                                     </td>
                                                                     <td className="py-6 px-4">
                                                                         <div className="font-bold text-xs">{req.project.name}</div>
@@ -389,30 +378,32 @@ export default function ApprovalsPage() {
                                                                     </td>
                                                                     <td className="py-6 px-4 text-center">
                                                                         {req.attachments && req.attachments.length > 0 ? (
-                                                                            <div className="flex flex-col gap-1 items-center">
-                                                                                {req.attachments.map(att => (
-                                                                                    <a
-                                                                                        key={att.id}
-                                                                                        href={resolveApiUrl(att.fileUrl)}
-                                                                                        target="_blank"
-                                                                                        rel="noopener noreferrer"
-                                                                                        className="text-primary-600 hover:text-primary-800 flex items-center justify-center bg-primary-50 dark:bg-primary-900/20 p-2 rounded-lg transition-colors"
-                                                                                        title={att.fileName}
-                                                                                    >
-                                                                                        <FileText size={16} />
-                                                                                    </a>
-                                                                                ))}
+                                                                            <div className="flex flex-wrap justify-center gap-2">
+                                                                                {req.attachments.map(att => {
+                                                                                    const ext = att.fileName.split('.').pop()?.toLowerCase() || '';
+                                                                                    let Icon = File;
+                                                                                    let colorClass = "text-gray-500";
+                                                                                    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) { Icon = ImageIcon; colorClass = "text-blue-500"; }
+                                                                                    else if (['xls', 'xlsx', 'csv'].includes(ext)) { Icon = FileSpreadsheet; colorClass = "text-green-500"; }
+                                                                                    else if (['pdf'].includes(ext)) { Icon = FileText; colorClass = "text-red-500"; }
+
+                                                                                    return (
+                                                                                        <a
+                                                                                            key={att.id}
+                                                                                            href={resolveApiUrl(att.fileUrl)}
+                                                                                            target="_blank"
+                                                                                            rel="noopener noreferrer"
+                                                                                            className={`transition-colors p-2 rounded-lg bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 ${colorClass}`}
+                                                                                            title={att.fileName}
+                                                                                        >
+                                                                                            <Icon size={20} />
+                                                                                        </a>
+                                                                                    );
+                                                                                })}
                                                                             </div>
                                                                         ) : (
                                                                             <span className="text-[10px] text-gray-300 italic">Sin adjuntos</span>
                                                                         )}
-                                                                    </td>
-                                                                    <td className="py-6 px-4 text-center">
-                                                                        <div className="flex justify-center gap-2">
-                                                                            <div title="Líder" className={`w-3 h-3 rounded-full ${req.leaderApproval ? 'bg-green-500' : req.leaderApproval === false ? 'bg-red-500' : 'bg-gray-200'}`}></div>
-                                                                            <div title="Coordinador" className={`w-3 h-3 rounded-full ${req.coordinatorApproval ? 'bg-green-500' : req.coordinatorApproval === false ? 'bg-red-500' : 'bg-gray-200'}`}></div>
-                                                                            <div title="Dirección" className={`w-3 h-3 rounded-full ${req.directorApproval ? 'bg-green-500' : req.directorApproval === false ? 'bg-red-500' : 'bg-gray-200'}`}></div>
-                                                                        </div>
                                                                     </td>
                                                                 </tr>
                                                             ))}
