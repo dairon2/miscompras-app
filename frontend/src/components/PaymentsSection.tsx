@@ -62,7 +62,7 @@ export default function PaymentsSection({
 
     const fetchPayments = async () => {
         try {
-            const res = await api.get(`/payments/requirement/${requirementId}`);
+            const res = await api.get(`/payments/${requirementId}`);
             setPayments(res.data);
         } catch (error) {
             console.error('Error fetching payments:', error);
@@ -80,7 +80,7 @@ export default function PaymentsSection({
 
         setSaving(true);
         try {
-            await api.post(`/payments/requirement/${requirementId}`, {
+            await api.post(`/payments/${requirementId}`, {
                 amount: parseFloat(form.amount),
                 invoiceNumber: form.invoiceNumber || null,
                 paymentDate: form.paymentDate || null,
