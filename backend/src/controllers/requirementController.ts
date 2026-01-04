@@ -1124,11 +1124,35 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         }
 
         console.log("[Dashboard] Fetching counts with where:", JSON.stringify(where));
-        const [pending, approved, rejected] = await Promise.all([
-            prisma.requirement.count({ where: { ...where, status: { contains: 'PENDING' } } }),
-            prisma.requirement.count({ where: { ...where, status: 'APPROVED' } }),
-            prisma.requirement.count({ where: { ...where, status: 'REJECTED' } })
-        ]);
+
+        let pending = 0, approved = 0, rejected = 0;
+
+        try {
+            // Count pending (PENDING, PENDING_APPROVAL, PENDING_COORDINATOR)
+            pending = await prisma.requirement.count({
+                where: {
+                    ...where,
+                    status: { in: ['PENDING', 'PENDING_APPROVAL', 'PENDING_COORDINATOR'] }
+                }
+            });
+            console.log("[Dashboard] Pending count:", pending);
+        } catch (pendingErr: any) {
+            console.error("[Dashboard] Error counting pending:", pendingErr.message);
+        }
+
+        try {
+            approved = await prisma.requirement.count({ where: { ...where, status: 'APPROVED' } });
+            console.log("[Dashboard] Approved count:", approved);
+        } catch (approvedErr: any) {
+            console.error("[Dashboard] Error counting approved:", approvedErr.message);
+        }
+
+        try {
+            rejected = await prisma.requirement.count({ where: { ...where, status: 'REJECTED' } });
+            console.log("[Dashboard] Rejected count:", rejected);
+        } catch (rejectedErr: any) {
+            console.error("[Dashboard] Error counting rejected:", rejectedErr.message);
+        }
 
         // Recent Activity Filters
         const recentWhere: any = {};
