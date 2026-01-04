@@ -1097,30 +1097,10 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
 
         if (!isGlobalViewer) {
-            where.OR = [
-                { createdById: userId },
-                {
-                    budget: {
-                        OR: [
-                            { managerId: userId },
-                            { subLeaders: { some: { userId: userId } } }
-                        ]
-                    }
-                }
-            ];
-
-            try {
-                const directedAreas = await prisma.area.findMany({
-                    where: { directorId: userId } as any,
-                    select: { id: true }
-                });
-                const directedAreaIds = directedAreas.map(a => a.id);
-                if (directedAreaIds.length > 0) {
-                    where.OR.push({ areaId: { in: directedAreaIds } });
-                }
-            } catch (areaError) {
-                console.error("[Dashboard] Error fetching directed areas:", areaError);
-            }
+            // Simplified filter: Only show user's own requirements
+            // Complex budget/subleader filters were causing 500 errors
+            where.createdById = userId;
+            console.log("[Dashboard] Non-admin user, filtering by createdById:", userId);
         }
 
         console.log("[Dashboard] Fetching counts with where:", JSON.stringify(where));
