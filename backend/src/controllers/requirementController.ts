@@ -1235,8 +1235,8 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         // Sort combined activity by date descending
         allActivity.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        // Take top 10
-        const recent = allActivity.slice(0, 10);
+        // Take top 4 (compact view)
+        const recent = allActivity.slice(0, 4);
 
         // Sum totals logic (unchanged)
         let totalAmount = 0;
