@@ -1108,11 +1108,11 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         let pending = 0, approved = 0, rejected = 0;
 
         try {
-            // Count pending (PENDING, PENDING_APPROVAL, PENDING_COORDINATOR)
+            // Count pending - only PENDING_APPROVAL is a valid Status enum value
             pending = await prisma.requirement.count({
                 where: {
                     ...where,
-                    status: { in: ['PENDING', 'PENDING_APPROVAL', 'PENDING_COORDINATOR'] }
+                    status: 'PENDING_APPROVAL'
                 }
             });
             console.log("[Dashboard] Pending count:", pending);
