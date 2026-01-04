@@ -1086,7 +1086,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
-    // console.log(`[Dashboard] Stats requested by ${req.user?.email} (${userRole}) for year ${year}`);
+    console.log(`[Dashboard] Stats requested by ${req.user?.email} (${userRole}) for year ${year}`);
 
     try {
         const where: any = {
@@ -1123,7 +1123,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             }
         }
 
-        // console.log("[Dashboard] Fetching counts...");
+        console.log("[Dashboard] Fetching counts with where:", JSON.stringify(where));
         const [pending, approved, rejected] = await Promise.all([
             prisma.requirement.count({ where: { ...where, status: { contains: 'PENDING' } } }),
             prisma.requirement.count({ where: { ...where, status: 'APPROVED' } }),
@@ -1154,7 +1154,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             };
         }
 
-        // console.log("[Dashboard] Fetching recent items...");
+        console.log("[Dashboard] Fetching recent items...");
         const recentRequirements = await prisma.requirement.findMany({
             where: recentWhere,
             include: {
@@ -1166,7 +1166,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             take: 5
         });
 
-        // console.log("[Dashboard] Fetching budgets...");
+        console.log("[Dashboard] Fetching budgets...");
         let recentBudgets: any[] = [];
         try {
             recentBudgets = await prisma.budget.findMany({
@@ -1183,7 +1183,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             console.error("[Dashboard] Error fetching budgets:", budgetError);
         }
 
-        // console.log("[Dashboard] Fetching invoices...");
+        console.log("[Dashboard] Fetching invoices...");
         let recentInvoices: any[] = [];
         try {
             recentInvoices = await prisma.invoice.findMany({
