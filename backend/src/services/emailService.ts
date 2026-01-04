@@ -10,7 +10,7 @@ const getEmailClient = () => {
     return new EmailClient(connectionString);
 };
 
-const FROM_EMAIL = process.env.AZURE_EMAIL_SENDER || 'DoNotReply@64ee9d58-18ec-428c-9d01-f96ec1303bc6.azurecomm.net';
+const FROM_EMAIL = process.env.AZURE_EMAIL_SENDER || 'DoNotReply@64ee9d58-18ec-428c-9d01-ff68c1303bc6.azurecomm.net';
 const APP_NAME = 'MisCompras - Museo de Antioquia';
 
 // Format currency for emails
