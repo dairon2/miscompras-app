@@ -352,3 +352,27 @@ enum InvoiceStatus {
   PAID
   REJECTED
 }
+
+// Reglas de horario para envío de requerimientos
+model SubmissionRule {
+  id            String   @id @default(uuid())
+  name          String   // "Lunes regular", "Martes regular", etc.
+  dayOfWeek     Int      // 0=Domingo, 1=Lunes, 2=Martes, 3=Miércoles, etc.
+  startTime     String   // "08:00"
+  endTime       String   // "16:00"
+  isHolidayRule Boolean  @default(false) // Si es regla alternativa cuando el día anterior es festivo
+  holidayShift  Int?     // Días a desplazar (ej: 1 = si lunes festivo, aplica a martes)
+  isActive      Boolean  @default(true)
+  priority      Int      @default(0) // Mayor prioridad se evalúa primero
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Festivos colombianos
+model ColombianHoliday {
+  id    String   @id @default(uuid())
+  date  DateTime @unique
+  name  String   // "Año Nuevo", "Día del Trabajo", etc.
+  year  Int
+}
+

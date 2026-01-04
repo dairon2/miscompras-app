@@ -6,15 +6,28 @@ import fs from 'fs';
 import path from 'path';
 import { createRequirementGroup } from '../services/requirementGroupService';
 import { uploadToBlobStorage, processFileUploads } from '../services/blobStorageService';
+import { checkSubmissionAllowed } from '../services/submissionRulesService';
 
 export const createRequirement = async (req: AuthRequest, res: Response) => {
     const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, budgetId } = req.body;
     const userId = req.user?.id;
+    const userRole = req.user?.role || 'USER';
     const files = req.files as Express.Multer.File[];
 
     if (!userId) return res.status(401).json({ error: 'User not authenticated' });
 
+    // Verificar si el usuario puede enviar requerimientos en este momento
+    const submissionCheck = await checkSubmissionAllowed(userRole);
+    if (!submissionCheck.canSubmit) {
+        return res.status(403).json({
+            error: 'No puedes enviar requerimientos en este momento',
+            message: submissionCheck.message,
+            nextAvailable: submissionCheck.nextAvailable
+        });
+    }
+
     try {
+
         // Process attachments first using the new helper
         const attachmentData = await processFileUploads(files, 'requirements');
 

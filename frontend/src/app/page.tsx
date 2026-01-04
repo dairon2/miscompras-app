@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
-import { Plus, CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3, Users, Building2, Package, ArrowRight } from "lucide-react";
+import { Plus, CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3, Users, Building2, Package, ArrowRight, CalendarClock } from "lucide-react";
 import api from "@/lib/api";
 import { translateStatus } from "@/lib/translations";
 
@@ -14,6 +14,11 @@ export default function HomePage() {
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, totalAmount: 0 });
   const [recentRequirements, setRecentRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submissionInfo, setSubmissionInfo] = useState<{
+    canSubmit: boolean;
+    message: string;
+    nextAvailable?: { day: string; date: string; startTime: string; endTime: string };
+  } | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -35,6 +40,14 @@ export default function HomePage() {
         totalAmount: totalAmount || 0
       });
       setRecentRequirements(recent || []);
+
+      // Verificar si el usuario puede enviar requerimientos
+      try {
+        const submissionRes = await api.get("/submission-rules/can-submit");
+        setSubmissionInfo(submissionRes.data);
+      } catch (e) {
+        console.error("Error checking submission:", e);
+      }
     } catch (err) {
       console.error("Error fetching dashboard data", err);
     } finally {
@@ -57,6 +70,28 @@ export default function HomePage() {
         <p className="text-gray-500 dark:text-gray-400 font-medium italic">
           Gestiona tus requerimientos de compra y presupuestos de forma eficiente.
         </p>
+
+        {/* Submission Schedule Banner */}
+        {submissionInfo && !submissionInfo.canSubmit && submissionInfo.nextAvailable && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-200 dark:border-amber-800 flex items-start gap-4"
+          >
+            <div className="p-3 bg-amber-100 dark:bg-amber-900/40 rounded-xl">
+              <CalendarClock className="text-amber-600" size={24} />
+            </div>
+            <div>
+              <p className="font-bold text-amber-800 dark:text-amber-200">Horario de Envío de Solicitudes</p>
+              <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                Próximo horario disponible: <strong>{submissionInfo.nextAvailable.day} {submissionInfo.nextAvailable.date}</strong>
+              </p>
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                De {submissionInfo.nextAvailable.startTime} a {submissionInfo.nextAvailable.endTime}
+              </p>
+            </div>
+          </motion.div>
+        )}
       </motion.section>
 
       {/* Stats Grid */}

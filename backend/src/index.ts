@@ -16,6 +16,7 @@ import adminRoutes from './routes/adminRoutes';
 import budgetRoutes from './routes/budgetRoutes';
 import adjustmentRoutes from './routes/adjustmentRoutes';
 import invoiceRoutes from './routes/invoiceRoutes';
+import submissionRulesRoutes from './routes/submissionRulesRoutes';
 
 dotenv.config();
 
@@ -193,6 +194,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/adjustments', adjustmentRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/submission-rules', submissionRulesRoutes);
 
 
 // NOTE: Budget CRUD is handled by budgetRoutes mounted at /api/budgets

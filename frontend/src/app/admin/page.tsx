@@ -25,8 +25,11 @@ import {
     Monitor,
     AlertTriangle,
     Hash,
-    Power
+    Power,
+    Clock,
+    ChevronRight
 } from "lucide-react";
+
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
@@ -414,6 +417,34 @@ export default function AdminPage() {
                         )}
 
                         {isAdmin && <div className="h-px bg-gray-100 dark:bg-gray-700" />}
+
+                        {/* Submission Rules Link - for ADMIN, DIRECTOR, LEADER */}
+                        {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && (
+                            <section>
+                                <div className="flex items-center justify-between p-6 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-200 dark:border-amber-800">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-amber-100 dark:bg-amber-900/40 rounded-xl">
+                                            <Clock size={24} className="text-amber-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-black text-amber-800 dark:text-amber-200">Reglas de Envío de Requerimientos</h3>
+                                            <p className="text-sm text-amber-600 dark:text-amber-400">
+                                                Configura los horarios permitidos para enviar solicitudes
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => router.push('/admin/submission-rules')}
+                                        className="flex items-center gap-2 px-6 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-colors"
+                                    >
+                                        Configurar
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
+                            </section>
+                        )}
+
+                        {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && <div className="h-px bg-gray-100 dark:bg-gray-700" />}
 
                         {/* Theme Preferences */}
                         <section>
