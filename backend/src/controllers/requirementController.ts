@@ -1147,16 +1147,21 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         }
 
         console.log("[Dashboard] Fetching recent items...");
-        const recentRequirements = await prisma.requirement.findMany({
-            where: recentWhere,
-            include: {
-                project: true,
-                area: true,
-                createdBy: { select: { name: true, email: true } }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 5
-        });
+        let recentRequirements: any[] = [];
+        try {
+            recentRequirements = await prisma.requirement.findMany({
+                where: recentWhere,
+                include: {
+                    project: true,
+                    area: true,
+                    createdBy: { select: { name: true, email: true } }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 5
+            });
+        } catch (reqError: any) {
+            console.error("[Dashboard] Error fetching recent requirements:", reqError.message);
+        }
 
         console.log("[Dashboard] Fetching budgets...");
         let recentBudgets: any[] = [];
@@ -1234,14 +1239,19 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         const recent = allActivity.slice(0, 10);
 
         // Sum totals logic (unchanged)
-        const totalReqs = await prisma.requirement.findMany({
-            where: { ...where, status: { not: 'REJECTED' } },
-            select: { actualAmount: true, estimatedAmount: true }
-        });
+        let totalAmount = 0;
+        try {
+            const totalReqs = await prisma.requirement.findMany({
+                where: { ...where, status: { not: 'REJECTED' } },
+                select: { actualAmount: true, estimatedAmount: true }
+            });
 
-        const totalAmount = totalReqs.reduce((sum, r) => {
-            return sum + Number(r.actualAmount?.toString() || r.estimatedAmount?.toString() || 0);
-        }, 0);
+            totalAmount = totalReqs.reduce((sum, r) => {
+                return sum + Number(r.actualAmount?.toString() || r.estimatedAmount?.toString() || 0);
+            }, 0);
+        } catch (totalErr: any) {
+            console.error("[Dashboard] Error fetching total amount:", totalErr.message);
+        }
 
         res.json({
             pending,
