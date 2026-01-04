@@ -880,8 +880,8 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             prisma.requirement.count({ where: { ...where, status: 'REJECTED' } })
         ]);
 
-        // For recent activity, we don't filter by year - we want the most recent regardless
-        const recentWhere: any = { isAsiento: false };
+        // For recent activity, we don't filter by year or isAsiento - show all recent items
+        const recentWhere: any = {};
         if (!isGlobalViewer) {
             if (where.OR) {
                 recentWhere.OR = where.OR;
@@ -889,6 +889,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
                 recentWhere.createdById = userId;
             }
         }
+
 
         // Get recent requirements (without year filter)
         console.log('[Dashboard] Fetching recent activity for user:', userId, 'role:', userRole);
