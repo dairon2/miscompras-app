@@ -298,10 +298,7 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
 
         if (!currentReq) return res.status(404).json({ error: 'Requirement not found' });
 
-        // Security check: USER role can only edit own requirements
-        if (req.user?.role === 'USER' && currentReq.createdById !== req.user.id) {
-            return res.status(403).json({ error: 'No tienes permiso para editar este requerimiento' });
-        }
+
 
         // Budget Deduction Logic
         let budgetAdjustment = 0;
@@ -349,19 +346,11 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
         };
 
         // Prepare data based on role
-        let updateData: any = {};
-        const uploadedAttachments = await processFileUploads(files, 'requirements');
 
-        if (req.user?.role === 'USER') {
-            // USER can ONLY add attachments, nothing else
-            updateData = {
-                attachments: {
-                    create: uploadedAttachments
-                }
-            };
-        } else {
-            // ADMIN/LEADER/etc can update everything
-            updateData = {
+
+        const updatedRequirement = await prisma.requirement.update({
+            where: { id },
+            data: {
                 title,
                 description,
                 quantity,
@@ -381,14 +370,9 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 satisfactionComments: satisfactionComments === 'null' ? null : satisfactionComments,
                 hasMultiplePayments: hasMultiplePayments !== undefined ? (hasMultiplePayments === 'true' || hasMultiplePayments === true) : undefined,
                 attachments: {
-                    create: uploadedAttachments
+                    create: await processFileUploads(files, 'requirements')
                 }
-            };
-        }
-
-        const updatedRequirement = await prisma.requirement.update({
-            where: { id },
-            data: updateData,
+            },
             include: {
                 project: true,
                 area: true,

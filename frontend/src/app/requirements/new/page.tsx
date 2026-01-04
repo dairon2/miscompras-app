@@ -168,47 +168,38 @@ export default function NewRequirementPage() {
 
         setLoading(true);
         try {
-            // First, create the requirements without attachments
-            const response = await api.post("/requirements/mass-create", {
-                requirements: items.map(item => ({
-                    title: item.title,
-                    description: item.description,
-                    quantity: item.quantity,
-                    projectId: item.projectId,
-                    areaId: item.areaId,
-                    budgetId: item.budgetId,
-                    supplierId: item.isManualSupplier ? null : item.supplierId,
-                    manualSupplierName: item.isManualSupplier ? item.manualSupplierName : null
-                }))
-            });
+            // Process each item individually to handle attachments correctly in a single request
+            for (const item of items) {
+                const formData = new FormData();
+                formData.append('title', item.title);
+                formData.append('description', item.description);
+                formData.append('quantity', item.quantity);
+                formData.append('projectId', item.projectId);
+                formData.append('areaId', item.areaId);
+                formData.append('budgetId', item.budgetId);
 
-            // Then, upload attachments for each item that has them
-            const createdRequirements = response.data.requirements || [];
+                if (item.isManualSupplier && item.manualSupplierName) {
+                    formData.append('manualSupplierName', item.manualSupplierName);
+                } else if (item.supplierId) {
+                    formData.append('supplierId', item.supplierId);
+                }
 
-            for (let i = 0; i < items.length; i++) {
-                const item = items[i];
-                const createdReq = createdRequirements[i];
-
-                if (item.attachments && item.attachments.length > 0 && createdReq?.id) {
-                    const formData = new FormData();
+                // Append attachments if any
+                if (item.attachments && item.attachments.length > 0) {
                     item.attachments.forEach(file => {
                         formData.append('attachments', file);
                     });
-
-                    try {
-                        await api.put(`/requirements/${createdReq.id}`, formData, {
-                            headers: { 'Content-Type': 'multipart/form-data' }
-                        });
-                    } catch (attachErr) {
-                        console.error(`Error uploading attachments for ${item.title}:`, attachErr);
-                        // Continue with other uploads even if one fails
-                    }
                 }
+
+                await api.post('/requirements', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
             }
 
-            addToast("Solicitud múltiple creada exitosamente", 'success');
+            addToast("Solicitud creada exitosamente", 'success');
             router.push("/requirements");
         } catch (err: any) {
+            console.error("Error creating requirements:", err);
             addToast("Error al crear la solicitud: " + (err.response?.data?.error || err.message), 'error');
         } finally {
             setLoading(false);
