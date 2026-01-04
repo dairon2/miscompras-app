@@ -7,10 +7,12 @@ import { invoiceService } from '@/services/invoiceService';
 import LoadingButton from '@/components/LoadingButton';
 import { ChevronLeft, Upload, FileText } from 'lucide-react';
 import axios from 'axios';
+import { useToastStore } from '@/store/toastStore';
 
 export default function NewInvoicePage() {
     const { token } = useAuthStore();
     const router = useRouter();
+    const { addToast } = useToastStore();
     const [loading, setLoading] = useState(false);
     const [suppliers, setSuppliers] = useState<any[]>([]);
 
@@ -42,8 +44,14 @@ export default function NewInvoicePage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!file) return alert('Debes adjuntar el PDF de la factura');
-        if (!formData.supplierId) return alert('Selecciona un proveedor');
+        if (!file) {
+            addToast('Debes adjuntar el PDF de la factura', 'error');
+            return;
+        }
+        if (!formData.supplierId) {
+            addToast('Selecciona un proveedor', 'error');
+            return;
+        }
 
         setLoading(true);
         try {
@@ -55,12 +63,12 @@ export default function NewInvoicePage() {
             data.append('file', file);
 
             await invoiceService.createInvoice(token!, data);
-            alert('Factura creada exitosamente');
+            addToast('Factura creada exitosamente', 'success');
             router.push('/invoices');
         } catch (error: any) {
             console.error('Error creating invoice:', error);
             const errorMessage = error.response?.data?.error || error.response?.data?.details || error.message || 'Error al crear la factura';
-            alert(errorMessage);
+            addToast(errorMessage, 'error');
         } finally {
             setLoading(false);
         }
