@@ -185,9 +185,7 @@ export default function RootLayout({
                 </nav>
 
                 <div className="flex items-center gap-6">
-                  {/* ... notifications ... */}
-// ... existing code ...
-                  {/* ... notifications ... */}
+                  {/* Notifications */}
                   <div className="relative" ref={notifRef}>
                     <button
                       onClick={() => setShowNotifs(!showNotifs)}
