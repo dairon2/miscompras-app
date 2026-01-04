@@ -58,6 +58,7 @@ interface Requirement {
     reqCategory: string;
     isAsiento?: boolean;
     createdAt: string;
+    groupId?: number;
 }
 
 export default function RequirementsPage() {
@@ -187,8 +188,10 @@ export default function RequirementsPage() {
     };
 
     const filteredReqs = requirements.filter((r: any) => {
-        const matchesSearch = r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.id.toLowerCase().includes(searchTerm.toLowerCase());
+        const searchText = searchTerm.toLowerCase();
+        const matchesSearch = r.title.toLowerCase().includes(searchText) ||
+            r.id.toLowerCase().includes(searchText) ||
+            (r.groupId && r.groupId.toString().includes(searchText));
         const matchesProc = !filters.procurementStatus || r.procurementStatus === filters.procurementStatus;
         const matchesArea = !filters.areaId || r.areaId === filters.areaId;
         const matchesUser = !filters.createdById || r.createdById === filters.createdById;
@@ -288,7 +291,7 @@ export default function RequirementsPage() {
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Buscar por título o ID de requerimiento..."
+                            placeholder="Buscar por título, ID o número de solicitud..."
                             className="w-full bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold text-sm"
                         />
                     </div>
@@ -460,7 +463,9 @@ export default function RequirementsPage() {
                                                                             </span>
                                                                         )}
                                                                     </div>
-                                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">ID: {req.id.substring(0, 8)}</p>
+                                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">
+                                                                        {req.groupId ? `Solicitud: #${req.groupId}` : `ID: ${req.id.substring(0, 8)}`}
+                                                                    </p>
                                                                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-2 flex justify-between items-center">
                                                                         <span>Estado Solicitud:</span>
                                                                         <span className={`px-2 py-0.5 rounded-full border ${getStatusStyle(req.status)}`}>{getStatusLabel(req.status)}</span>
@@ -647,7 +652,9 @@ function RequirementCard({ req, onClick }: { req: Requirement, onClick: () => vo
                             Asiento
                         </span>
                     )}
-                    <span className="text-[10px] font-black text-gray-300 uppercase">#{req.id?.substring(0, 8)}</span>
+                    <span className="text-[10px] font-black text-gray-300 uppercase">
+                        {req.groupId ? `Solicitud: #${req.groupId}` : `#${req.id?.substring(0, 8)}`}
+                    </span>
                 </div>
             </div>
 
