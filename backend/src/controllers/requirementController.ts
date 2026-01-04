@@ -1140,22 +1140,10 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         const invoiceWhere: any = {};
 
         if (!isGlobalViewer) {
-            if (where.OR) {
-                recentWhere.OR = where.OR;
-            } else {
-                recentWhere.createdById = userId;
-            }
-
-            // Filter budgets for non-admins
-            budgetWhere.OR = [
-                { managerId: userId },
-                { subLeaders: { some: { userId: userId } } }
-            ];
-
-            // Filter invoices
-            invoiceWhere.requirement = {
-                createdById: userId
-            };
+            // Simplified: only user's own items
+            recentWhere.createdById = userId;
+            budgetWhere.managerId = userId; // Simplified - just manager, not subleaders
+            invoiceWhere.requirement = { createdById: userId };
         }
 
         console.log("[Dashboard] Fetching recent items...");
