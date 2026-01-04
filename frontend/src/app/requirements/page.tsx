@@ -496,7 +496,7 @@ export default function RequirementsPage() {
                                                                             </span>
                                                                         )}
                                                                     </div>
-                                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">
+                                                                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-tighter">
                                                                         {req.groupId ? `Solicitud: #${req.groupId}` : `ID: ${req.id.substring(0, 8)}`}
                                                                     </p>
                                                                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mt-2 flex justify-between items-center">
@@ -541,7 +541,7 @@ export default function RequirementsPage() {
                                                                     />
                                                                 )}
                                                                 <div className="flex flex-col">
-                                                                    <span className="text-sm font-black text-gray-900 dark:text-gray-100">
+                                                                    <span className="text-sm font-black text-blue-600 dark:text-blue-400">
                                                                         {req.groupId ? `Solicitud: #${req.groupId}` : `ID: ${req.id.substring(0, 8)}`}
                                                                     </span>
                                                                     <span className="text-[10px] text-gray-400 font-medium">

@@ -880,14 +880,12 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     try {
         const where: any = {
             year: year,
-            isAsiento: false // Usually dashboard focuses on actual requirements
+            isAsiento: false
         };
 
-        // Visibility logic (same as getAllRequirements)
         const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
 
         if (!isGlobalViewer) {
-            // New logic: Include requirements created by user OR related to budgets they manage
             where.OR = [
                 { createdById: userId },
                 {
@@ -900,7 +898,6 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
                 }
             ];
 
-            // Also include directed areas if any (kept from original logic if still relevant, otherwise just the budget rule covers most)
             const directedAreas = await prisma.area.findMany({
                 where: { directorId: userId } as any,
                 select: { id: true }
@@ -911,28 +908,35 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             }
         }
 
-        // Get stats in parallel - stats are filtered by year
         const [pending, approved, rejected] = await Promise.all([
             prisma.requirement.count({ where: { ...where, status: { contains: 'PENDING' } } }),
             prisma.requirement.count({ where: { ...where, status: 'APPROVED' } }),
             prisma.requirement.count({ where: { ...where, status: 'REJECTED' } })
         ]);
 
-        // For recent activity, we don't filter by year or isAsiento - show all recent items
+        // Recent Activity Filters
         const recentWhere: any = {};
+        const budgetWhere: any = {};
+        const invoiceWhere: any = {};
+
         if (!isGlobalViewer) {
             if (where.OR) {
                 recentWhere.OR = where.OR;
             } else {
                 recentWhere.createdById = userId;
             }
+
+            // Filter budgets for non-admins
+            budgetWhere.OR = [
+                { managerId: userId },
+                { subLeaders: { some: { userId: userId } } }
+            ];
+
+            // Filter invoices (linked to visible requirements or budgets) by simplicity lets limit to created requirements
+            invoiceWhere.requirement = {
+                createdById: userId
+            };
         }
-
-
-        // Get recent requirements (without year filter)
-        console.log('[Dashboard] Fetching recent activity for user:', userId, 'role:', userRole);
-        console.log('[Dashboard] isGlobalViewer:', isGlobalViewer);
-        console.log('[Dashboard] recentWhere:', JSON.stringify(recentWhere));
 
         const recentRequirements = await prisma.requirement.findMany({
             where: recentWhere,
@@ -944,10 +948,9 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             orderBy: { createdAt: 'desc' },
             take: 5
         });
-        console.log('[Dashboard] Found requirements:', recentRequirements.length);
 
-        // Get recent budgets
         const recentBudgets = await prisma.budget.findMany({
+            where: budgetWhere,
             include: {
                 project: true,
                 area: true,
@@ -956,10 +959,9 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             orderBy: { createdAt: 'desc' },
             take: 3
         });
-        console.log('[Dashboard] Found budgets:', recentBudgets.length);
 
-        // Get recent invoices
         const recentInvoices = await prisma.invoice.findMany({
+            where: invoiceWhere,
             include: {
                 supplier: true,
                 requirement: { select: { title: true } }
@@ -967,16 +969,14 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             orderBy: { createdAt: 'desc' },
             take: 3
         });
-        console.log('[Dashboard] Found invoices:', recentInvoices.length);
 
-        // Combine all activity into a unified feed
         const allActivity: any[] = [
             ...recentRequirements.map(r => ({
                 id: r.id,
                 type: 'requirement',
                 title: r.title,
                 status: r.status,
-                totalAmount: r.actualAmount || r.totalAmount || 0,
+                totalAmount: Number(r.actualAmount?.toString() || r.estimatedAmount?.toString() || 0),
                 createdAt: r.createdAt,
                 project: r.project?.name,
                 area: r.area?.name,
@@ -987,7 +987,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
                 type: 'budget',
                 title: b.title,
                 status: b.status,
-                totalAmount: b.amount || 0,
+                totalAmount: Number(b.amount?.toString() || 0),
                 createdAt: b.createdAt,
                 project: b.project?.name,
                 area: b.area?.name,
@@ -998,27 +998,24 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
                 type: 'invoice',
                 title: `Factura ${i.invoiceNumber || i.id.substring(0, 8)}`,
                 status: i.status,
-                totalAmount: i.amount || 0,
+                totalAmount: Number(i.amount?.toString() || 0),
                 createdAt: i.createdAt,
                 supplier: i.supplier?.name,
                 requirement: i.requirement?.title
             }))
         ];
 
-        // Sort by createdAt descending and take top 8
         allActivity.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         const recent = allActivity.slice(0, 8);
-        console.log('[Dashboard] Total recent activity items:', recent.length);
 
-
-        // Calculate total amount safely
+        // Sum total amount
         const allStatsReqs = await prisma.requirement.findMany({
             where,
-            select: { actualAmount: true, totalAmount: true }
+            select: { actualAmount: true, estimatedAmount: true }
         });
 
         const totalAmount = allStatsReqs.reduce((acc, req) => {
-            return acc + Number(req.actualAmount || req.totalAmount || 0);
+            return acc + Number(req.actualAmount?.toString() || req.estimatedAmount?.toString() || 0);
         }, 0);
 
         res.json({
