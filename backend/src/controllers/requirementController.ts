@@ -1122,3 +1122,54 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ error: 'Error al crear el asiento', details: error.message });
     }
 };
+
+export const updateMassRequirements = async (req: AuthRequest, res: Response) => {
+    const { ids, updates } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) return res.status(401).json({ error: 'User not authenticated' });
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: 'No requirement IDs provided' });
+    }
+    if (!updates || Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'No updates provided' });
+    }
+
+    try {
+        const allowedUpdates: any = {};
+        if (updates.supplierId !== undefined) allowedUpdates.supplierId = updates.supplierId;
+        if (updates.manualSupplierName !== undefined) allowedUpdates.manualSupplierName = updates.manualSupplierName;
+        if (updates.invoiceNumber !== undefined) allowedUpdates.invoiceNumber = updates.invoiceNumber;
+        if (updates.purchaseOrderNumber !== undefined) allowedUpdates.purchaseOrderNumber = updates.purchaseOrderNumber;
+        if (updates.procurementStatus !== undefined) allowedUpdates.procurementStatus = updates.procurementStatus;
+        if (updates.status !== undefined) allowedUpdates.status = updates.status;
+        if (updates.actualAmount !== undefined) allowedUpdates.actualAmount = updates.actualAmount;
+        if (updates.observations !== undefined) {
+            // If handling observations, consider appending to history or updating a notes field if exists.
+            // For now we will assume simple field updates.
+        }
+
+        const result = await prisma.requirement.updateMany({
+            where: {
+                id: { in: ids }
+            },
+            data: allowedUpdates
+        });
+
+        // Log the mass update
+        if (result.count > 0) {
+            await prisma.historyLog.createMany({
+                data: ids.map((id: string) => ({
+                    action: 'MASS_UPDATE',
+                    requirementId: id,
+                    details: `Updated via mass edit by ${req.user?.email}`
+                }))
+            });
+        }
+
+        res.json({ message: 'Requirements updated successfully', count: result.count });
+    } catch (error: any) {
+        console.error("Mass update error:", error);
+        res.status(500).json({ error: 'Failed to update requirements', details: error.message });
+    }
+};

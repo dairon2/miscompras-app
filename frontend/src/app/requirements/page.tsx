@@ -34,6 +34,7 @@ import { exportRequirements } from "@/lib/excelExport";
 import { useAuthStore } from "@/store/authStore";
 import YearSelector from "@/components/YearSelector";
 import { translateStatus } from "@/lib/translations";
+import BulkEditModal from "@/components/BulkEditModal";
 
 interface Requirement {
     id: string;
@@ -73,6 +74,27 @@ export default function RequirementsPage() {
     const [users, setUsers] = useState([]);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [requirementToDelete, setRequirementToDelete] = useState<any>(null);
+
+    // Bulk Edit State
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+    const isAdminOrLeader = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR'].includes(user?.role || '');
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedIds(requirements.map(r => r.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectOne = (id: string) => {
+        if (selectedIds.includes(id)) {
+            setSelectedIds(selectedIds.filter(sid => sid !== id));
+        } else {
+            setSelectedIds([...selectedIds, id]);
+        }
+    };
 
     // Year filter - default to current year
     const currentYear = new Date().getFullYear();
@@ -441,6 +463,17 @@ export default function RequirementsPage() {
                                                     {isAdmin && <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Creado por</th>}
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Tipo / Área</th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Presupuesto / Categoría</th>
+                                                    <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-wider">
+                                                        {isAdminOrLeader && (
+                                                            <input
+                                                                type="checkbox"
+                                                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 mr-3"
+                                                                onChange={handleSelectAll}
+                                                                checked={requirements.length > 0 && selectedIds.length === requirements.length}
+                                                            />
+                                                        )}
+                                                        ID
+                                                    </th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Monto</th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado Trámite</th>
                                                     <th className="px-6 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Acciones</th>
@@ -495,6 +528,27 @@ export default function RequirementsPage() {
                                                         <td className="px-6 py-6 text-left">
                                                             <p className="font-bold text-xs text-primary-600">{req.budget?.title || 'Sin presupuesto'}</p>
                                                             <p className="text-[10px] font-bold text-gray-400">{req.budget?.category?.name || 'Sin categoría'}</p>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="flex items-center gap-3">
+                                                                {isAdminOrLeader && (
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                                                        checked={selectedIds.includes(req.id)}
+                                                                        onChange={() => handleSelectOne(req.id)}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    />
+                                                                )}
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-sm font-black text-gray-900 dark:text-gray-100">
+                                                                        {req.groupId ? `Solicitud: #${req.groupId}` : `ID: ${req.id.substring(0, 8)}`}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-gray-400 font-medium">
+                                                                        {new Date(req.createdAt).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
                                                         </td>
                                                         <td className="px-6 py-6 text-left font-black text-sm">
                                                             {req.actualAmount && parseFloat(req.actualAmount) > 0
@@ -557,6 +611,46 @@ export default function RequirementsPage() {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Bulk Actions Floating Bar */}
+            <AnimatePresence>
+                {selectedIds.length > 0 && isAdminOrLeader && (
+                    <motion.div
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 50, opacity: 0 }}
+                        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 bg-white dark:bg-slate-800 shadow-2xl rounded-2xl p-2 px-6 flex items-center gap-4 border border-gray-100 dark:border-gray-700"
+                    >
+                        <span className="text-sm font-bold text-gray-600 dark:text-gray-300">
+                            {selectedIds.length} seleccionados
+                        </span>
+                        <div className="h-6 w-px bg-gray-200 dark:bg-gray-600" />
+                        <button
+                            onClick={() => setIsBulkEditOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-bold text-sm transition-colors"
+                        >
+                            <FileSpreadsheet size={16} />
+                            Editar Detalles
+                        </button>
+                        <button
+                            onClick={() => setSelectedIds([])}
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 transition-colors"
+                        >
+                            <XCircle size={18} />
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <BulkEditModal
+                isOpen={isBulkEditOpen}
+                onClose={() => setIsBulkEditOpen(false)}
+                selectedIds={selectedIds}
+                onSuccess={() => {
+                    fetchRequirements();
+                    setSelectedIds([]);
+                }}
+            />
 
             {/* Delete Confirmation Modal */}
             <AnimatePresence>

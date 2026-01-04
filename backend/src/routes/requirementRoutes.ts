@@ -15,7 +15,8 @@ import {
     rejectRequirementGroup,
     getRequirementGroups,
     getAvailableYears,
-    getDashboardStats
+    getDashboardStats,
+    updateMassRequirements
 } from '../controllers/requirementController';
 import { authMiddleware, roleCheck } from '../middlewares/auth';
 import multer from 'multer';
@@ -44,6 +45,7 @@ router.post('/asientos', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR'
 // Requirements Routes
 router.post('/', upload.array('attachments'), createRequirement);
 router.post('/mass-create', createMassRequirements);
+router.put('/mass-update', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), updateMassRequirements);
 router.get('/me', getMyRequirements);
 router.get('/dashboard-stats', getDashboardStats);
 router.get('/all', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getAllRequirements);
