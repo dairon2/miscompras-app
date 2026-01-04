@@ -55,6 +55,7 @@ interface Requirement {
     areaId: string;
     supplierId?: string;
     manualSupplierName?: string;
+    suggestedSupplier?: string;
     attachments: Attachment[];
     purchaseOrderNumber?: string;
     invoiceNumber?: string;
@@ -161,7 +162,8 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                 reqCategory: response.data.reqCategory,
                 deliveryDate: response.data.deliveryDate ? response.data.deliveryDate.split('T')[0] : '',
                 receivedDate: response.data.receivedDate ? response.data.receivedDate.split('T')[0] : '',
-                receivedAtSatisfaction: response.data.receivedAtSatisfaction
+                receivedAtSatisfaction: response.data.receivedAtSatisfaction,
+                suggestedSupplier: response.data.suggestedSupplier || ''
             });
             setStatusForm({
                 status: response.data.status,
@@ -553,6 +555,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                 highlight={!!requirement?.actualAmount}
                             />
                             <InfoItem icon={<Package />} label="Proveedor" value={requirement.supplier?.name || requirement.manualSupplierName || "No especificado"} />
+                            <InfoItem icon={<Building className="text-gray-400" />} label="Proveedor Sugerido" value={requirement.suggestedSupplier || "N/A"} />
                             {requirement.invoiceNumber && (
                                 <InfoItem icon={<FileText className="text-purple-500" />} label="Factura" value={requirement.invoiceNumber} />
                             )}
@@ -761,6 +764,16 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                                 className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
                                             />
                                         </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Proveedor Sugerido</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.suggestedSupplier || ''}
+                                            readOnly
+                                            className="w-full bg-gray-100 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-medium text-gray-500 cursor-not-allowed outline-none"
+                                        />
                                     </div>
 
                                     <div className="space-y-2">
