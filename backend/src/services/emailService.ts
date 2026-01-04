@@ -4,9 +4,12 @@ import { EmailClient, EmailMessage } from '@azure/communication-email';
 const getEmailClient = () => {
     const connectionString = process.env.AZURE_COMMUNICATION_CONNECTION_STRING;
     if (!connectionString) {
-        console.log('Azure Email not configured, skipping email send');
+        console.log('[Email] Azure Email not configured, skipping email send');
         return null;
     }
+    // Log the endpoint to diagnose production issues
+    const endpointMatch = connectionString.match(/endpoint=([^;]+)/i);
+    console.log(`[Email] ACS Endpoint: ${endpointMatch ? endpointMatch[1] : 'unknown'}`);
     return new EmailClient(connectionString);
 };
 
