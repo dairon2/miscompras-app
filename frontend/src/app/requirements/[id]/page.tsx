@@ -677,19 +677,21 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             <History className="text-primary-500" size={20} />
                             <h3 className="text-xl font-black tracking-tight">Historial</h3>
                         </div>
-                        <div className="space-y-8 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100 dark:before:bg-gray-700">
-                            {requirement.logs?.map((log) => (
-                                <div key={log.id} className="relative pl-10">
-                                    <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-white dark:bg-slate-800 border-2 border-primary-500 z-10 flex items-center justify-center">
-                                        <div className="w-2 h-2 rounded-full bg-primary-500"></div>
+                        <div className="space-y-8 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100 dark:before:bg-gray-700 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                            {[...(requirement.logs || [])]
+                                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                .map((log) => (
+                                    <div key={log.id} className="relative pl-10">
+                                        <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-white dark:bg-slate-800 border-2 border-primary-500 z-10 flex items-center justify-center">
+                                            <div className="w-2 h-2 rounded-full bg-primary-500"></div>
+                                        </div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-primary-600 mb-1">
+                                            {new Date(log.createdAt).toLocaleString()}
+                                        </p>
+                                        <p className="font-bold text-sm mb-1">{translateAction(log.action)}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{translateLogDetails(log.details)}</p>
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary-600 mb-1">
-                                        {new Date(log.createdAt).toLocaleString()}
-                                    </p>
-                                    <p className="font-bold text-sm mb-1">{translateAction(log.action)}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{translateLogDetails(log.details)}</p>
-                                </div>
-                            ))}
+                                ))}
                         </div>
                     </div>
                 </div>
