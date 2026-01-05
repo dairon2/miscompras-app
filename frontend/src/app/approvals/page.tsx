@@ -156,7 +156,7 @@ export default function ApprovalsPage() {
         try {
             if (commentModal.isAdj) {
                 const endpoint = commentModal.type === 'APPROVE' ? 'approve' : 'reject';
-                await api.patch(`/ adjustments / ${commentModal.id}/${endpoint}`, {
+                await api.patch(`/adjustments/${commentModal.id}/${endpoint}`, {
                     comment: comments
                 });
                 addToast(`Ajuste ${commentModal.type === 'APPROVE' ? 'aprobado' : 'rechazado'} correctamente`, "success");
