@@ -32,35 +32,31 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
         // Process attachments first using the new helper
         const attachmentData = await processFileUploads(files, 'requirements');
 
-        const requirement = await prisma.requirement.create({
-            data: {
-                title,
-                description,
-                quantity: quantity || "1",
-                manualSupplierName: manualSupplierName || null,
-                suggestedSupplier: suggestedSupplier || null,
-                projectId,
-                areaId,
-                budgetId: budgetId || null,
-                supplierId: supplierId || null,
-                createdById: userId,
-                year: new Date().getFullYear(),
-                status: 'PENDING_APPROVAL',
-                attachments: {
-                    create: attachmentData
-                }
-            },
-            include: {
-                attachments: true
+        // Use the service to create a group (even for a single requirement)
+        // This ensures PDF generation and proper structure
+        const result = await createRequirementGroup(userId, [{
+            title,
+            description,
+            quantity: quantity || "1",
+            manualSupplierName: manualSupplierName || null,
+            suggestedSupplier: suggestedSupplier || null,
+            projectId,
+            areaId,
+            budgetId: budgetId || null,
+            supplierId: supplierId || null,
+            attachments: {
+                create: attachmentData
             }
-        });
+        }]);
+
+        const requirement = result.requirements[0];
 
         // Log the creation
         await prisma.historyLog.create({
             data: {
                 action: 'CREATED',
                 requirementId: requirement.id,
-                details: `Requirement created by ${req.user?.email} with ${files?.length || 0} attachments`
+                details: `Requirement created by ${req.user?.email} with ${attachmentData.length} attachments (Group ${result.group.id})`
             }
         });
 
