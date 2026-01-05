@@ -289,13 +289,13 @@ npm run test
 
 ## 📄 Licencia
 
-Este proyecto es propiedad del **Museo de Antioquia**. Todos los derechos reservados.
+Este proyecto es propiedad del **Dairo Moreno Renteria**. Todos los derechos reservados.
 
 ---
 
 ## 👥 Equipo de Desarrollo
 
-- **Desarrollo**: Dairon García
+- **Desarrollo**: Dairo Moreno
 - **Fecha**: Enero 2026
 
 ---
