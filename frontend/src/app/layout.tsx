@@ -182,6 +182,9 @@ export default function RootLayout({
                     />
                   )}
                   <NavItem icon={<FileText size={14} />} label="Facturas" href="/invoices" active={pathname === "/invoices" || pathname.startsWith("/invoices/")} />
+                  {['ADMIN', 'DIRECTOR', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'].includes(user?.role || '') && (
+                    <NavItem icon={<Briefcase size={14} />} label="Informes" href="/reports" active={pathname === "/reports" || pathname.startsWith("/reports/")} />
+                  )}
                 </nav>
 
                 <div className="flex items-center gap-6">

@@ -9,7 +9,7 @@ import { authMiddleware, roleCheck } from './middlewares/auth';
 import authRoutes from './routes/authRoutes';
 import requirementRoutes from './routes/requirementRoutes';
 import notificationRoutes from './routes/notificationRoutes';
-import reportRoutes from './routes/reportRoutes';
+import reportsRoutes from './routes/reportsRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import userRoutes from './routes/userRoutes';
 import adminRoutes from './routes/adminRoutes';
@@ -216,7 +216,7 @@ app.get('/api/suppliers/:id', authMiddleware, async (req, res) => {
 // Protected Routes
 app.use('/api/requirements', authMiddleware, requirementRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
-app.use('/api/reports', authMiddleware, reportRoutes);
+app.use('/api/reports', authMiddleware, reportsRoutes);
 app.use('/api/payments', authMiddleware, paymentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
