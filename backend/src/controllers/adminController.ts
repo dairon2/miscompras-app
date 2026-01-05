@@ -425,7 +425,37 @@ export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
             'contacto': 'contactName',
             'direccion': 'address',
             'address': 'address',
-            'dir': 'address'
+            'dir': 'address',
+            // New fields
+            'tipo': 'supplierType',
+            'type': 'supplierType',
+            'tipoproveedor': 'supplierType',
+            'supplier_type': 'supplierType',
+            'suppliertype': 'supplierType',
+            'criticidad': 'criticality',
+            'criticality': 'criticality',
+            'riesgo': 'criticality',
+            'risk': 'criticality'
+        };
+
+        // Helper to map string values to enums
+        const mapSupplierType = (value: string): 'SUPPLIER' | 'SERVICE_PROVIDER' => {
+            const normalized = value?.toLowerCase().trim() || '';
+            if (normalized.includes('servicio') || normalized.includes('service') || normalized === 'prestador') {
+                return 'SERVICE_PROVIDER';
+            }
+            return 'SUPPLIER';
+        };
+
+        const mapCriticality = (value: string): 'LOW' | 'MEDIUM' | 'HIGH' => {
+            const normalized = value?.toLowerCase().trim() || '';
+            if (normalized === 'alta' || normalized === 'high' || normalized === '3') {
+                return 'HIGH';
+            }
+            if (normalized === 'media' || normalized === 'medium' || normalized === 'medio' || normalized === '2') {
+                return 'MEDIUM';
+            }
+            return 'LOW';
         };
 
         for (const rawSupplier of suppliers) {
@@ -485,7 +515,9 @@ export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
                         phone: mappedSupplier.phone || null,
                         contactPhone: mappedSupplier.contactPhone || null,
                         contactName: mappedSupplier.contactName || null,
-                        address: mappedSupplier.address || null
+                        address: mappedSupplier.address || null,
+                        supplierType: mappedSupplier.supplierType ? mapSupplierType(mappedSupplier.supplierType) : 'SUPPLIER',
+                        criticality: mappedSupplier.criticality ? mapCriticality(mappedSupplier.criticality) : 'LOW'
                     }
                 });
 

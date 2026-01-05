@@ -63,20 +63,33 @@ model Area {
 }
 
 model Supplier {
-  id           String        @id @default(uuid())
+  id           String           @id @default(uuid())
   name         String
-  taxId        String?       @unique
+  taxId        String?          @unique
   contactEmail String?
   contactPhone String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
   address      String?
   contactName  String?
   email        String?
-  nit          String?       @unique
+  nit          String?          @unique
   phone        String?
+  supplierType SupplierType     @default(SUPPLIER)
+  criticality  Criticality      @default(LOW)
   requirements Requirement[]
   invoices     Invoice[]
+}
+
+enum SupplierType {
+  SUPPLIER          // Proveedor
+  SERVICE_PROVIDER  // Prestador de servicio
+}
+
+enum Criticality {
+  LOW     // Baja
+  MEDIUM  // Media
+  HIGH    // Alta
 }
 
 model Category {
