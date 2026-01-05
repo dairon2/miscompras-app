@@ -81,7 +81,8 @@ export default function SuppliersPage() {
 
         try {
             // Dynamic import of xlsx library
-            const XLSX = (await import('xlsx')).default;
+            const xlsxModule = await import('xlsx');
+            const XLSX = xlsxModule.default || xlsxModule;
 
             const reader = new FileReader();
             reader.onload = async (e) => {
@@ -383,8 +384,8 @@ export default function SuppliersPage() {
                             {/* File Drop Zone */}
                             <div
                                 className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${importFile
-                                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
-                                        : 'border-gray-300 hover:border-gray-400'
+                                    ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
+                                    : 'border-gray-300 hover:border-gray-400'
                                     }`}
                             >
                                 {importFile ? (
@@ -425,8 +426,8 @@ export default function SuppliersPage() {
                             {/* Import Result */}
                             {importResult && (
                                 <div className={`mt-6 p-4 rounded-xl ${importResult.error
-                                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600'
-                                        : 'bg-green-50 dark:bg-green-900/20 text-green-600'
+                                    ? 'bg-red-50 dark:bg-red-900/20 text-red-600'
+                                    : 'bg-green-50 dark:bg-green-900/20 text-green-600'
                                     }`}>
                                     {importResult.error ? (
                                         <p className="font-bold">{importResult.error}</p>
