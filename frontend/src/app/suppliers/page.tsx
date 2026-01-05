@@ -25,7 +25,9 @@ export default function SuppliersPage() {
         contactName: "",
         email: "",
         phone: "",
-        address: ""
+        address: "",
+        supplierType: "SUPPLIER" as "SUPPLIER" | "SERVICE_PROVIDER",
+        criticality: "LOW" as "LOW" | "MEDIUM" | "HIGH"
     });
 
     // Import modal state
@@ -64,7 +66,7 @@ export default function SuppliersPage() {
         try {
             await api.post("/admin/suppliers", formData);
             setShowCreateModal(false);
-            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "" });
+            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW" });
             fetchSuppliers();
             alert("Proveedor registrado exitosamente");
         } catch (error) {
@@ -341,6 +343,32 @@ export default function SuppliersPage() {
                                                 placeholder="Calle 00 # 00-00"
                                             />
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Tipo de Proveedor</label>
+                                        <select
+                                            value={formData.supplierType}
+                                            onChange={e => setFormData({ ...formData, supplierType: e.target.value as "SUPPLIER" | "SERVICE_PROVIDER" })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all appearance-none cursor-pointer"
+                                        >
+                                            <option value="SUPPLIER">Proveedor</option>
+                                            <option value="SERVICE_PROVIDER">Prestador de Servicio</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Criticidad</label>
+                                        <select
+                                            value={formData.criticality}
+                                            onChange={e => setFormData({ ...formData, criticality: e.target.value as "LOW" | "MEDIUM" | "HIGH" })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all appearance-none cursor-pointer"
+                                        >
+                                            <option value="LOW">Baja</option>
+                                            <option value="MEDIUM">Media</option>
+                                            <option value="HIGH">Alta</option>
+                                        </select>
                                     </div>
                                 </div>
 
