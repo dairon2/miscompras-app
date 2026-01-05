@@ -123,8 +123,8 @@ export default function AdminPage() {
         setEditingItem(null);
         setFormData(getEmptyForm());
         setShowModal(true);
-        // Load users for director selection when editing areas
-        if (activeTab === 'areas' && usersList.length === 0) {
+        // Load users for director selection when editing areas or projects
+        if ((activeTab === 'areas' || activeTab === 'projects') && usersList.length === 0) {
             api.get('/admin/users').then(res => setUsersList(res.data)).catch(console.error);
         }
     };
@@ -138,6 +138,11 @@ export default function AdminPage() {
             if (usersList.length === 0) {
                 api.get('/admin/users').then(res => setUsersList(res.data)).catch(console.error);
             }
+        } else if (activeTab === 'projects') {
+            setFormData({ ...item, funderId: item.funder?.id || '', leaderId: item.leader?.id || '' });
+            if (usersList.length === 0) {
+                api.get('/admin/users').then(res => setUsersList(res.data)).catch(console.error);
+            }
         } else {
             setFormData({ ...item });
         }
@@ -147,7 +152,7 @@ export default function AdminPage() {
     const getEmptyForm = () => {
         switch (activeTab) {
             case 'areas': return { name: '', directorId: '' };
-            case 'projects': return { name: '', code: '', description: '' };
+            case 'projects': return { name: '', code: '', description: '', funderId: '', leaderId: '' };
             case 'categories': return { name: '', code: '', description: '' };
             case 'suppliers': return { name: '', nit: '', contactName: '', email: '', phone: '', address: '' };
             default: return {};
@@ -590,6 +595,8 @@ export default function AdminPage() {
                                                 <>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Código</th>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Financiador</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Líder</th>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Requerimientos</th>
                                                 </>
                                             )}
@@ -684,6 +691,20 @@ export default function AdminPage() {
                                                                 </span>
                                                             </td>
                                                             <td className="px-6 py-4 font-bold">{item.name}</td>
+                                                            <td className="px-6 py-4">
+                                                                {item.funder ? (
+                                                                    <span className="text-sm font-bold text-gray-600 dark:text-gray-300">{item.funder.name}</span>
+                                                                ) : (
+                                                                    <span className="text-xs text-gray-400 italic">Sin asignar</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                {item.leader ? (
+                                                                    <span className="text-sm font-bold text-gray-600 dark:text-gray-300">{item.leader.name}</span>
+                                                                ) : (
+                                                                    <span className="text-xs text-gray-400 italic">Sin asignar</span>
+                                                                )}
+                                                            </td>
                                                             <td className="px-6 py-4">
                                                                 <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
                                                                     {item._count?.requirements || 0}
@@ -855,9 +876,39 @@ export default function AdminPage() {
                                                 value={formData.description || ''}
                                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                                 className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none resize-none"
-                                                rows={3}
+                                                rows={2}
                                                 placeholder="Descripción opcional"
                                             />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-gray-600">Financiador</label>
+                                                <select
+                                                    value={formData.funderId || ''}
+                                                    onChange={(e) => setFormData({ ...formData, funderId: e.target.value })}
+                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                >
+                                                    <option value="">Sin financiador asignado</option>
+                                                    {usersList.map((u: any) => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                                                    ))}
+                                                </select>
+                                                <p className="text-xs text-gray-400">Usuario responsable del financiamiento</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-gray-600">Líder del Proyecto</label>
+                                                <select
+                                                    value={formData.leaderId || ''}
+                                                    onChange={(e) => setFormData({ ...formData, leaderId: e.target.value })}
+                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                >
+                                                    <option value="">Sin líder asignado</option>
+                                                    {usersList.map((u: any) => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                                                    ))}
+                                                </select>
+                                                <p className="text-xs text-gray-400">Usuario que lidera el proyecto</p>
+                                            </div>
                                         </div>
                                     </>
                                 )}

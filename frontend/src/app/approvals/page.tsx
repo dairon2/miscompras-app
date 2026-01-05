@@ -300,12 +300,27 @@ export default function ApprovalsPage() {
                                                     </span>
                                                 </div>
                                                 <h3 className="text-xl font-black">Compuesto por {group.requirements.length} ítems</h3>
-                                                <div className="flex items-center gap-4 mt-2">
+                                                <div className="flex items-center gap-4 mt-2 flex-wrap">
                                                     <div className="flex items-center gap-2 text-xs text-gray-500 border-r border-gray-100 dark:border-gray-700 pr-4">
                                                         <User size={14} className="text-primary-500" /> {group.creator.name}
                                                     </div>
-                                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500 border-r border-gray-100 dark:border-gray-700 pr-4">
                                                         <Clock size={14} className="text-primary-500" /> {new Date(group.createdAt).toLocaleDateString()}
+                                                    </div>
+                                                    {/* Indicadores de Aprobación */}
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${group.requirements.every((r: Requirement) => r.coordinatorApproval)
+                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                            }`}>
+                                                            Coordinación: {group.requirements.every((r: Requirement) => r.coordinatorApproval) ? 'SÍ' : 'NO'}
+                                                        </span>
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${group.requirements.every((r: Requirement) => r.directorApproval)
+                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                            }`}>
+                                                            Dirección: {group.requirements.every((r: Requirement) => r.directorApproval) ? 'SÍ' : 'NO'}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
