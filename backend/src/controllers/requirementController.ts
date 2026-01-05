@@ -682,16 +682,23 @@ export const approveRequirementGroup = async (req: AuthRequest, res: Response) =
     const userId = req.user?.id;
 
     try {
-        // Handle Individual Requirements (Virtual Group 0)
-        if (id === '0') {
+        // Handle Individual Requirements by Creator (Virtual Group)
+        if (id === 'individual') {
+            const { creatorId } = req.body;
+            if (!creatorId) {
+                return res.status(400).json({ error: 'Creator ID is required for individual approval' });
+            }
+
             const where: any = {
                 status: 'PENDING_APPROVAL',
-                groupId: null
+                groupId: null,
+                createdById: creatorId
             };
 
             const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
 
             if (!isGlobalViewer) {
+                // ... existing access control logic ...
                 const directedAreas = await prisma.area.findMany({
                     where: { directorId: userId } as any,
                     select: { id: true }
@@ -854,15 +861,23 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
     const userId = req.user?.id;
 
     try {
-        if (id === '0') {
+        // Handle Individual Requirements by Creator (Virtual Group)
+        if (id === 'individual') {
+            const { creatorId } = req.body;
+            if (!creatorId) {
+                return res.status(400).json({ error: 'Creator ID is required for individual rejection' });
+            }
+
             const where: any = {
                 status: 'PENDING_APPROVAL',
-                groupId: null
+                groupId: null,
+                createdById: creatorId
             };
 
             const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
 
             if (!isGlobalViewer) {
+                // ... existing access control logic ...
                 const directedAreas = await prisma.area.findMany({
                     where: { directorId: userId } as any,
                     select: { id: true }
@@ -1037,16 +1052,29 @@ export const getRequirementGroups = async (req: AuthRequest, res: Response) => {
 
         const result = Array.from(groupsMap.values());
 
-        // Add individual requirements as a separate group if any
-        if (individualReqs.length > 0) {
-            result.push({
-                id: 0, // ID 0 for "Individual/Miscellaneous"
-                creator: { id: 'system', name: 'Solicitudes Individuales', email: '' },
-                pdfUrl: null,
-                createdAt: new Date().toISOString(),
-                requirements: individualReqs
-            });
-        }
+        // Group individual requirements by creator
+        const creatorGroups = new Map<string, any[]>();
+        individualReqs.forEach(req => {
+            if (!creatorGroups.has(req.createdById)) {
+                creatorGroups.set(req.createdById, []);
+            }
+            creatorGroups.get(req.createdById)?.push(req);
+        });
+
+        // Add virtual groups for individual requirements
+        let virtualGroupId = -1;
+        creatorGroups.forEach((reqs, creatorId) => {
+            if (reqs.length > 0) {
+                const firstReq = reqs[0];
+                result.push({
+                    id: virtualGroupId--, // Use negative IDs for virtual groups
+                    creator: firstReq.createdBy,
+                    pdfUrl: null,
+                    createdAt: firstReq.createdAt,
+                    requirements: reqs
+                });
+            }
+        });
 
         res.json(result);
     } catch (error: any) {

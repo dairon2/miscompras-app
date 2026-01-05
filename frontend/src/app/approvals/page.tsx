@@ -28,7 +28,7 @@ interface Requirement {
 
 interface Group {
     id: number;
-    creator: { name: string; email: string };
+    creator: { id: string; name: string; email: string };
     pdfUrl: string | null;
     createdAt: string;
     requirements: Requirement[];
@@ -63,7 +63,7 @@ export default function ApprovalsPage() {
     const [loading, setLoading] = useState(true);
     const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
     const [expandedAdj, setExpandedAdj] = useState<string | null>(null);
-    const [commentModal, setCommentModal] = useState<{ id: number | string, type: 'APPROVE' | 'REJECT', isAdj?: boolean } | null>(null);
+    const [commentModal, setCommentModal] = useState<{ id: number | string, type: 'APPROVE' | 'REJECT', isAdj?: boolean, creatorId?: string } | null>(null);
     const [comments, setComments] = useState('');
     const [processing, setProcessing] = useState(false);
     const [filterStatus, setFilterStatus] = useState<'pending' | 'all'>('pending');
@@ -162,9 +162,19 @@ export default function ApprovalsPage() {
                 addToast(`Ajuste ${commentModal.type === 'APPROVE' ? 'aprobado' : 'rechazado'} correctamente`, "success");
             } else {
                 const endpoint = commentModal.type === 'APPROVE' ? 'approve' : 'reject';
-                await api.post(`/requirements/group/${commentModal.id}/${endpoint}`, {
-                    comments
-                });
+
+                // Handle virtual groups (negative IDs)
+                if (typeof commentModal.id === 'number' && commentModal.id < 0) {
+                    await api.post(`/requirements/group/individual/${endpoint}`, {
+                        comments,
+                        creatorId: commentModal.creatorId
+                    });
+                } else {
+                    await api.post(`/requirements/group/${commentModal.id}/${endpoint}`, {
+                        comments
+                    });
+                }
+
                 addToast(`Solicitud ${commentModal.type === 'APPROVE' ? 'aprobada' : 'rechazada'} correctamente`, "success");
             }
             setCommentModal(null);
@@ -286,7 +296,7 @@ export default function ApprovalsPage() {
                                                 <div className="flex items-center gap-3 mb-1">
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Solicitud #{group.id}</span>
                                                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${getGroupStatus(group) === 'PENDING_APPROVAL' ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}>
-                                                        {getGroupStatus(group)}
+                                                        {getGroupStatus(group) === 'PENDING_APPROVAL' ? 'Pendiente' : getGroupStatus(group) === 'APPROVED' ? 'Aprobado' : 'Rechazado'}
                                                     </span>
                                                 </div>
                                                 <h3 className="text-xl font-black">Compuesto por {group.requirements.length} ítems</h3>
@@ -318,13 +328,13 @@ export default function ApprovalsPage() {
                                                 </div>
                                             )}
                                             <button
-                                                onClick={() => setCommentModal({ id: group.id, type: 'REJECT' })}
+                                                onClick={() => setCommentModal({ id: group.id, type: 'REJECT', creatorId: group.creator.id })}
                                                 className="px-6 py-4 bg-red-50 text-red-600 rounded-2xl font-black text-xs hover:bg-red-100 transition-colors uppercase tracking-widest"
                                             >
                                                 Rechazar
                                             </button>
                                             <button
-                                                onClick={() => setCommentModal({ id: group.id, type: 'APPROVE' })}
+                                                onClick={() => setCommentModal({ id: group.id, type: 'APPROVE', creatorId: group.creator.id })}
                                                 className="px-6 py-4 bg-primary-600 text-white rounded-2xl font-black text-xs hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all uppercase tracking-widest"
                                             >
                                                 Aprobar
