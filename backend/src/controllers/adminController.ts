@@ -474,12 +474,12 @@ export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
                     }
                 }
 
-                // Create supplier
+                // Create supplier - ensure empty strings become null for unique fields
                 await prisma.supplier.create({
                     data: {
                         name: mappedSupplier.name,
-                        nit: mappedSupplier.nit || null,
-                        taxId: mappedSupplier.taxId || null,
+                        nit: mappedSupplier.nit && mappedSupplier.nit.trim() !== '' ? mappedSupplier.nit : null,
+                        taxId: mappedSupplier.taxId && mappedSupplier.taxId.trim() !== '' ? mappedSupplier.taxId : null,
                         email: mappedSupplier.email || null,
                         contactEmail: mappedSupplier.contactEmail || null,
                         phone: mappedSupplier.phone || null,
@@ -492,7 +492,13 @@ export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
                 results.success++;
             } catch (err: any) {
                 results.errors++;
-                results.details.push(`Error: ${err.message}`);
+                // Handle Prisma unique constraint violation
+                if (err.code === 'P2002') {
+                    results.duplicates++;
+                    results.details.push(`Duplicado: ${rawSupplier.name || 'Sin nombre'} (${err.meta?.target || 'campo único'})`);
+                } else {
+                    results.details.push(`Error en ${rawSupplier.name || 'Sin nombre'}: ${err.message}`);
+                }
             }
         }
 
