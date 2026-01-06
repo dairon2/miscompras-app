@@ -14,7 +14,7 @@ interface Project {
     id: string;
     name: string;
     code: string;
-    leader?: { id: string; name: string; email: string };
+    leader?: { id: string; name: string; email: string; areaId?: string };
 }
 interface Area { id: string; name: string }
 interface Category { id: string; name: string; code: string }
@@ -114,7 +114,7 @@ export default function NewBudgetPage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // Auto-fill code and managerId when project is selected
+    // Auto-fill code, managerId, and areaId when project is selected
     const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const projectId = e.target.value;
         const selectedProject = projects.find(p => p.id === projectId);
@@ -123,7 +123,8 @@ export default function NewBudgetPage() {
             ...prev,
             projectId,
             code: selectedProject?.code || '',
-            managerId: selectedProject?.leader?.id || ''
+            managerId: selectedProject?.leader?.id || '',
+            areaId: (selectedProject?.leader as any)?.areaId || prev.areaId // Auto-fill area from leader's area
         }));
     };
 

@@ -100,7 +100,8 @@ app.get('/api/projects', auth_1.authMiddleware, async (req, res) => {
                     select: {
                         id: true,
                         name: true,
-                        email: true
+                        email: true,
+                        areaId: true
                     }
                 }
             }

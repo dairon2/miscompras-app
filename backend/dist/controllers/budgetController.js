@@ -531,6 +531,23 @@ const createMassBudgets = async (req, res) => {
                 budgetCode = `BUD-${year || new Date().getFullYear()}-${Date.now().toString().slice(-4)}-${suffix}`;
             }
             try {
+                // Check for existing budget with same unique combination
+                const budgetYear = year || new Date().getFullYear();
+                const existingBudget = await index_1.prisma.budget.findFirst({
+                    where: {
+                        projectId,
+                        areaId,
+                        categoryId,
+                        year: budgetYear
+                    }
+                });
+                if (existingBudget) {
+                    errors.push({
+                        title: title || 'Sin título',
+                        error: `Ya existe un presupuesto para esta combinación de Proyecto, Área, Categoría y Año (${budgetYear}). ID existente: ${existingBudget.id}`
+                    });
+                    continue; // Skip to next budget item
+                }
                 const newBudget = await index_1.prisma.budget.create({
                     data: {
                         title: (budgets.length > 1) ? `${title}` : title, // Keep original title
@@ -538,7 +555,7 @@ const createMassBudgets = async (req, res) => {
                         code: budgetCode,
                         amount: parseFloat(amount),
                         available: parseFloat(amount),
-                        year: year || new Date().getFullYear(),
+                        year: budgetYear,
                         expirationDate: expirationDate ? new Date(expirationDate) : null,
                         status: 'PENDING',
                         projectId,
