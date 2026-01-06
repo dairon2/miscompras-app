@@ -129,8 +129,8 @@ export default function NewBudgetPage() {
 
     const addItem = () => {
         // Validate required fields (title removed - auto-generated)
-        if (!formData.amount || !formData.projectId || !formData.areaId) {
-            addToast('Completa los campos obligatorios: Proyecto, Área y Monto', 'warning');
+        if (!formData.amount || !formData.projectId || !formData.areaId || !formData.categoryId) {
+            addToast('Completa los campos obligatorios: Proyecto, Área, Categoría y Monto', 'warning');
             return;
         }
 
@@ -328,7 +328,7 @@ export default function NewBudgetPage() {
                                 {/* 3. Categoría */}
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">
-                                        Rubro / Categoría
+                                        Rubro / Categoría *
                                     </label>
                                     <select
                                         name="categoryId"

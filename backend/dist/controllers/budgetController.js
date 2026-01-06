@@ -182,8 +182,8 @@ const createBudget = async (req, res) => {
             return res.status(403).json({ error: 'Solo el DIRECTOR puede crear presupuestos' });
         }
         const { title, description, code, amount, projectId, areaId, categoryId, managerId, subLeaders, year, expirationDate } = req.body;
-        if (!title || !amount || !projectId || !areaId) {
-            return res.status(400).json({ error: 'Título, monto, proyecto y área son requeridos' });
+        if (!title || !amount || !projectId || !areaId || !categoryId) {
+            return res.status(400).json({ error: 'Título, monto, proyecto, área y categoría son requeridos' });
         }
         // Generate or validate unique code
         let budgetCode = code;
@@ -208,7 +208,7 @@ const createBudget = async (req, res) => {
                 status: 'PENDING',
                 projectId,
                 areaId,
-                categoryId: categoryId || null,
+                categoryId,
                 managerId: managerId || null,
                 createdById: userId,
                 subLeaders: subLeaders?.length > 0 ? {
@@ -288,7 +288,11 @@ const createBudget = async (req, res) => {
     }
     catch (error) {
         console.error('Error creating budget:', error);
-        res.status(500).json({ error: 'Error al crear presupuesto' });
+        // Better error handling for unique constraint
+        if (error.code === 'P2002') {
+            return res.status(400).json({ error: 'Ya existe un presupuesto con esta combinación de Proyecto, Área, Categoría y Año.' });
+        }
+        res.status(500).json({ error: 'Error al crear presupuesto: ' + (error.message || 'Error desconocido') });
     }
 };
 exports.createBudget = createBudget;
@@ -321,7 +325,7 @@ const updateBudget = async (req, res) => {
                 available: amount ? newAvailable : undefined,
                 projectId,
                 areaId,
-                categoryId: categoryId || null,
+                category: categoryId ? { connect: { id: categoryId } } : undefined,
                 managerId: managerId || null,
                 version: { increment: 1 }
             }

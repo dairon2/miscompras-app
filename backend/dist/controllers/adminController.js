@@ -107,13 +107,6 @@ const getProjects = async (req, res) => {
         const projects = await index_1.prisma.project.findMany({
             orderBy: { name: 'asc' },
             include: {
-                funder: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true
-                    }
-                },
                 leader: {
                     select: {
                         id: true,
@@ -135,7 +128,7 @@ const getProjects = async (req, res) => {
 };
 exports.getProjects = getProjects;
 const createProject = async (req, res) => {
-    const { name, code, description, funderId, leaderId } = req.body;
+    const { name, code, description, funder, leaderId } = req.body;
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
     }
@@ -156,11 +149,10 @@ const createProject = async (req, res) => {
                 name: name.trim(),
                 code: code?.trim() || null,
                 description: description?.trim() || null,
-                funderId: funderId || null,
+                funder: funder?.trim() || null,
                 leaderId: leaderId || null
             },
             include: {
-                funder: { select: { id: true, name: true, email: true } },
                 leader: { select: { id: true, name: true, email: true } }
             }
         });
@@ -174,7 +166,7 @@ const createProject = async (req, res) => {
 exports.createProject = createProject;
 const updateProject = async (req, res) => {
     const { id } = req.params;
-    const { name, code, description, funderId, leaderId } = req.body;
+    const { name, code, description, funder, leaderId } = req.body;
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
     }
@@ -185,11 +177,10 @@ const updateProject = async (req, res) => {
                 name: name.trim(),
                 code: code?.trim() || null,
                 description: description?.trim() || null,
-                funderId: funderId || null,
+                funder: funder?.trim() || null,
                 leaderId: leaderId || null
             },
             include: {
-                funder: { select: { id: true, name: true, email: true } },
                 leader: { select: { id: true, name: true, email: true } }
             }
         });

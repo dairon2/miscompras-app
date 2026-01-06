@@ -202,8 +202,8 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
             subLeaders, year, expirationDate
         } = req.body;
 
-        if (!title || !amount || !projectId || !areaId) {
-            return res.status(400).json({ error: 'Título, monto, proyecto y área son requeridos' });
+        if (!title || !amount || !projectId || !areaId || !categoryId) {
+            return res.status(400).json({ error: 'Título, monto, proyecto, área y categoría son requeridos' });
         }
 
         // Generate or validate unique code
@@ -230,7 +230,7 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
                 status: 'PENDING',
                 projectId,
                 areaId,
-                categoryId: categoryId || null,
+                categoryId,
                 managerId: managerId || null,
                 createdById: userId,
                 subLeaders: subLeaders?.length > 0 ? {
@@ -311,7 +311,11 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
         res.status(201).json(budget);
     } catch (error: any) {
         console.error('Error creating budget:', error);
-        res.status(500).json({ error: 'Error al crear presupuesto' });
+        // Better error handling for unique constraint
+        if (error.code === 'P2002') {
+            return res.status(400).json({ error: 'Ya existe un presupuesto con esta combinación de Proyecto, Área, Categoría y Año.' });
+        }
+        res.status(500).json({ error: 'Error al crear presupuesto: ' + (error.message || 'Error desconocido') });
     }
 };
 
@@ -354,7 +358,7 @@ export const updateBudget = async (req: AuthRequest, res: Response) => {
                 available: amount ? newAvailable : undefined,
                 projectId,
                 areaId,
-                categoryId: categoryId || null,
+                category: categoryId ? { connect: { id: categoryId } } : undefined,
                 managerId: managerId || null,
                 version: { increment: 1 }
             }

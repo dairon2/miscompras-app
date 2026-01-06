@@ -111,7 +111,7 @@ model Budget {
   id                String             @id @default(uuid())
   amount            Decimal            @db.Decimal(15, 2)
   available         Decimal            @db.Decimal(15, 2)
-  categoryId        String?
+  categoryId        String
   projectId         String
   areaId            String
   managerId         String?
