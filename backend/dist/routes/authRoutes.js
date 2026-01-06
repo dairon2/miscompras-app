@@ -12,4 +12,5 @@ router.post('/reset-password', authController_1.resetPassword);
 router.post('/refresh-token', authController_1.refreshToken);
 // Protected routes
 router.get('/users', auth_1.authMiddleware, authController_1.getUsers);
+router.post('/change-password', auth_1.authMiddleware, authController_1.changePassword);
 exports.default = router;

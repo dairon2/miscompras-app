@@ -131,7 +131,8 @@ export const login = async (req: Request, res: Response) => {
                 name: user.name,
                 areaId: user.areaId,
                 isAreaDirector: (user as any).areasDirected?.length > 0,
-                directedAreas: (user as any).areasDirected || []
+                directedAreas: (user as any).areasDirected || [],
+                mustChangePassword: user.mustChangePassword
             }
         });
     } catch (error: any) {
@@ -289,5 +290,47 @@ export const getUsers = async (req: Request, res: Response) => {
         res.json(users);
     } catch (error: any) {
         res.status(500).json({ error: 'Failed to fetch users', details: error.message });
+    }
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+    const { currentPassword, newPassword } = req.body;
+    // Get user ID from token - we need to decode or use middleware
+    // For simplicity, let's get from body or use a different approach
+    // Actually, this should use AuthRequest but we need to import it
+    const authReq = req as any;
+    const userId = authReq.user?.id;
+
+    if (!userId) return res.status(401).json({ error: 'Usuario no autenticado' });
+    if (!newPassword || newPassword.length < 8) {
+        return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
+    }
+
+    try {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        // Verify current password
+        if (currentPassword) {
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+            }
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                password: hashedPassword,
+                mustChangePassword: false
+            }
+        });
+
+        res.json({ message: 'Contraseña actualizada exitosamente' });
+    } catch (error: any) {
+        console.error('Change password error:', error);
+        res.status(500).json({ error: 'Error al cambiar la contraseña' });
     }
 };

@@ -12,6 +12,7 @@ import ToastContainer from "@/components/ToastContainer";
 import Link from "next/link";
 import Image from "next/image";
 import { useThemeStore } from "@/store/themeStore";
+import ForcePasswordChangeModal from "@/components/ForcePasswordChangeModal";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -398,6 +399,7 @@ export default function RootLayout({
             </footer>
           )}
           {!isAuthPage && <MobileNavbar pathname={pathname} userRole={user?.role || ''} />}
+          <ForcePasswordChangeModal />
         </div>
         <ToastContainer />
       </body>

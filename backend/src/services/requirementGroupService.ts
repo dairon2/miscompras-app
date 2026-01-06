@@ -38,6 +38,9 @@ export const createRequirementGroup = async (creatorId: string, requirementsData
 
         if (!creator) throw new Error('Creator not found');
 
+        // PDF GENERATION DISABLED - Prioritizing user-uploaded attachments
+        // Uncomment the following block to re-enable automatic PDF generation
+        /*
         // 4. Generate PDF
         const pdfUrl = await generateRequirementGroupPDF({
             id: group.id,
@@ -69,7 +72,8 @@ export const createRequirementGroup = async (creatorId: string, requirementsData
                 })
             )
         );
+        */
 
-        return { group, requirements: createdRequirements, pdfUrl };
+        return { group, requirements: createdRequirements, pdfUrl: null };
     });
 };

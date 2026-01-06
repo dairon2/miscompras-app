@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createRequirementGroup = void 0;
 const client_1 = require("@prisma/client");
-const pdfService_1 = require("./pdfService");
 const prisma = new client_1.PrismaClient();
 const createRequirementGroup = async (creatorId, requirementsData) => {
     return await prisma.$transaction(async (tx) => {
@@ -32,8 +31,11 @@ const createRequirementGroup = async (creatorId, requirementsData) => {
         });
         if (!creator)
             throw new Error('Creator not found');
+        // PDF GENERATION DISABLED - Prioritizing user-uploaded attachments
+        // Uncomment the following block to re-enable automatic PDF generation
+        /*
         // 4. Generate PDF
-        const pdfUrl = await (0, pdfService_1.generateRequirementGroupPDF)({
+        const pdfUrl = await generateRequirementGroupPDF({
             id: group.id,
             creator: { name: creator.name || 'Usuario', email: creator.email },
             createdAt: group.createdAt,
@@ -44,20 +46,27 @@ const createRequirementGroup = async (creatorId, requirementsData) => {
                 area: { name: r.area.name }
             }))
         });
+
         // 5. Update group with PDF URL
         await tx.requirementGroup.update({
             where: { id: group.id },
             data: { pdfUrl }
         });
+
         // 6. Attach PDF to each requirement as per user request
-        await Promise.all(createdRequirements.map(req => tx.attachment.create({
-            data: {
-                requirementId: req.id,
-                fileName: `Solicitud_Administrativa_${group.id}.pdf`,
-                fileUrl: pdfUrl
-            }
-        })));
-        return { group, requirements: createdRequirements, pdfUrl };
+        await Promise.all(
+            createdRequirements.map(req =>
+                tx.attachment.create({
+                    data: {
+                        requirementId: req.id,
+                        fileName: `Solicitud_Administrativa_${group.id}.pdf`,
+                        fileUrl: pdfUrl
+                    }
+                })
+            )
+        );
+        */
+        return { group, requirements: createdRequirements, pdfUrl: null };
     });
 };
 exports.createRequirementGroup = createRequirementGroup;

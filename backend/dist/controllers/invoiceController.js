@@ -19,7 +19,7 @@ const getInvoices = async (req, res) => {
         if (supplierId)
             where.supplierId = supplierId;
         // Role-based visibility
-        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'AUDITOR', 'DEVELOPER'].includes(userRole || '');
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'AUDITOR', 'DEVELOPER', 'COORDINATOR'].includes(userRole || '');
         if (!isGlobalViewer) {
             // Users/Leaders see invoices if they uploaded them OR if they own the related requirement
             where.OR = [
@@ -141,7 +141,7 @@ exports.verifyInvoice = verifyInvoice;
 const approveInvoice = async (req, res) => {
     const { id } = req.params;
     const userRole = req.user?.role;
-    if (!['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole || '')) {
+    if (!['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR'].includes(userRole || '')) {
         return res.status(403).json({ error: 'Not authorized to approve payments' });
     }
     try {
@@ -191,7 +191,7 @@ exports.payInvoice = payInvoice;
 const deleteInvoice = async (req, res) => {
     const { id } = req.params;
     const userRole = req.user?.role;
-    if (!['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(userRole || '')) {
+    if (!['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(userRole || '')) {
         return res.status(403).json({ error: 'Not authorized to delete invoices' });
     }
     try {

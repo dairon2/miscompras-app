@@ -9,6 +9,7 @@ export interface User {
     areaId?: string;
     isAreaDirector?: boolean;
     directedAreas?: Array<{ id: string; name: string }>;
+    mustChangePassword?: boolean;
 }
 
 interface AuthState {

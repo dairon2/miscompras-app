@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUsers = exports.refreshToken = exports.resetPassword = exports.forgotPassword = exports.login = exports.register = void 0;
+exports.changePassword = exports.getUsers = exports.refreshToken = exports.resetPassword = exports.forgotPassword = exports.login = exports.register = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
@@ -116,7 +116,8 @@ const login = async (req, res) => {
                 name: user.name,
                 areaId: user.areaId,
                 isAreaDirector: user.areasDirected?.length > 0,
-                directedAreas: user.areasDirected || []
+                directedAreas: user.areasDirected || [],
+                mustChangePassword: user.mustChangePassword
             }
         });
     }
@@ -258,3 +259,42 @@ const getUsers = async (req, res) => {
     }
 };
 exports.getUsers = getUsers;
+const changePassword = async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    // Get user ID from token - we need to decode or use middleware
+    // For simplicity, let's get from body or use a different approach
+    // Actually, this should use AuthRequest but we need to import it
+    const authReq = req;
+    const userId = authReq.user?.id;
+    if (!userId)
+        return res.status(401).json({ error: 'Usuario no autenticado' });
+    if (!newPassword || newPassword.length < 8) {
+        return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
+    }
+    try {
+        const user = await index_1.prisma.user.findUnique({ where: { id: userId } });
+        if (!user)
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        // Verify current password
+        if (currentPassword) {
+            const isMatch = await bcryptjs_1.default.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+            }
+        }
+        const hashedPassword = await bcryptjs_1.default.hash(newPassword, 10);
+        await index_1.prisma.user.update({
+            where: { id: userId },
+            data: {
+                password: hashedPassword,
+                mustChangePassword: false
+            }
+        });
+        res.json({ message: 'Contraseña actualizada exitosamente' });
+    }
+    catch (error) {
+        console.error('Change password error:', error);
+        res.status(500).json({ error: 'Error al cambiar la contraseña' });
+    }
+};
+exports.changePassword = changePassword;

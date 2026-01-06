@@ -62,15 +62,14 @@ const createRequirement = async (req, res) => {
         });
         const adminEmails = admins.map((admin) => admin.email).join(',');
         // Notify Admins/Leaders via Email
-        for (const admin of admins) {
-            await (0, emailService_1.sendRequirementNotificationEmail)({
-                to: admin.email,
-                type: 'REQUIREMENT_CREATED',
-                requirementId: requirement.id,
-                requirementTitle: title,
-                requesterName: req.user?.name || req.user?.email || 'Desconocido'
-            });
-        }
+        // Notify Admins/Leaders via Email - Non-blocking
+        Promise.all(admins.map(admin => (0, emailService_1.sendRequirementNotificationEmail)({
+            to: admin.email,
+            type: 'REQUIREMENT_CREATED',
+            requirementId: requirement.id,
+            requirementTitle: title,
+            requesterName: req.user?.name || req.user?.email || 'Desconocido'
+        }).catch(e => console.error(`Email error for ${admin.email}`, e))));
         // --- IN-APP NOTIFICATION FOR ADMINS ---
         for (const admin of admins) {
             await index_1.prisma.notification.create({
@@ -95,6 +94,12 @@ const createMassRequirements = async (req, res) => {
     let { requirements } = req.body;
     const userId = req.user?.id;
     const files = req.files || [];
+    // DEBUG: Log received files
+    console.log('[Mass Create] Received files count:', files.length);
+    if (files.length > 0) {
+        console.log('[Mass Create] File fieldnames:', files.map(f => f.fieldname));
+        console.log('[Mass Create] File details:', files.map(f => ({ fieldname: f.fieldname, originalname: f.originalname, size: f.size })));
+    }
     if (!userId)
         return res.status(401).json({ error: 'User not authenticated' });
     // Handle JSON string from FormData
@@ -115,6 +120,8 @@ const createMassRequirements = async (req, res) => {
             // Find files for this specific requirement using index mapping
             // Frontend sends files with field name "attachments_0", "attachments_1", etc.
             const itemFiles = files.filter(f => f.fieldname === `attachments_${index}`);
+            // DEBUG: Log files per item
+            console.log(`[Mass Create] Item ${index}: found ${itemFiles.length} files`);
             // Generate attachment data
             const attachmentData = await (0, blobStorageService_1.processFileUploads)(itemFiles, 'requirements');
             return {
@@ -125,35 +132,42 @@ const createMassRequirements = async (req, res) => {
             };
         }));
         const result = await (0, requirementGroupService_1.createRequirementGroup)(userId, requirementsWithAttachments);
-        // Notify Approvers (Leader of the area, Coordinators, Directors)
-        const approvers = await index_1.prisma.user.findMany({
-            where: {
-                role: { in: ['LEADER', 'COORDINATOR', 'DIRECTOR', 'ADMIN'] }
-            }
-        });
-        for (const approver of approvers) {
-            await index_1.prisma.notification.create({
-                data: {
-                    userId: approver.id,
-                    title: 'Nueva Solicitud Múltiple',
-                    message: `Se ha creado una solicitud agrupada (ID: ${result.group.id}) con ${requirements.length} items.`,
-                    type: 'INFO'
-                }
-            });
-            // Calculate total amount from results
-            const totalAmt = result.requirements.reduce((acc, r) => acc + Number(r.estimatedAmount || 0), 0);
-            // Send Email Notification for Mass Create
-            await (0, emailService_1.sendRequirementNotificationEmail)({
-                to: approver.email,
-                type: 'REQUIREMENT_CREATED',
-                requirementId: result.group.id.toString(), // Using group ID as ID display
-                groupId: result.group.id,
-                requirementTitle: `Solicitud Agrupada de ${req.user?.name || req.user?.email}`,
-                requesterName: req.user?.name || req.user?.email || 'Desconocido',
-                amount: totalAmt
-            });
-        }
+        // Send Response IMMEDIATELY to improve perceived performance
         res.status(201).json(result);
+        // ---- BACKGROUND TASKS (Non-blocking) ----
+        // Notify Approvers asynchronously - do not block the response
+        (async () => {
+            try {
+                const approvers = await index_1.prisma.user.findMany({
+                    where: {
+                        role: { in: ['LEADER', 'COORDINATOR', 'DIRECTOR', 'ADMIN'] }
+                    }
+                });
+                const totalAmt = result.requirements.reduce((acc, r) => acc + Number(r.estimatedAmount || 0), 0);
+                // Create all notifications in parallel
+                await index_1.prisma.notification.createMany({
+                    data: approvers.map(approver => ({
+                        userId: approver.id,
+                        title: 'Nueva Solicitud Múltiple',
+                        message: `Se ha creado una solicitud agrupada (ID: ${result.group.id}) con ${requirements.length} items.`,
+                        type: 'INFO'
+                    }))
+                });
+                // Send emails in parallel (fire-and-forget)
+                Promise.all(approvers.map(approver => (0, emailService_1.sendRequirementNotificationEmail)({
+                    to: approver.email,
+                    type: 'REQUIREMENT_CREATED',
+                    requirementId: result.group.id.toString(),
+                    groupId: result.group.id,
+                    requirementTitle: `Solicitud Agrupada de ${req.user?.name || req.user?.email}`,
+                    requesterName: req.user?.name || req.user?.email || 'Desconocido',
+                    amount: totalAmt
+                }).catch(err => console.error(`Failed to send email to ${approver.email}`, err))));
+            }
+            catch (bgError) {
+                console.error('Background notification error:', bgError);
+            }
+        })();
     }
     catch (error) {
         console.error("Mass create error:", error);
@@ -207,7 +221,8 @@ const getMyRequirements = async (req, res) => {
                             }
                         }
                     }
-                }
+                },
+                attachments: true
             },
             orderBy: { createdAt: 'desc' },
             skip,
@@ -488,7 +503,8 @@ const getAllRequirements = async (req, res) => {
                         name: true,
                         email: true
                     }
-                }
+                },
+                attachments: true
             },
             orderBy: { createdAt: 'desc' },
             skip,
