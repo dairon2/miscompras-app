@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+// Force rebuild: 2026-01-06T05:50:00
 import { generateRequirementGroupPDF } from './pdfService';
 
 const prisma = new PrismaClient();
