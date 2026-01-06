@@ -180,13 +180,21 @@ export default function NewRequirementPage() {
 
             // 4. Append attachments with indexed field names
             items.forEach((item, index) => {
+                console.log(`[DEBUG] Item ${index} attachments:`, item.attachments);
                 if (item.attachments && item.attachments.length > 0) {
                     item.attachments.forEach(file => {
+                        console.log(`[DEBUG] Appending file: ${file.name}, size: ${file.size}`);
                         // Key format: attachments_0, attachments_1, etc.
                         formData.append(`attachments_${index}`, file);
                     });
                 }
             });
+
+            // DEBUG: Log all FormData entries
+            console.log('[DEBUG] FormData entries:');
+            for (const [key, value] of formData.entries()) {
+                console.log(`  ${key}:`, value);
+            }
 
             // 5. Send to mass-create endpoint
             // Note: Content-Type header is automatically set by browser/axios with boundary
