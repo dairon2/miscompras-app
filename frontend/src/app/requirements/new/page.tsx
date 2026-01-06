@@ -84,7 +84,7 @@ export default function NewRequirementPage() {
             const [p, a, b] = await Promise.all([
                 api.get('/projects'),
                 api.get('/areas'),
-                api.get('/budgets')
+                api.get('/budgets?status=APPROVED')
             ]);
 
             setOptions({
