@@ -71,6 +71,12 @@ interface Requirement {
     createdById: string;
     receivedAtSatisfaction: boolean;
     logs: Array<{ id: string; action: string; details: string; createdAt: string }>;
+    leaderApproval?: boolean;
+    coordinatorApproval?: boolean;
+    directorApproval?: boolean;
+    leaderComment?: string;
+    coordinatorComment?: string;
+    directorComment?: string;
 }
 
 export default function RequirementDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -312,7 +318,24 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     const canApproveFinance = requirement.status === 'PENDING_FINANCE' && ['ADMIN', 'DIRECTOR'].includes(userRole);
 
     // Generic approve for PENDING_APPROVAL - Director and Coordinator can approve
-    const canApprovePending = requirement.status === 'PENDING_APPROVAL' && isApprover;
+    // Nueva modificación: Verificar si el usuario actual ya aprobó
+    const alreadyApprovedByCoordinator = requirement.coordinatorApproval === true;
+    const alreadyApprovedByDirector = requirement.directorApproval === true;
+
+    // pendingApprovalByCurrentUser DETERMINA SI SE MUESTRA EL BOTÓN
+    let pendingApprovalByCurrentUser = false;
+    if (requirement.status === 'PENDING_APPROVAL') {
+        if (userRole === 'COORDINATOR' && !alreadyApprovedByCoordinator) {
+            pendingApprovalByCurrentUser = true;
+        } else if (userRole === 'DIRECTOR' && !alreadyApprovedByDirector) {
+            pendingApprovalByCurrentUser = true;
+        } else if (userRole === 'ADMIN') {
+            // Admin can see buttons if anyone hasn't approved yet
+            pendingApprovalByCurrentUser = !alreadyApprovedByCoordinator || !alreadyApprovedByDirector;
+        }
+    }
+
+    const canApprovePending = pendingApprovalByCurrentUser && isApprover;
 
     const canManageProcurement = requirement.status === 'APPROVED' && (requirement.procurementStatus === 'PENDIENTE' || requirement.procurementStatus === 'EN_TRAMITE' || requirement.procurementStatus === 'ENTREGADO');
     const canMarkReceived = requirement.procurementStatus === 'ENTREGADO' && isCreator && !requirement.receivedAtSatisfaction;
@@ -363,6 +386,26 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Info */}
                 <div className="lg:col-span-2 space-y-8" id="requirement-content">
+                    {/* INFO LABELS FOR MISSING APPROVALS */}
+                    {requirement.status === 'PENDING_APPROVAL' && (
+                        <div className="flex flex-col gap-2 mb-4">
+                            {/* Mostrar etiqueta si falta Coordinación */}
+                            {!requirement.coordinatorApproval && (
+                                <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl flex items-center gap-3">
+                                    <Clock size={18} className="text-amber-600" />
+                                    <span className="font-bold text-xs uppercase tracking-wider">Falta aprobación de Coordinación</span>
+                                </div>
+                            )}
+                            {/* Mostrar etiqueta si falta Dirección */}
+                            {!requirement.directorApproval && (
+                                <div className="bg-purple-50 border border-purple-200 text-purple-800 px-4 py-3 rounded-xl flex items-center gap-3">
+                                    <Clock size={18} className="text-purple-600" />
+                                    <span className="font-bold text-xs uppercase tracking-wider">Falta aprobación de Dirección</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Action buttons moved to the top */}
                     {(canApprovePending || canApproveCoordination || canApproveFinance || canManageProcurement || canMarkReceived || canManage || canFullEdit || canEditObservationsOnly) && (
                         <motion.div
