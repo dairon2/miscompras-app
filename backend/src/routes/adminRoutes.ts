@@ -50,21 +50,21 @@ router.get('/stats', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'D
 
 // Areas CRUD - Admin and Director global
 router.get('/areas', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getAreas);
-router.post('/areas', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), createArea);
-router.put('/areas/:id', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), updateArea);
-router.delete('/areas/:id', roleCheck(['ADMIN', 'DIRECTOR', 'DEVELOPER']), deleteArea);
+router.post('/areas', roleCheck(['DIRECTOR', 'DEVELOPER']), createArea);
+router.put('/areas/:id', roleCheck(['DIRECTOR', 'DEVELOPER']), updateArea);
+router.delete('/areas/:id', roleCheck(['DIRECTOR', 'DEVELOPER']), deleteArea);
 
 // Projects CRUD
 router.get('/projects', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getProjects);
-router.post('/projects', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), createProject);
-router.put('/projects/:id', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), updateProject);
-router.delete('/projects/:id', roleCheck(['ADMIN', 'DIRECTOR', 'DEVELOPER']), deleteProject);
+router.post('/projects', roleCheck(['DIRECTOR', 'DEVELOPER']), createProject);
+router.put('/projects/:id', roleCheck(['DIRECTOR', 'DEVELOPER']), updateProject);
+router.delete('/projects/:id', roleCheck(['DIRECTOR', 'DEVELOPER']), deleteProject);
 
 // Categories CRUD
 router.get('/categories', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getCategories);
-router.post('/categories', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), createCategory);
-router.put('/categories/:id', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), updateCategory);
-router.delete('/categories/:id', roleCheck(['ADMIN', 'DIRECTOR', 'DEVELOPER']), deleteCategory);
+router.post('/categories', roleCheck(['DIRECTOR', 'DEVELOPER']), createCategory);
+router.put('/categories/:id', roleCheck(['DIRECTOR', 'DEVELOPER']), updateCategory);
+router.delete('/categories/:id', roleCheck(['DIRECTOR', 'DEVELOPER']), deleteCategory);
 
 // Suppliers CRUD - LEADER can manage suppliers as requested
 router.get('/suppliers', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getSuppliers);
@@ -74,13 +74,13 @@ router.delete('/suppliers/:id', roleCheck(['ADMIN', 'DIRECTOR', 'DEVELOPER']), d
 router.post('/suppliers/bulk-import', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), bulkImportSuppliers);
 
 // Users Management
-router.get('/users', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), getUsers);
-router.get('/users/generate-password', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), generatePassword);
-router.post('/users', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), createUser);
-router.get('/users/:id', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), getUserById);
-router.put('/users/:id', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), updateUser);
-router.patch('/users/toggle/:id', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), toggleUserStatus);
-router.delete('/users/:id', roleCheck(['ADMIN', 'DIRECTOR', 'DEVELOPER']), deleteUser);
+router.get('/users', roleCheck(['DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), getUsers); // Leader sees list? Maybe needed
+router.get('/users/generate-password', roleCheck(['DIRECTOR', 'COORDINATOR', 'DEVELOPER']), generatePassword);
+router.post('/users', roleCheck(['DIRECTOR', 'COORDINATOR', 'DEVELOPER']), createUser);
+router.get('/users/:id', roleCheck(['DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), getUserById);
+router.put('/users/:id', roleCheck(['DIRECTOR', 'COORDINATOR', 'DEVELOPER']), updateUser);
+router.patch('/users/toggle/:id', roleCheck(['DIRECTOR', 'COORDINATOR', 'DEVELOPER']), toggleUserStatus);
+router.delete('/users/:id', roleCheck(['DIRECTOR', 'DEVELOPER']), deleteUser);
 
 // System Config
 router.get('/config', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), getSystemConfig);
