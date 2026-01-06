@@ -438,7 +438,7 @@ export default function BudgetsPage() {
 
                     {canManageBudgets && (
                         <button
-                            onClick={openCreateModal}
+                            onClick={() => router.push('/budget/new')}
                             className="flex items-center gap-2 bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
                         >
                             <Plus size={18} />
