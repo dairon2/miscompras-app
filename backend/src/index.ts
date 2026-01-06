@@ -101,7 +101,30 @@ app.get('/api/areas', async (req, res) => {
 
 app.get('/api/projects', authMiddleware, async (req, res) => {
     try {
+        const userId = (req as any).user?.id;
+        const userRole = (req as any).user?.role;
+
+        // Build where clause based on role
+        let where: any = {};
+
+        // Only filter for USER role - other roles see all projects
+        if (userRole === 'USER' && userId) {
+            // USER can only see projects that have approved budgets where they are manager or subleader
+            where = {
+                budgets: {
+                    some: {
+                        status: 'APPROVED',
+                        OR: [
+                            { managerId: userId },
+                            { subLeaders: { some: { userId } } }
+                        ]
+                    }
+                }
+            };
+        }
+
         const projects = await prisma.project.findMany({
+            where,
             orderBy: { name: 'asc' },
             include: {
                 leader: {
