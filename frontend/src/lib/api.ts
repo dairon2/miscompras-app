@@ -2,9 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api',
-    headers: {
-        'Content-Type': 'application/json',
-    },
+    // Don't set Content-Type here - let it be set per-request or automatically for FormData
 });
 
 // Request interceptor to add auth token
@@ -13,6 +11,14 @@ api.interceptors.request.use((config) => {
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Only set Content-Type to JSON if NOT sending FormData
+    // FormData needs the browser to set 'multipart/form-data' with boundary automatically
+    if (!(config.data instanceof FormData)) {
+        config.headers['Content-Type'] = 'application/json';
+    }
+    // For FormData, do NOT set Content-Type - browser will handle it
+
     return config;
 });
 
