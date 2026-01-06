@@ -6,10 +6,42 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.isBlobStorageAvailable = exports.processFileUploads = exports.deleteFromBlobStorage = exports.uploadBufferToBlobStorage = exports.uploadToBlobStorage = void 0;
 const storage_blob_1 = require("@azure/storage-blob");
 const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const logger_1 = __importDefault(require("./logger"));
 // Azure Blob Storage configuration
 const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const CONTAINER_NAME = process.env.AZURE_STORAGE_CONTAINER || 'pdfs';
+/**
+ * Determine MIME type based on file extension
+ */
+const getMimeType = (filePath) => {
+    const ext = path_1.default.extname(filePath).toLowerCase();
+    const mimeTypes = {
+        '.pdf': 'application/pdf',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.bmp': 'image/bmp',
+        '.svg': 'image/svg+xml',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.xls': 'application/vnd.ms-excel',
+        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        '.ppt': 'application/vnd.ms-powerpoint',
+        '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        '.txt': 'text/plain',
+        '.csv': 'text/csv',
+        '.zip': 'application/zip',
+        '.rar': 'application/x-rar-compressed',
+        '.7z': 'application/x-7z-compressed',
+        '.mp4': 'video/mp4',
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
+};
 let containerClient = null;
 /**
  * Initialize Azure Blob Storage client
@@ -52,12 +84,15 @@ const uploadToBlobStorage = async (filePath, blobName) => {
             logger_1.default.blob('Not available, skipping upload');
             return null;
         }
+        // Determine content type based on file extension
+        const contentType = getMimeType(filePath);
+        logger_1.default.blob(`Uploading with content type: ${contentType}`);
         // Read file and upload
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);
         const fileBuffer = fs_1.default.readFileSync(filePath);
         await blockBlobClient.upload(fileBuffer, fileBuffer.length, {
             blobHTTPHeaders: {
-                blobContentType: 'application/pdf'
+                blobContentType: contentType
             }
         });
         const blobUrl = `https://miscomprasstorage.blob.core.windows.net/${CONTAINER_NAME}/${blobName}`;

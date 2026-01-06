@@ -113,13 +113,6 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
         const projects = await prisma.project.findMany({
             orderBy: { name: 'asc' },
             include: {
-                funder: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true
-                    }
-                },
                 leader: {
                     select: {
                         id: true,
@@ -140,7 +133,7 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
 };
 
 export const createProject = async (req: AuthRequest, res: Response) => {
-    const { name, code, description, funderId, leaderId } = req.body;
+    const { name, code, description, funder, leaderId } = req.body;
 
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
@@ -164,11 +157,10 @@ export const createProject = async (req: AuthRequest, res: Response) => {
                 name: name.trim(),
                 code: code?.trim() || null,
                 description: description?.trim() || null,
-                funderId: funderId || null,
+                funder: funder?.trim() || null,
                 leaderId: leaderId || null
             },
             include: {
-                funder: { select: { id: true, name: true, email: true } },
                 leader: { select: { id: true, name: true, email: true } }
             }
         });
@@ -181,7 +173,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
 
 export const updateProject = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { name, code, description, funderId, leaderId } = req.body;
+    const { name, code, description, funder, leaderId } = req.body;
 
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
@@ -194,11 +186,10 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
                 name: name.trim(),
                 code: code?.trim() || null,
                 description: description?.trim() || null,
-                funderId: funderId || null,
+                funder: funder?.trim() || null,
                 leaderId: leaderId || null
             },
             include: {
-                funder: { select: { id: true, name: true, email: true } },
                 leader: { select: { id: true, name: true, email: true } }
             }
         });

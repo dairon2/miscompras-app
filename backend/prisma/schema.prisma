@@ -37,7 +37,7 @@ model User {
   area                 Area?              @relation("AreaUsers", fields: [areaId], references: [id])
   areasDirected        Area[]             @relation("AreaDirector")
   invoicesCreated      Invoice[]          @relation("InvoiceCreator")
-  projectsFunded       Project[]          @relation("ProjectFunder")
+
   projectsLed          Project[]          @relation("ProjectLeader")
 }
 
@@ -46,9 +46,8 @@ model Project {
   name         String
   code         String        @unique
   description  String?
-  funderId     String?       // Financiador
-  leaderId     String?       // Líder del proyecto
-  funder       User?         @relation("ProjectFunder", fields: [funderId], references: [id])
+  funder       String?       // Financiador - Texto libre (antes relación User)
+  leaderId     String?
   leader       User?         @relation("ProjectLeader", fields: [leaderId], references: [id])
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt

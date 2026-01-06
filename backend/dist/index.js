@@ -14,13 +14,14 @@ const auth_1 = require("./middlewares/auth");
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const requirementRoutes_1 = __importDefault(require("./routes/requirementRoutes"));
 const notificationRoutes_1 = __importDefault(require("./routes/notificationRoutes"));
-const reportRoutes_1 = __importDefault(require("./routes/reportRoutes"));
+const reportsRoutes_1 = __importDefault(require("./routes/reportsRoutes"));
 const paymentRoutes_1 = __importDefault(require("./routes/paymentRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const budgetRoutes_1 = __importDefault(require("./routes/budgetRoutes"));
 const adjustmentRoutes_1 = __importDefault(require("./routes/adjustmentRoutes"));
 const invoiceRoutes_1 = __importDefault(require("./routes/invoiceRoutes"));
+const submissionRulesRoutes_1 = __importDefault(require("./routes/submissionRulesRoutes"));
 dotenv_1.default.config();
 // Validate critical environment variables
 const validateEnv = () => {
@@ -113,7 +114,33 @@ app.get('/api/categories', auth_1.authMiddleware, async (req, res) => {
 // Suppliers route (real DB)
 app.get('/api/suppliers', auth_1.authMiddleware, async (req, res) => {
     try {
-        const suppliers = await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
+        const userId = req.user?.id;
+        const userRole = req.user?.role;
+        let whereClause = {};
+        // If USER role, filter suppliers by visibility (only those linked to visible requirements)
+        if (userRole === 'USER' && userId) {
+            whereClause = {
+                requirements: {
+                    some: {
+                        OR: [
+                            { createdById: userId },
+                            {
+                                budget: {
+                                    OR: [
+                                        { managerId: userId },
+                                        { subLeaders: { some: { userId: userId } } }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            };
+        }
+        const suppliers = await prisma.supplier.findMany({
+            where: whereClause,
+            orderBy: { name: 'asc' }
+        });
         res.json(suppliers);
     }
     catch (e) {
@@ -174,13 +201,14 @@ app.get('/api/suppliers/:id', auth_1.authMiddleware, async (req, res) => {
 // Protected Routes
 app.use('/api/requirements', auth_1.authMiddleware, requirementRoutes_1.default);
 app.use('/api/notifications', auth_1.authMiddleware, notificationRoutes_1.default);
-app.use('/api/reports', auth_1.authMiddleware, reportRoutes_1.default);
+app.use('/api/reports', auth_1.authMiddleware, reportsRoutes_1.default);
 app.use('/api/payments', auth_1.authMiddleware, paymentRoutes_1.default);
 app.use('/api/users', userRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
 app.use('/api/budgets', budgetRoutes_1.default);
 app.use('/api/adjustments', adjustmentRoutes_1.default);
 app.use('/api/invoices', invoiceRoutes_1.default);
+app.use('/api/submission-rules', submissionRulesRoutes_1.default);
 // NOTE: Budget CRUD is handled by budgetRoutes mounted at /api/budgets
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'API Miscompras en ejecución' });

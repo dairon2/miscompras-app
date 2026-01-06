@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAdminStats = exports.updateSystemConfig = exports.getSystemConfig = exports.updateUser = exports.deleteUser = exports.toggleUserStatus = exports.getUsers = exports.deleteSupplier = exports.updateSupplier = exports.createSupplier = exports.getSuppliers = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getCategories = exports.deleteProject = exports.updateProject = exports.createProject = exports.getProjects = exports.deleteArea = exports.updateArea = exports.createArea = exports.getAreas = void 0;
+exports.getAdminStats = exports.updateSystemConfig = exports.getSystemConfig = exports.updateUser = exports.deleteUser = exports.toggleUserStatus = exports.getUsers = exports.bulkImportSuppliers = exports.deleteSupplier = exports.updateSupplier = exports.createSupplier = exports.getSuppliers = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getCategories = exports.deleteProject = exports.updateProject = exports.createProject = exports.getProjects = exports.deleteArea = exports.updateArea = exports.createArea = exports.getAreas = void 0;
 const index_1 = require("../index");
 // ==================== AREAS ====================
 const getAreas = async (req, res) => {
@@ -107,6 +107,20 @@ const getProjects = async (req, res) => {
         const projects = await index_1.prisma.project.findMany({
             orderBy: { name: 'asc' },
             include: {
+                funder: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                },
+                leader: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                },
                 _count: {
                     select: { requirements: true, budgets: true }
                 }
@@ -121,7 +135,7 @@ const getProjects = async (req, res) => {
 };
 exports.getProjects = getProjects;
 const createProject = async (req, res) => {
-    const { name, code, description } = req.body;
+    const { name, code, description, funderId, leaderId } = req.body;
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
     }
@@ -141,7 +155,13 @@ const createProject = async (req, res) => {
             data: {
                 name: name.trim(),
                 code: code?.trim() || null,
-                description: description?.trim() || null
+                description: description?.trim() || null,
+                funderId: funderId || null,
+                leaderId: leaderId || null
+            },
+            include: {
+                funder: { select: { id: true, name: true, email: true } },
+                leader: { select: { id: true, name: true, email: true } }
             }
         });
         res.status(201).json(project);
@@ -154,7 +174,7 @@ const createProject = async (req, res) => {
 exports.createProject = createProject;
 const updateProject = async (req, res) => {
     const { id } = req.params;
-    const { name, code, description } = req.body;
+    const { name, code, description, funderId, leaderId } = req.body;
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
     }
@@ -164,7 +184,13 @@ const updateProject = async (req, res) => {
             data: {
                 name: name.trim(),
                 code: code?.trim() || null,
-                description: description?.trim() || null
+                description: description?.trim() || null,
+                funderId: funderId || null,
+                leaderId: leaderId || null
+            },
+            include: {
+                funder: { select: { id: true, name: true, email: true } },
+                leader: { select: { id: true, name: true, email: true } }
             }
         });
         res.json(project);
@@ -367,6 +393,154 @@ const deleteSupplier = async (req, res) => {
     }
 };
 exports.deleteSupplier = deleteSupplier;
+// Bulk import suppliers from CSV/XLSX
+const bulkImportSuppliers = async (req, res) => {
+    try {
+        const { suppliers } = req.body;
+        if (!suppliers || !Array.isArray(suppliers) || suppliers.length === 0) {
+            return res.status(400).json({ error: 'No se proporcionaron proveedores para importar' });
+        }
+        const results = {
+            success: 0,
+            duplicates: 0,
+            errors: 0,
+            details: []
+        };
+        // Field mapping from common Excel column names to database fields
+        const fieldMapping = {
+            'nombre': 'name',
+            'name': 'name',
+            'nit': 'nit',
+            'rut': 'nit',
+            'taxid': 'taxId',
+            'tax_id': 'taxId',
+            'email': 'email',
+            'correo': 'email',
+            'contactemail': 'contactEmail',
+            'contact_email': 'contactEmail',
+            'emailcontacto': 'contactEmail',
+            'telefono': 'phone',
+            'phone': 'phone',
+            'tel': 'phone',
+            'contactphone': 'contactPhone',
+            'contact_phone': 'contactPhone',
+            'telefonocontacto': 'contactPhone',
+            'contactname': 'contactName',
+            'contact_name': 'contactName',
+            'nombrecontacto': 'contactName',
+            'contacto': 'contactName',
+            'direccion': 'address',
+            'address': 'address',
+            'dir': 'address',
+            // New fields
+            'tipo': 'supplierType',
+            'type': 'supplierType',
+            'tipoproveedor': 'supplierType',
+            'supplier_type': 'supplierType',
+            'suppliertype': 'supplierType',
+            'criticidad': 'criticality',
+            'criticality': 'criticality',
+            'riesgo': 'criticality',
+            'risk': 'criticality'
+        };
+        // Helper to map string values to enums
+        const mapSupplierType = (value) => {
+            const normalized = value?.toLowerCase().trim() || '';
+            if (normalized.includes('servicio') || normalized.includes('service') || normalized === 'prestador') {
+                return 'SERVICE_PROVIDER';
+            }
+            return 'SUPPLIER';
+        };
+        const mapCriticality = (value) => {
+            const normalized = value?.toLowerCase().trim() || '';
+            if (normalized === 'alta' || normalized === 'high' || normalized === '3') {
+                return 'HIGH';
+            }
+            if (normalized === 'media' || normalized === 'medium' || normalized === 'medio' || normalized === '2') {
+                return 'MEDIUM';
+            }
+            return 'LOW';
+        };
+        for (const rawSupplier of suppliers) {
+            try {
+                // Map fields from input to database format
+                const mappedSupplier = {};
+                for (const [key, value] of Object.entries(rawSupplier)) {
+                    // Skip ID field - let database auto-generate
+                    if (key.toLowerCase() === 'id')
+                        continue;
+                    const normalizedKey = key.toLowerCase().replace(/\s+/g, '').replace(/_/g, '');
+                    const dbField = fieldMapping[normalizedKey] || key;
+                    // Only set non-empty values
+                    if (value !== null && value !== undefined && value !== '') {
+                        mappedSupplier[dbField] = String(value).trim();
+                    }
+                }
+                // Validate required fields
+                if (!mappedSupplier.name) {
+                    results.errors++;
+                    results.details.push(`Fila sin nombre de proveedor`);
+                    continue;
+                }
+                // Check for existing supplier by NIT or taxId
+                const existingConditions = [];
+                if (mappedSupplier.nit) {
+                    existingConditions.push({ nit: mappedSupplier.nit });
+                }
+                if (mappedSupplier.taxId) {
+                    existingConditions.push({ taxId: mappedSupplier.taxId });
+                }
+                if (existingConditions.length > 0) {
+                    const existing = await index_1.prisma.supplier.findFirst({
+                        where: { OR: existingConditions }
+                    });
+                    if (existing) {
+                        results.duplicates++;
+                        results.details.push(`Duplicado: ${mappedSupplier.name} (NIT/TaxId ya existe)`);
+                        continue;
+                    }
+                }
+                // Create supplier - ensure empty strings become null for unique fields
+                await index_1.prisma.supplier.create({
+                    data: {
+                        name: mappedSupplier.name,
+                        nit: mappedSupplier.nit && mappedSupplier.nit.trim() !== '' ? mappedSupplier.nit : null,
+                        taxId: mappedSupplier.taxId && mappedSupplier.taxId.trim() !== '' ? mappedSupplier.taxId : null,
+                        email: mappedSupplier.email || null,
+                        contactEmail: mappedSupplier.contactEmail || null,
+                        phone: mappedSupplier.phone || null,
+                        contactPhone: mappedSupplier.contactPhone || null,
+                        contactName: mappedSupplier.contactName || null,
+                        address: mappedSupplier.address || null,
+                        supplierType: mappedSupplier.supplierType ? mapSupplierType(mappedSupplier.supplierType) : 'SUPPLIER',
+                        criticality: mappedSupplier.criticality ? mapCriticality(mappedSupplier.criticality) : 'LOW'
+                    }
+                });
+                results.success++;
+            }
+            catch (err) {
+                results.errors++;
+                // Handle Prisma unique constraint violation
+                if (err.code === 'P2002') {
+                    results.duplicates++;
+                    results.details.push(`Duplicado: ${rawSupplier.name || 'Sin nombre'} (${err.meta?.target || 'campo único'})`);
+                }
+                else {
+                    results.details.push(`Error en ${rawSupplier.name || 'Sin nombre'}: ${err.message}`);
+                }
+            }
+        }
+        res.json({
+            message: `Importación completada: ${results.success} creados, ${results.duplicates} duplicados, ${results.errors} errores`,
+            results
+        });
+    }
+    catch (error) {
+        console.error('Error in bulk import:', error);
+        res.status(500).json({ error: 'Error al importar proveedores', details: error.message });
+    }
+};
+exports.bulkImportSuppliers = bulkImportSuppliers;
 // ==================== USERS ====================
 const getUsers = async (req, res) => {
     try {

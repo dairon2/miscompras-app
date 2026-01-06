@@ -139,7 +139,7 @@ export default function AdminPage() {
                 api.get('/admin/users').then(res => setUsersList(res.data)).catch(console.error);
             }
         } else if (activeTab === 'projects') {
-            setFormData({ ...item, funderId: item.funder?.id || '', leaderId: item.leader?.id || '' });
+            setFormData({ ...item, funder: item.funder || '', leaderId: item.leader?.id || '' });
             if (usersList.length === 0) {
                 api.get('/admin/users').then(res => setUsersList(res.data)).catch(console.error);
             }
@@ -152,7 +152,7 @@ export default function AdminPage() {
     const getEmptyForm = () => {
         switch (activeTab) {
             case 'areas': return { name: '', directorId: '' };
-            case 'projects': return { name: '', code: '', description: '', funderId: '', leaderId: '' };
+            case 'projects': return { name: '', code: '', description: '', funder: '', leaderId: '' };
             case 'categories': return { name: '', code: '', description: '' };
             case 'suppliers': return { name: '', nit: '', contactName: '', email: '', phone: '', address: '' };
             default: return {};
@@ -693,7 +693,7 @@ export default function AdminPage() {
                                                             <td className="px-6 py-4 font-bold">{item.name}</td>
                                                             <td className="px-6 py-4">
                                                                 {item.funder ? (
-                                                                    <span className="text-sm font-bold text-gray-600 dark:text-gray-300">{item.funder.name}</span>
+                                                                    <span className="text-sm font-bold text-gray-600 dark:text-gray-300">{item.funder}</span>
                                                                 ) : (
                                                                     <span className="text-xs text-gray-400 italic">Sin asignar</span>
                                                                 )}
@@ -883,17 +883,17 @@ export default function AdminPage() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-gray-600">Financiador</label>
-                                                <select
-                                                    value={formData.funderId || ''}
-                                                    onChange={(e) => setFormData({ ...formData, funderId: e.target.value })}
-                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                                >
-                                                    <option value="">Sin financiador asignado</option>
-                                                    {usersList.map((u: any) => (
-                                                        <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                                                    ))}
-                                                </select>
-                                                <p className="text-xs text-gray-400">Usuario responsable del financiamiento</p>
+                                                <div className="relative">
+                                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                                    <input
+                                                        type="text"
+                                                        value={formData.funder || ''}
+                                                        onChange={(e) => setFormData({ ...formData, funder: e.target.value })}
+                                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 pl-10 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                        placeholder="Nombre del financiador"
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-gray-400">Nombre de la persona o entidad que financia</p>
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-gray-600">Líder del Proyecto</label>
