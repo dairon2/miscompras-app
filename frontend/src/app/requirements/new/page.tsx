@@ -161,7 +161,7 @@ export default function NewRequirementPage() {
 
         setLoading(true);
         try {
-            // Collect all items without attachments for the JSON payload
+            // 1. Prepare requirements data without File objects
             const requirementsData = items.map(item => ({
                 title: item.title,
                 description: item.description,
@@ -172,30 +172,27 @@ export default function NewRequirementPage() {
                 suggestedSupplier: item.suggestedSupplier || null
             }));
 
-            // Check if any item has attachments
-            const hasAttachments = items.some(item => item.attachments && item.attachments.length > 0);
+            // 2. Create FormData
+            const formData = new FormData();
 
-            if (hasAttachments) {
-                // If there are attachments, use FormData approach with individual calls
-                // but first create the group, then add attachments
-                // For now, we send items without attachments via mass-create and log the attachment issue
-                // TODO: Implement attachment handling for grouped requirements
+            // 3. Append requirements as JSON string
+            formData.append('requirements', JSON.stringify(requirementsData));
 
-                // Send all items in a single request to create a group
-                const result = await api.post('/requirements/mass-create', {
-                    requirements: requirementsData
-                });
+            // 4. Append attachments with indexed field names
+            items.forEach((item, index) => {
+                if (item.attachments && item.attachments.length > 0) {
+                    item.attachments.forEach(file => {
+                        // Key format: attachments_0, attachments_1, etc.
+                        formData.append(`attachments_${index}`, file);
+                    });
+                }
+            });
 
-                addToast(`Solicitud #${result.data.group.id} creada con ${items.length} ítem(s)`, 'success');
-            } else {
-                // No attachments - simple JSON request
-                const result = await api.post('/requirements/mass-create', {
-                    requirements: requirementsData
-                });
+            // 5. Send to mass-create endpoint
+            // Note: Content-Type header is automatically set by browser/axios with boundary
+            const result = await api.post('/requirements/mass-create', formData);
 
-                addToast(`Solicitud #${result.data.group.id} creada con ${items.length} ítem(s)`, 'success');
-            }
-
+            addToast(`Solicitud #${result.data.group.id} creada con ${items.length} ítem(s)`, 'success');
             router.push("/requirements");
         } catch (err: any) {
             console.error("Error creating requirements:", err);

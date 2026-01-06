@@ -101,16 +101,44 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
 };
 
 export const createMassRequirements = async (req: AuthRequest, res: Response) => {
-    const { requirements } = req.body;
+    let { requirements } = req.body;
     const userId = req.user?.id;
+    const files = req.files as Express.Multer.File[] || [];
 
     if (!userId) return res.status(401).json({ error: 'User not authenticated' });
+
+    // Handle JSON string from FormData
+    if (typeof requirements === 'string') {
+        try {
+            requirements = JSON.parse(requirements);
+        } catch (e) {
+            return res.status(400).json({ error: 'Invalid requirements JSON format' });
+        }
+    }
+
     if (!requirements || !Array.isArray(requirements) || requirements.length === 0) {
         return res.status(400).json({ error: 'No requirements provided' });
     }
 
     try {
-        const result = await createRequirementGroup(userId, requirements);
+        // Prepare requirements with attachments
+        const requirementsWithAttachments = await Promise.all(requirements.map(async (reqItem: any, index: number) => {
+            // Find files for this specific requirement using index mapping
+            // Frontend sends files with field name "attachments_0", "attachments_1", etc.
+            const itemFiles = files.filter(f => f.fieldname === `attachments_${index}`);
+
+            // Generate attachment data
+            const attachmentData = await processFileUploads(itemFiles, 'requirements');
+
+            return {
+                ...reqItem,
+                attachments: {
+                    create: attachmentData
+                }
+            };
+        }));
+
+        const result = await createRequirementGroup(userId, requirementsWithAttachments);
 
         // Notify Approvers (Leader of the area, Coordinators, Directors)
         const approvers = await prisma.user.findMany({
