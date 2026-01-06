@@ -135,7 +135,7 @@ export default function SuppliersPage() {
     };
 
     return (
-        <div className="p-6 lg:p-12 max-w-7xl mx-auto">
+        <div className="p-6 lg:p-10 max-w-[1600px] mx-auto">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
                     <h2 className="text-4xl font-black tracking-tight mb-2">Proveedores</h2>

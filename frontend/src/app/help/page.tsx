@@ -155,7 +155,7 @@ export default function HelpPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-            <div className="p-6 lg:p-12 max-w-7xl mx-auto">
+            <div className="p-6 lg:p-10 max-w-[1600px] mx-auto">
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
@@ -261,8 +261,8 @@ export default function HelpPage() {
                                         key={cat}
                                         onClick={() => setSelectedCategory(cat)}
                                         className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${selectedCategory === cat
-                                                ? 'bg-amber-500 text-white'
-                                                : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                                            ? 'bg-amber-500 text-white'
+                                            : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
                                             }`}
                                     >
                                         {cat}

@@ -225,7 +225,7 @@ export default function NewBudgetPage() {
     }
 
     return (
-        <div className="p-6 lg:p-12 max-w-7xl mx-auto">
+        <div className="p-6 lg:p-10 max-w-[1600px] mx-auto">
             <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}

@@ -152,7 +152,7 @@ export default function AdjustmentsPage() {
     if (!mounted || !isDirector) return null;
 
     return (
-        <div className="p-6 lg:p-12 max-w-7xl mx-auto">
+        <div className="p-6 lg:p-10 max-w-[1600px] mx-auto">
             {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
