@@ -23,6 +23,7 @@ interface Payment {
     paymentNumber: number;
     amount: number;
     invoiceNumber?: string;
+    purchaseOrder?: string;
     paymentDate?: string;
     observations?: string;
     createdAt: string;
@@ -52,6 +53,7 @@ export default function PaymentsSection({
     const [form, setForm] = useState({
         amount: '',
         invoiceNumber: '',
+        purchaseOrder: '',
         paymentDate: new Date().toISOString().split('T')[0],
         observations: ''
     });
@@ -83,12 +85,13 @@ export default function PaymentsSection({
             await api.post(`/payments/${requirementId}`, {
                 amount: parseFloat(form.amount),
                 invoiceNumber: form.invoiceNumber || null,
+                purchaseOrder: form.purchaseOrder || null,
                 paymentDate: form.paymentDate || null,
                 observations: form.observations || null
             });
             addToast('Pago registrado exitosamente', 'success');
             setShowModal(false);
-            setForm({ amount: '', invoiceNumber: '', paymentDate: new Date().toISOString().split('T')[0], observations: '' });
+            setForm({ amount: '', invoiceNumber: '', purchaseOrder: '', paymentDate: new Date().toISOString().split('T')[0], observations: '' });
             fetchPayments();
             onPaymentsChange?.();
         } catch (error: any) {
@@ -205,6 +208,12 @@ export default function PaymentsSection({
                                                 Factura: {payment.invoiceNumber}
                                             </span>
                                         )}
+                                        {payment.purchaseOrder && (
+                                            <span className="flex items-center gap-1">
+                                                <FileText size={12} />
+                                                OC: {payment.purchaseOrder}
+                                            </span>
+                                        )}
                                         {payment.paymentDate && (
                                             <span className="flex items-center gap-1">
                                                 <Calendar size={12} />
@@ -292,7 +301,7 @@ export default function PaymentsSection({
                                     )}
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-xs font-black text-gray-600">Número de Factura</label>
                                         <input
@@ -300,6 +309,16 @@ export default function PaymentsSection({
                                             value={form.invoiceNumber}
                                             onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
                                             placeholder="FAC-001"
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-3 rounded-xl font-bold focus:ring-2 ring-amber-500 outline-none"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-600">Orden de Compra</label>
+                                        <input
+                                            type="text"
+                                            value={form.purchaseOrder}
+                                            onChange={(e) => setForm({ ...form, purchaseOrder: e.target.value })}
+                                            placeholder="OC-001"
                                             className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-3 rounded-xl font-bold focus:ring-2 ring-amber-500 outline-none"
                                         />
                                     </div>

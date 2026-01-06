@@ -5,7 +5,7 @@ import { prisma } from '../index';
 // Create a new payment for a requirement
 export const createPayment = async (req: AuthRequest, res: Response) => {
     const { requirementId } = req.params;
-    const { amount, invoiceNumber, paymentDate, observations } = req.body;
+    const { amount, invoiceNumber, purchaseOrder, paymentDate, observations } = req.body;
 
     if (!amount || amount <= 0) {
         return res.status(400).json({ error: 'El monto del pago es requerido y debe ser mayor a 0' });
@@ -52,6 +52,7 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
                 paymentNumber,
                 amount: parseFloat(amount),
                 invoiceNumber,
+                purchaseOrder,
                 paymentDate: paymentDate ? new Date(paymentDate) : null,
                 observations,
                 requirementId
@@ -115,7 +116,7 @@ export const getPaymentsByRequirement = async (req: AuthRequest, res: Response) 
 // Update a payment
 export const updatePayment = async (req: AuthRequest, res: Response) => {
     const { paymentId } = req.params;
-    const { amount, invoiceNumber, paymentDate, observations } = req.body;
+    const { amount, invoiceNumber, purchaseOrder, paymentDate, observations } = req.body;
 
     try {
         const payment = await prisma.payment.findUnique({
@@ -147,6 +148,7 @@ export const updatePayment = async (req: AuthRequest, res: Response) => {
             data: {
                 amount: amount !== undefined ? parseFloat(amount) : undefined,
                 invoiceNumber,
+                purchaseOrder,
                 paymentDate: paymentDate ? new Date(paymentDate) : undefined,
                 observations
             }

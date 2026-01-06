@@ -288,6 +288,7 @@ model Payment {
   paymentNumber Int
   amount        Decimal     @db.Decimal(15, 2)
   invoiceNumber String?
+  purchaseOrder String?     // Orden de Compra
   paymentDate   DateTime?
   observations  String?
   requirementId String
