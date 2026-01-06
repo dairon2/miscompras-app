@@ -565,26 +565,29 @@ export default function BudgetsPage() {
                         <table className="w-full text-left">
                             <thead className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700">
                                 <tr>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Título</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Rubro</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Proyecto</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Rubro</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Líder</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Presupuesto</th>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Ejecutado</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Disponible</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Estado</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredBudgets.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="px-6 py-12 text-center text-gray-400 font-bold">
+                                        <td colSpan={7} className="px-6 py-12 text-center text-gray-400 font-bold">
                                             No hay presupuestos para mostrar
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredBudgets.map((budget) => {
-                                        const usedPct = ((Number(budget.amount) - Number(budget.available)) / Number(budget.amount)) * 100;
+                                        const totalAmount = Number(budget.amount);
+                                        const availableAmount = Number(budget.available);
+                                        const executedAmount = totalAmount - availableAmount;
+
+                                        const usedPct = (executedAmount / totalAmount) * 100;
                                         const availablePct = 100 - usedPct;
                                         const isLow = availablePct < 10;
 
@@ -594,15 +597,15 @@ export default function BudgetsPage() {
                                                 onClick={() => router.push(`/budget/${budget.id}`)}
                                                 className="border-b border-gray-50 dark:border-gray-700 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-colors cursor-pointer"
                                             >
-                                                <td className="px-6 py-4 font-bold">{budget.title}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-500 font-bold">{budget.project?.name}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-500">{budget.category?.name || '-'}</td>
-                                                <td className="px-6 py-4 text-sm text-gray-500">{budget.project?.name}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-500">{budget.manager?.name || '-'}</td>
-                                                <td className="px-6 py-4 font-bold">{formatCurrency(Number(budget.amount))}</td>
+                                                <td className="px-6 py-4 font-bold">{formatCurrency(totalAmount)}</td>
+                                                <td className="px-6 py-4 font-bold text-amber-600">{formatCurrency(executedAmount)}</td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-2">
                                                         <span className={`font-bold ${isLow ? 'text-red-600' : 'text-green-600'}`}>
-                                                            {formatCurrency(Number(budget.available))}
+                                                            {formatCurrency(availableAmount)}
                                                         </span>
                                                         {isLow && (
                                                             <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[8px] font-black">BAJO</span>
@@ -612,7 +615,6 @@ export default function BudgetsPage() {
                                                         <div className={`h-full rounded-full ${getProgressColor(budget)}`} style={{ width: `${Math.min(usedPct, 100)}%` }}></div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">{getStatusBadge(budget.status)}</td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                                         <button
