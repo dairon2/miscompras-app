@@ -552,16 +552,6 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                     {getProcStatusLabel(requirement.procurementStatus)}
                                 </span>
                             </div>
-                            {requirement.status === 'APPROVED' && (
-                                <button
-                                    onClick={handleDownloadPDF}
-                                    disabled={actionLoading}
-                                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary-600 hover:underline mt-2 disabled:opacity-50"
-                                >
-                                    {actionLoading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
-                                    {actionLoading ? "Generando..." : "Descargar PDF"}
-                                </button>
-                            )}
                         </div>
                     </div>
 
