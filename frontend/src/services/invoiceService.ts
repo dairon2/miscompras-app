@@ -42,10 +42,18 @@ const payInvoice = async (token: string, id: string, paymentData: { paymentDate:
     return response.data;
 };
 
+const deleteInvoice = async (token: string, id: string) => {
+    const response = await axios.delete(`${API_URL}/invoices/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
 export const invoiceService = {
     getInvoices,
     createInvoice,
     verifyInvoice,
     approveInvoice,
-    payInvoice
+    payInvoice,
+    deleteInvoice
 };

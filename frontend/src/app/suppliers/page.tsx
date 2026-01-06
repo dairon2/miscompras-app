@@ -27,7 +27,8 @@ export default function SuppliersPage() {
         phone: "",
         address: "",
         supplierType: "SUPPLIER" as "SUPPLIER" | "SERVICE_PROVIDER",
-        criticality: "LOW" as "LOW" | "MEDIUM" | "HIGH"
+        criticality: "LOW" as "LOW" | "MEDIUM" | "HIGH",
+        activity: ""
     });
 
     // Import modal state
@@ -40,6 +41,23 @@ export default function SuppliersPage() {
     const userRole = user?.role || 'USER';
     const canManageSuppliers = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole);
 
+
+    // Search and Filter State
+    const [searchTerm, setSearchTerm] = useState("");
+    const [typeFilter, setTypeFilter] = useState<'ALL' | 'SUPPLIER' | 'SERVICE_PROVIDER'>('ALL');
+
+    const filteredSuppliers = suppliers.filter((s: any) => {
+        const matchesSearch =
+            (s.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+            (s.taxId?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+            (s.contactName?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+            (s.contactEmail?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+            (s.contactPhone?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+
+        const matchesType = typeFilter === 'ALL' || s.supplierType === typeFilter;
+
+        return matchesSearch && matchesType;
+    });
 
     useEffect(() => {
         fetchSuppliers();
@@ -66,7 +84,7 @@ export default function SuppliersPage() {
         try {
             await api.post("/admin/suppliers", formData);
             setShowCreateModal(false);
-            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW" });
+            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "" });
             fetchSuppliers();
             alert("Proveedor registrado exitosamente");
         } catch (error) {
@@ -118,10 +136,48 @@ export default function SuppliersPage() {
 
     return (
         <div className="p-6 lg:p-12 max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
                     <h2 className="text-4xl font-black tracking-tight mb-2">Proveedores</h2>
                     <p className="text-gray-500 font-medium">Gestión y trazabilidad de aliados estratégicos.</p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    {/* Search Bar */}
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Buscar proveedor..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-white dark:bg-slate-800 border border-gray-100 dark:border-gray-700 rounded-2xl py-3 pl-12 pr-4 text-sm font-bold shadow-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Toolbar */}
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
+                <div className="flex gap-2 bg-gray-100 dark:bg-slate-800 p-1 rounded-2xl overflow-x-auto max-w-full">
+                    <button
+                        onClick={() => setTypeFilter('ALL')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${typeFilter === 'ALL' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        Todos
+                    </button>
+                    <button
+                        onClick={() => setTypeFilter('SUPPLIER')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${typeFilter === 'SUPPLIER' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        Proveedores
+                    </button>
+                    <button
+                        onClick={() => setTypeFilter('SERVICE_PROVIDER')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${typeFilter === 'SERVICE_PROVIDER' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        Servicios
+                    </button>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -143,7 +199,7 @@ export default function SuppliersPage() {
                     <button
                         onClick={() => {
                             try {
-                                exportSuppliers(suppliers);
+                                exportSuppliers(filteredSuppliers);
                             } catch (error) {
                                 console.error('Error al exportar:', error);
                                 alert('Error al generar el archivo Excel');
@@ -178,16 +234,16 @@ export default function SuppliersPage() {
                 <div className="py-24 text-center text-gray-400 font-bold uppercase text-[10px] tracking-widest">
                     Consultando catálogo de proveedores...
                 </div>
-            ) : suppliers.length === 0 ? (
+            ) : filteredSuppliers.length === 0 ? (
                 <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-[3rem] border border-dashed border-gray-200 dark:border-gray-700">
-                    <p className="text-gray-400 font-black text-xs uppercase">No se encontraron proveedores registrados</p>
+                    <p className="text-gray-400 font-black text-xs uppercase">No se encontraron proveedores</p>
                 </div>
             ) : (
                 <>
                     {viewMode === 'grid' ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-                            {suppliers.map((supp: any, index) => (
+                            {filteredSuppliers.map((supp: any, index: number) => (
                                 <SupplierCard key={supp.id} supplier={supp} index={index} onClick={() => navigateToSupplier(supp.id)} />
                             ))}
                         </div>
@@ -199,12 +255,13 @@ export default function SuppliersPage() {
                                         <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Proveedor / NIT</th>
                                         <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Contacto Principal</th>
                                         <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Teléfono</th>
+                                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Actividad</th>
                                         <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Estado</th>
                                         <th className="p-6"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {suppliers.map((supp: any) => (
+                                    {filteredSuppliers.map((supp: any) => (
                                         <tr key={supp.id} className="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors group">
                                             <td className="p-6">
                                                 <p className="font-black text-sm mb-1 group-hover:text-primary-600 transition-colors">{supp.name}</p>
@@ -212,6 +269,9 @@ export default function SuppliersPage() {
                                             </td>
                                             <td className="p-6 text-xs font-bold text-gray-600 dark:text-gray-300">{supp.contactEmail || 'N/A'}</td>
                                             <td className="p-6 text-xs font-bold text-gray-600 dark:text-gray-300">{supp.contactPhone || 'N/A'}</td>
+                                            <td className="p-6 text-xs font-medium text-gray-500 max-w-[200px] truncate" title={supp.activity}>
+                                                {supp.activity || '-'}
+                                            </td>
                                             <td className="p-6">
                                                 <span className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 rounded-lg text-[10px] font-black uppercase tracking-widest border border-green-100 dark:border-green-800/30">
                                                     Activo
@@ -279,16 +339,25 @@ export default function SuppliersPage() {
                                             />
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Nombre *</label>
-                                        <input
-                                            type="text" required
-                                            value={formData.name}
-                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                            className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                                            placeholder="Razón social"
-                                        />
-                                    </div>
+                                    <input
+                                        type="text" required
+                                        value={formData.name}
+                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                        placeholder="Razón social"
+                                    />
+                                </div>
+
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Actividad Económica</label>
+                                    <input
+                                        type="text"
+                                        value={formData.activity || ''}
+                                        onChange={e => setFormData({ ...formData, activity: e.target.value })}
+                                        className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                        placeholder="Ej: Suministro de papelería, Servicios de mantenimiento..."
+                                    />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-6">
@@ -379,131 +448,134 @@ export default function SuppliersPage() {
                             </form>
                         </motion.div>
                     </div>
-                )}
-            </AnimatePresence>
+                )
+                }
+            </AnimatePresence >
 
             {/* Import Modal */}
             <AnimatePresence>
-                {showImportModal && (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="bg-white dark:bg-slate-800 rounded-[2rem] p-8 w-full max-w-lg shadow-2xl relative"
-                        >
-                            <button
-                                onClick={() => {
-                                    setShowImportModal(false);
-                                    setImportFile(null);
-                                    setImportResult(null);
-                                }}
-                                className="absolute top-6 right-6 text-gray-400 hover:text-gray-600"
+                {
+                    showImportModal && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="bg-white dark:bg-slate-800 rounded-[2rem] p-8 w-full max-w-lg shadow-2xl relative"
                             >
-                                <X size={24} />
-                            </button>
-
-                            <h3 className="text-2xl font-black mb-6">Importar Proveedores</h3>
-                            <p className="text-gray-500 mb-6 text-sm">
-                                Sube un archivo CSV o Excel (.xlsx) con los datos de los proveedores.
-                                La columna ID será ignorada (se genera automáticamente).
-                            </p>
-
-                            {/* File Drop Zone */}
-                            <div
-                                className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${importFile
-                                    ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
-                                    : 'border-gray-300 hover:border-gray-400'
-                                    }`}
-                            >
-                                {importFile ? (
-                                    <div className="flex items-center justify-center gap-3">
-                                        <FileSpreadsheet className="text-teal-600" size={32} />
-                                        <div className="text-left">
-                                            <p className="font-bold text-gray-800 dark:text-gray-200">{importFile.name}</p>
-                                            <p className="text-sm text-gray-500">{(importFile.size / 1024).toFixed(1)} KB</p>
-                                        </div>
-                                        <button
-                                            onClick={() => setImportFile(null)}
-                                            className="ml-4 text-gray-400 hover:text-red-500"
-                                        >
-                                            <X size={20} />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <Upload className="mx-auto text-gray-400 mb-3" size={40} />
-                                        <p className="text-gray-500 mb-2">Arrastra un archivo aquí o</p>
-                                        <label className="cursor-pointer inline-block bg-gray-100 dark:bg-slate-700 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
-                                            Seleccionar archivo
-                                            <input
-                                                type="file"
-                                                accept=".csv,.xlsx,.xls"
-                                                className="hidden"
-                                                onChange={(e) => {
-                                                    if (e.target.files?.[0]) {
-                                                        setImportFile(e.target.files[0]);
-                                                    }
-                                                }}
-                                            />
-                                        </label>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Import Result */}
-                            {importResult && (
-                                <div className={`mt-6 p-4 rounded-xl ${importResult.error
-                                    ? 'bg-red-50 dark:bg-red-900/20 text-red-600'
-                                    : 'bg-green-50 dark:bg-green-900/20 text-green-600'
-                                    }`}>
-                                    {importResult.error ? (
-                                        <p className="font-bold">{importResult.error}</p>
-                                    ) : (
-                                        <>
-                                            <p className="font-bold mb-2">{importResult.message}</p>
-                                            {importResult.results && (
-                                                <div className="text-sm space-y-1">
-                                                    <p>✅ Creados: {importResult.results.success}</p>
-                                                    <p>⚠️ Duplicados: {importResult.results.duplicates}</p>
-                                                    <p>❌ Errores: {importResult.results.errors}</p>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                            <div className="flex gap-4 mt-6">
                                 <button
                                     onClick={() => {
                                         setShowImportModal(false);
                                         setImportFile(null);
                                         setImportResult(null);
                                     }}
-                                    className="flex-1 py-4 rounded-2xl border border-gray-200 font-bold hover:bg-gray-50 transition-colors"
+                                    className="absolute top-6 right-6 text-gray-400 hover:text-gray-600"
                                 >
-                                    Cancelar
+                                    <X size={24} />
                                 </button>
-                                <button
-                                    onClick={handleImportFile}
-                                    disabled={!importFile || importing}
-                                    className="flex-1 py-4 rounded-2xl bg-teal-600 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-teal-700 transition-colors flex items-center justify-center gap-2"
+
+                                <h3 className="text-2xl font-black mb-6">Importar Proveedores</h3>
+                                <p className="text-gray-500 mb-6 text-sm">
+                                    Sube un archivo CSV o Excel (.xlsx) con los datos de los proveedores.
+                                    La columna ID será ignorada (se genera automáticamente).
+                                </p>
+
+                                {/* File Drop Zone */}
+                                <div
+                                    className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${importFile
+                                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
+                                        : 'border-gray-300 hover:border-gray-400'
+                                        }`}
                                 >
-                                    {importing ? (
-                                        <>Importando...</>
+                                    {importFile ? (
+                                        <div className="flex items-center justify-center gap-3">
+                                            <FileSpreadsheet className="text-teal-600" size={32} />
+                                            <div className="text-left">
+                                                <p className="font-bold text-gray-800 dark:text-gray-200">{importFile.name}</p>
+                                                <p className="text-sm text-gray-500">{(importFile.size / 1024).toFixed(1)} KB</p>
+                                            </div>
+                                            <button
+                                                onClick={() => setImportFile(null)}
+                                                className="ml-4 text-gray-400 hover:text-red-500"
+                                            >
+                                                <X size={20} />
+                                            </button>
+                                        </div>
                                     ) : (
                                         <>
-                                            <Upload size={18} />
-                                            Importar
+                                            <Upload className="mx-auto text-gray-400 mb-3" size={40} />
+                                            <p className="text-gray-500 mb-2">Arrastra un archivo aquí o</p>
+                                            <label className="cursor-pointer inline-block bg-gray-100 dark:bg-slate-700 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
+                                                Seleccionar archivo
+                                                <input
+                                                    type="file"
+                                                    accept=".csv,.xlsx,.xls"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        if (e.target.files?.[0]) {
+                                                            setImportFile(e.target.files[0]);
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
                                         </>
                                     )}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+                                </div>
+
+                                {/* Import Result */}
+                                {importResult && (
+                                    <div className={`mt-6 p-4 rounded-xl ${importResult.error
+                                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600'
+                                        : 'bg-green-50 dark:bg-green-900/20 text-green-600'
+                                        }`}>
+                                        {importResult.error ? (
+                                            <p className="font-bold">{importResult.error}</p>
+                                        ) : (
+                                            <>
+                                                <p className="font-bold mb-2">{importResult.message}</p>
+                                                {importResult.results && (
+                                                    <div className="text-sm space-y-1">
+                                                        <p>✅ Creados: {importResult.results.success}</p>
+                                                        <p>⚠️ Duplicados: {importResult.results.duplicates}</p>
+                                                        <p>❌ Errores: {importResult.results.errors}</p>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="flex gap-4 mt-6">
+                                    <button
+                                        onClick={() => {
+                                            setShowImportModal(false);
+                                            setImportFile(null);
+                                            setImportResult(null);
+                                        }}
+                                        className="flex-1 py-4 rounded-2xl border border-gray-200 font-bold hover:bg-gray-50 transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleImportFile}
+                                        disabled={!importFile || importing}
+                                        className="flex-1 py-4 rounded-2xl bg-teal-600 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-teal-700 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {importing ? (
+                                            <>Importando...</>
+                                        ) : (
+                                            <>
+                                                <Upload size={18} />
+                                                Importar
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )
+                }
+            </AnimatePresence >
         </div >
     );
 }
@@ -527,9 +599,15 @@ function SupplierCard({ supplier, index, onClick }: any) {
             </div>
 
             <h3 className="text-xl font-black tracking-tight mb-1 group-hover:text-primary-600 transition-colors">{supplier.name}</h3>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 border-b border-gray-50 dark:border-gray-700 pb-4">NIT: {supplier.taxId}</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">NIT: {supplier.taxId}</p>
 
-            <div className="space-y-4 mb-8">
+            {supplier.activity && (
+                <p className="text-xs font-medium text-gray-500 bg-gray-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg mb-6 line-clamp-2">
+                    {supplier.activity}
+                </p>
+            )}
+
+            <div className={`space-y-4 mb-8 ${!supplier.activity ? 'mt-6' : ''}`}>
                 <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                     <Mail size={16} className="text-primary-400" />
                     <span className="truncate">{supplier.contactEmail || "Sin correo"}</span>

@@ -194,3 +194,21 @@ export const payInvoice = async (req: AuthRequest, res: Response) => {
         res.status(400).json({ error: 'Failed to register payment' });
     }
 };
+
+// Delete Invoice
+export const deleteInvoice = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const userRole = req.user?.role;
+
+    if (!['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(userRole || '')) {
+        return res.status(403).json({ error: 'Not authorized to delete invoices' });
+    }
+
+    try {
+        await prisma.invoice.delete({ where: { id } });
+        res.json({ message: 'Factura eliminada' });
+    } catch (error: any) {
+        console.error("Delete invoice error:", error);
+        res.status(400).json({ error: 'Failed to delete invoice' });
+    }
+};

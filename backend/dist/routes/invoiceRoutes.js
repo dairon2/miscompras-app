@@ -41,4 +41,5 @@ router.post('/', auth_1.authMiddleware, upload.single('file'), invoiceController
 router.patch('/:id/verify', auth_1.authMiddleware, invoiceController_1.verifyInvoice);
 router.patch('/:id/approve', auth_1.authMiddleware, invoiceController_1.approveInvoice);
 router.patch('/:id/pay', auth_1.authMiddleware, invoiceController_1.payInvoice);
+router.delete('/:id', auth_1.authMiddleware, invoiceController_1.deleteInvoice);
 exports.default = router;

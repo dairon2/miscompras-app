@@ -453,6 +453,10 @@ export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
             'address': 'address',
             'dir': 'address',
             // New fields
+            'actividad': 'activity',
+            'activity': 'activity',
+            'actividadempresa': 'activity',
+            'actividad_empresa': 'activity',
             'tipo': 'supplierType',
             'type': 'supplierType',
             'tipoproveedor': 'supplierType',

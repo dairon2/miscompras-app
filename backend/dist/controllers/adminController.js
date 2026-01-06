@@ -431,6 +431,10 @@ const bulkImportSuppliers = async (req, res) => {
             'address': 'address',
             'dir': 'address',
             // New fields
+            'actividad': 'activity',
+            'activity': 'activity',
+            'actividadempresa': 'activity',
+            'actividad_empresa': 'activity',
             'tipo': 'supplierType',
             'type': 'supplierType',
             'tipoproveedor': 'supplierType',

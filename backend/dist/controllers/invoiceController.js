@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.payInvoice = exports.approveInvoice = exports.verifyInvoice = exports.createInvoice = exports.getInvoices = void 0;
+exports.deleteInvoice = exports.payInvoice = exports.approveInvoice = exports.verifyInvoice = exports.createInvoice = exports.getInvoices = void 0;
 const index_1 = require("../index");
 const blobStorageService_1 = require("../services/blobStorageService");
 const logger_1 = __importDefault(require("../services/logger"));
@@ -187,3 +187,20 @@ const payInvoice = async (req, res) => {
     }
 };
 exports.payInvoice = payInvoice;
+// Delete Invoice
+const deleteInvoice = async (req, res) => {
+    const { id } = req.params;
+    const userRole = req.user?.role;
+    if (!['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(userRole || '')) {
+        return res.status(403).json({ error: 'Not authorized to delete invoices' });
+    }
+    try {
+        await index_1.prisma.invoice.delete({ where: { id } });
+        res.json({ message: 'Factura eliminada' });
+    }
+    catch (error) {
+        console.error("Delete invoice error:", error);
+        res.status(400).json({ error: 'Failed to delete invoice' });
+    }
+};
+exports.deleteInvoice = deleteInvoice;

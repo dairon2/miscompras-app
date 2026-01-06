@@ -81,6 +81,7 @@ model Supplier {
   email        String?
   nit          String?          @unique
   phone        String?
+  activity     String?          // Actividad de la empresa
   supplierType SupplierType     @default(SUPPLIER)
   criticality  Criticality      @default(LOW)
   requirements Requirement[]

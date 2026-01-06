@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { invoiceService } from '@/services/invoiceService';
-import { Plus, CheckCircle, Clock, FileText, Upload, DollarSign, Filter } from 'lucide-react';
+import { Plus, CheckCircle, Clock, FileText, Upload, DollarSign, Filter, Eye, Edit, Trash2 } from 'lucide-react';
 import LoadingButton from '@/components/LoadingButton';
 
 export default function InvoicesPage() {
@@ -129,12 +129,42 @@ export default function InvoicesPage() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={() => router.push(`/invoices/${inv.id}`)}
-                                                className="text-blue-600 hover:text-blue-800 font-medium text-xs bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
-                                            >
-                                                Gestionar
-                                            </button>
+                                            {/* Action Buttons for Allowed Roles */}
+                                            {!['USER', 'LEADER', 'AUDITOR'].includes(user?.role || '') && (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => router.push(`/invoices/${inv.id}`)}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="Gestionar"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => router.push(`/invoices/${inv.id}/edit`)}
+                                                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                        title="Editar"
+                                                    >
+                                                        <Edit size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (confirm('¿Estás seguro de eliminar esta factura?')) {
+                                                                try {
+                                                                    await invoiceService.deleteInvoice(token!, inv.id);
+                                                                    loadInvoices();
+                                                                } catch (error) {
+                                                                    console.error(error);
+                                                                    alert('Error al eliminar factura');
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Eliminar"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

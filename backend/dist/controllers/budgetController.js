@@ -322,12 +322,12 @@ const updateBudget = async (req, res) => {
                 title,
                 description,
                 code,
-                amount: amount ? parseFloat(amount) : undefined,
-                available: amount ? newAvailable : undefined,
+                amount: (amount !== undefined && amount !== null && amount !== '') ? parseFloat(amount) : undefined,
+                available: (amount !== undefined && amount !== null && amount !== '') ? newAvailable : undefined,
                 projectId,
                 areaId,
                 category: categoryId ? { connect: { id: categoryId } } : undefined,
-                managerId: managerId || null,
+                managerId: (managerId && managerId !== 'null' && managerId !== '') ? managerId : null,
                 version: { increment: 1 }
             }
         });

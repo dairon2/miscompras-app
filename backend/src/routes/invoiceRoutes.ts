@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getInvoices, createInvoice, verifyInvoice, approveInvoice, payInvoice } from '../controllers/invoiceController';
+import { getInvoices, createInvoice, verifyInvoice, approveInvoice, payInvoice, deleteInvoice } from '../controllers/invoiceController';
 import { authMiddleware } from '../middlewares/auth';
 import multer from 'multer';
 import path from 'path';
@@ -40,5 +40,6 @@ router.post('/', authMiddleware, upload.single('file'), createInvoice);
 router.patch('/:id/verify', authMiddleware, verifyInvoice);
 router.patch('/:id/approve', authMiddleware, approveInvoice);
 router.patch('/:id/pay', authMiddleware, payInvoice);
+router.delete('/:id', authMiddleware, deleteInvoice);
 
 export default router;
