@@ -26,7 +26,8 @@ import {
     BookOpen,
     ArrowUpDown,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    Paperclip
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -60,6 +61,7 @@ interface Requirement {
     isAsiento?: boolean;
     createdAt: string;
     groupId?: number;
+    attachments?: { id: string }[];
 }
 
 export default function RequirementsPage() {
@@ -796,6 +798,12 @@ function RequirementCard({ req, onClick }: { req: Requirement, onClick: () => vo
                         </span>
                     </div>
                     <div className="flex items-center gap-2 text-primary-600 font-black text-[10px] uppercase tracking-widest">
+                        {(req.attachments && req.attachments.length > 0) && (
+                            <div className="flex items-center gap-1 mr-2 text-gray-400">
+                                <Paperclip size={12} />
+                                <span>{req.attachments.length}</span>
+                            </div>
+                        )}
                         Ver más <ArrowRight size={12} />
                     </div>
                 </div>

@@ -70,15 +70,16 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
         const adminEmails = admins.map((admin: { email: string }) => admin.email).join(',');
 
         // Notify Admins/Leaders via Email
-        for (const admin of admins) {
-            await sendRequirementNotificationEmail({
+        // Notify Admins/Leaders via Email - Non-blocking
+        Promise.all(admins.map(admin =>
+            sendRequirementNotificationEmail({
                 to: admin.email,
                 type: 'REQUIREMENT_CREATED',
                 requirementId: requirement.id,
                 requirementTitle: title,
                 requesterName: (req.user as any)?.name || req.user?.email || 'Desconocido'
-            });
-        }
+            }).catch(e => console.error(`Email error for ${admin.email}`, e))
+        ));
 
         // --- IN-APP NOTIFICATION FOR ADMINS ---
         for (const admin of admins) {
@@ -160,16 +161,16 @@ export const createMassRequirements = async (req: AuthRequest, res: Response) =>
             // Calculate total amount from results
             const totalAmt = result.requirements.reduce((acc: number, r: any) => acc + Number(r.estimatedAmount || 0), 0);
 
-            // Send Email Notification for Mass Create
-            await sendRequirementNotificationEmail({
+            // Send Email Notification for Mass Create - Non-blocking
+            sendRequirementNotificationEmail({
                 to: approver.email,
                 type: 'REQUIREMENT_CREATED',
-                requirementId: result.group.id.toString(), // Using group ID as ID display
+                requirementId: result.group.id.toString(),
                 groupId: result.group.id,
                 requirementTitle: `Solicitud Agrupada de ${(req.user as any)?.name || req.user?.email}`,
                 requesterName: (req.user as any)?.name || req.user?.email || 'Desconocido',
                 amount: totalAmt
-            });
+            }).catch(err => console.error(`Failed to send email to ${approver.email}`, err));
         }
 
         res.status(201).json(result);
@@ -229,7 +230,8 @@ export const getMyRequirements = async (req: AuthRequest, res: Response) => {
                             }
                         }
                     }
-                }
+                },
+                attachments: true
             },
             orderBy: { createdAt: 'desc' },
             skip,
@@ -547,7 +549,8 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
                         name: true,
                         email: true
                     }
-                }
+                },
+                attachments: true
             },
             orderBy: { createdAt: 'desc' },
             skip,
