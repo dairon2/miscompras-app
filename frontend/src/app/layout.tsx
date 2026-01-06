@@ -7,7 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useRef, useCallback } from "react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, User as UserIcon, Bell, Package, LayoutDashboard, Database, Briefcase, FileText, Users, Building2, Settings, Shield, Mail, MapPin, X, BookOpen, UserCog, CheckCircle } from "lucide-react";
+import { LogOut, User as UserIcon, Bell, Package, LayoutDashboard, Database, Briefcase, FileText, Users, Building2, Settings, Shield, Mail, MapPin, X, BookOpen, UserCog, CheckCircle, HelpCircle } from "lucide-react";
 import ToastContainer from "@/components/ToastContainer";
 import Link from "next/link";
 import Image from "next/image";
@@ -306,6 +306,15 @@ export default function RootLayout({
                                 <span>Configuración</span>
                               </Link>
                             )}
+
+                            <Link
+                              href="/help"
+                              onClick={() => setShowProfileMenu(false)}
+                              className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
+                            >
+                              <HelpCircle className="w-5 h-5 text-slate-500 group-hover:text-amber-400 transition-colors" />
+                              <span>Ayuda</span>
+                            </Link>
 
                             <div className="h-[1px] bg-slate-800 my-2 mx-4"></div>
 
