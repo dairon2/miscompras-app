@@ -597,7 +597,7 @@ export default function AdminPage() {
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Financiador</th>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Líder</th>
-                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Requerimientos</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Presupuesto</th>
                                                 </>
                                             )}
                                             {activeTab === 'categories' && (
@@ -706,8 +706,8 @@ export default function AdminPage() {
                                                                 )}
                                                             </td>
                                                             <td className="px-6 py-4">
-                                                                <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-full text-[10px] font-black">
-                                                                    {item._count?.requirements || 0}
+                                                                <span className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg text-[11px] font-black">
+                                                                    {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(item.totalBudget || 0)}
                                                                 </span>
                                                             </td>
                                                         </>

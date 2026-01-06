@@ -24,4 +24,8 @@ router.put('/:id', (0, auth_1.roleCheck)(['DIRECTOR']), budgetController_1.updat
 router.delete('/:id', (0, auth_1.roleCheck)(['DIRECTOR']), budgetController_1.deleteBudget);
 // Approve/Reject budget (by assigned manager/leader)
 router.patch('/:id/approve', budgetController_1.approveBudget);
+// Mass creation and Group management
+router.post('/mass-create', (0, auth_1.roleCheck)(['DIRECTOR']), budgetController_1.createMassBudgets);
+router.post('/group/:id/approve', budgetController_1.approveBudgetGroup);
+router.post('/group/:id/reject', budgetController_1.rejectBudgetGroup);
 exports.default = router;

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getManagerOptions = exports.getBudgetYears = exports.approveBudget = exports.deleteBudget = exports.updateBudget = exports.createBudget = exports.getPendingBudgetsForManager = exports.getBudgetById = exports.getBudgets = void 0;
+exports.rejectBudgetGroup = exports.approveBudgetGroup = exports.createMassBudgets = exports.getManagerOptions = exports.getBudgetYears = exports.approveBudget = exports.deleteBudget = exports.updateBudget = exports.createBudget = exports.getPendingBudgetsForManager = exports.getBudgetById = exports.getBudgets = void 0;
 const index_1 = require("../index");
 const pdfService_1 = require("../services/pdfService");
 const emailService_1 = require("../services/emailService");
@@ -161,7 +161,8 @@ const getPendingBudgetsForManager = async (req, res) => {
                 area: { select: { id: true, name: true } },
                 category: { select: { id: true, name: true, code: true } },
                 manager: { select: { id: true, name: true, email: true } },
-                createdBy: { select: { id: true, name: true, email: true } }
+                createdBy: { select: { id: true, name: true, email: true } },
+                group: true
             }
         });
         res.json(pendingBudgets);
@@ -494,3 +495,152 @@ const getManagerOptions = async (req, res) => {
     }
 };
 exports.getManagerOptions = getManagerOptions;
+// ==================== MASS CREATION AND GROUPS ====================
+const createMassBudgets = async (req, res) => {
+    try {
+        const userRole = req.user?.role;
+        const userId = req.user?.id;
+        const { budgets } = req.body; // Expects array of budget objects
+        if (userRole !== 'DIRECTOR') {
+            return res.status(403).json({ error: 'Solo el DIRECTOR puede crear presupuestos' });
+        }
+        if (!budgets || !Array.isArray(budgets) || budgets.length === 0) {
+            return res.status(400).json({ error: 'No se enviaron presupuestos' });
+        }
+        // Create Group
+        const group = await index_1.prisma.budgetGroup.create({
+            data: {
+                creatorId: userId
+            }
+        });
+        const results = [];
+        const errors = [];
+        for (const b of budgets) {
+            const { title, description, code, amount, projectId, areaId, categoryId, managerId, subLeaders, year, expirationDate } = b;
+            // Basic validation
+            if (!title || !amount || !projectId || !areaId || !categoryId) {
+                errors.push({ title: title || 'Sin título', error: 'Datos incompletos' });
+                continue;
+            }
+            // Generate code logic
+            let budgetCode = code;
+            if (!budgetCode) {
+                // Should ideally lock table or use atomic sequence, but simplistic approach for now
+                // Using a random suffix to minimize collision probability in loop
+                const suffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+                budgetCode = `BUD-${year || new Date().getFullYear()}-${Date.now().toString().slice(-4)}-${suffix}`;
+            }
+            try {
+                const newBudget = await index_1.prisma.budget.create({
+                    data: {
+                        title: (budgets.length > 1) ? `${title}` : title, // Keep original title
+                        description,
+                        code: budgetCode,
+                        amount: parseFloat(amount),
+                        available: parseFloat(amount),
+                        year: year || new Date().getFullYear(),
+                        expirationDate: expirationDate ? new Date(expirationDate) : null,
+                        status: 'PENDING',
+                        projectId,
+                        areaId,
+                        categoryId,
+                        managerId: managerId || null,
+                        createdById: userId,
+                        groupId: group.id,
+                        subLeaders: subLeaders?.length > 0 ? {
+                            create: subLeaders.map((id) => ({ userId: id }))
+                        } : undefined
+                    }
+                });
+                results.push(newBudget);
+                // Notify Manager
+                if (newBudget.managerId) {
+                    await index_1.prisma.notification.create({
+                        data: {
+                            title: 'Nuevo Presupuesto Asignado',
+                            message: `Se te ha asignado el presupuesto "${newBudget.title}"`,
+                            type: 'INFO',
+                            userId: newBudget.managerId
+                        }
+                    }).catch(console.error);
+                }
+            }
+            catch (err) {
+                console.error("Error creating individual budget in mass:", err);
+                errors.push({ title, error: err.message });
+            }
+        }
+        res.status(201).json({
+            message: `Proceso completado. ${results.length} creados, ${errors.length} fallidos.`,
+            group,
+            results,
+            errors
+        });
+    }
+    catch (error) {
+        console.error('Error in mass create budgets:', error);
+        res.status(500).json({ error: 'Error al crear presupuestos masivos' });
+    }
+};
+exports.createMassBudgets = createMassBudgets;
+const approveBudgetGroup = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const { id } = req.params; // Group ID
+        // Verify group exists
+        const group = await index_1.prisma.budgetGroup.findUnique({
+            where: { id: parseInt(id) },
+            include: { budgets: true }
+        });
+        if (!group)
+            return res.status(404).json({ error: 'Grupo no encontrado' });
+        // Filter budgets where user is manager
+        const budgetsToApprove = group.budgets.filter(b => b.managerId === userId && b.status === 'PENDING');
+        if (budgetsToApprove.length === 0) {
+            return res.status(400).json({ error: 'No tienes presupuestos pendientes en este grupo para aprobar' });
+        }
+        // Update all
+        const updateResult = await index_1.prisma.budget.updateMany({
+            where: {
+                id: { in: budgetsToApprove.map(b => b.id) }
+            },
+            data: {
+                status: 'APPROVED',
+                approvedAt: new Date(),
+                approvedById: userId
+            }
+        });
+        res.json({ message: `${updateResult.count} presupuestos aprobados exitosamente` });
+    }
+    catch (error) {
+        console.error('Error approving budget group:', error);
+        res.status(500).json({ error: 'Error al aprobar grupo' });
+    }
+};
+exports.approveBudgetGroup = approveBudgetGroup;
+const rejectBudgetGroup = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const { id } = req.params; // Group ID
+        const group = await index_1.prisma.budgetGroup.findUnique({
+            where: { id: parseInt(id) },
+            include: { budgets: true }
+        });
+        if (!group)
+            return res.status(404).json({ error: 'Grupo no encontrado' });
+        const budgetsToReject = group.budgets.filter(b => b.managerId === userId && b.status === 'PENDING');
+        if (budgetsToReject.length === 0) {
+            return res.status(400).json({ error: 'No tienes presupuestos pendientes en este grupo para rechazar' });
+        }
+        await index_1.prisma.budget.updateMany({
+            where: { id: { in: budgetsToReject.map(b => b.id) } },
+            data: { status: 'REJECTED' }
+        });
+        res.json({ message: 'Presupuestos rechazados exitosamente' });
+    }
+    catch (error) {
+        console.error('Error rejecting budget group:', error);
+        res.status(500).json({ error: 'Error al rechazar grupo' });
+    }
+};
+exports.rejectBudgetGroup = rejectBudgetGroup;

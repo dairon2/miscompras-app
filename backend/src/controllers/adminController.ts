@@ -122,10 +122,19 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
                 },
                 _count: {
                     select: { requirements: true, budgets: true }
+                },
+                budgets: {
+                    select: { amount: true }
                 }
             }
         });
-        res.json(projects);
+
+        const projectsWithBudget = projects.map(p => ({
+            ...p,
+            totalBudget: p.budgets.reduce((sum, b) => sum + Number(b.amount), 0)
+        }));
+
+        res.json(projectsWithBudget);
     } catch (error: any) {
         console.error('Error fetching projects:', error);
         res.status(500).json({ error: 'Error al obtener proyectos' });

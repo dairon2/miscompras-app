@@ -93,7 +93,18 @@ app.get('/api/areas', async (req, res) => {
 });
 app.get('/api/projects', auth_1.authMiddleware, async (req, res) => {
     try {
-        const projects = await prisma.project.findMany({ orderBy: { name: 'asc' } });
+        const projects = await prisma.project.findMany({
+            orderBy: { name: 'asc' },
+            include: {
+                leader: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
         res.json(projects);
     }
     catch (e) {
