@@ -8,7 +8,10 @@ import {
     approveBudget,
     getBudgetYears,
     getManagerOptions,
-    getPendingBudgetsForManager
+    getPendingBudgetsForManager,
+    createMassBudgets,
+    approveBudgetGroup,
+    rejectBudgetGroup
 } from '../controllers/budgetController';
 import { authMiddleware, roleCheck } from '../middlewares/auth';
 
@@ -43,5 +46,10 @@ router.delete('/:id', roleCheck(['DIRECTOR']), deleteBudget);
 
 // Approve/Reject budget (by assigned manager/leader)
 router.patch('/:id/approve', approveBudget);
+
+// Mass creation and Group management
+router.post('/mass-create', roleCheck(['DIRECTOR']), createMassBudgets);
+router.post('/group/:id/approve', approveBudgetGroup);
+router.post('/group/:id/reject', rejectBudgetGroup);
 
 export default router;

@@ -34,6 +34,7 @@ model User {
   requirementsCreated  Requirement[]      @relation("CreatedBy")
   requirementsOwned    Requirement[]      @relation("OwnedBy")
   groupsCreated        RequirementGroup[] @relation("GroupCreator")
+  budgetGroups         BudgetGroup[]      @relation("BudgetGroupCreator")
   area                 Area?              @relation("AreaUsers", fields: [areaId], references: [id])
   areasDirected        Area[]             @relation("AreaDirector")
   invoicesCreated      Invoice[]          @relation("InvoiceCreator")
@@ -139,7 +140,18 @@ model Budget {
   subLeaders        BudgetSubLeader[]
   requirements      Requirement[]
 
+  groupId           Int?
+  group             BudgetGroup?       @relation(fields: [groupId], references: [id])
+
   @@unique([projectId, areaId, categoryId, year])
+}
+
+model BudgetGroup {
+  id           Int      @id @default(autoincrement())
+  creatorId    String
+  creator      User     @relation("BudgetGroupCreator", fields: [creatorId], references: [id])
+  createdAt    DateTime @default(now())
+  budgets      Budget[]
 }
 
 model BudgetSubLeader {

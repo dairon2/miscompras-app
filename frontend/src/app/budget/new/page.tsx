@@ -191,8 +191,8 @@ export default function NewBudgetPage() {
 
         setLoading(true);
         try {
-            for (const item of items) {
-                await api.post('/budgets', {
+            await api.post('/budgets/mass-create', {
+                budgets: items.map(item => ({
                     title: item.title,
                     code: item.code || undefined,
                     amount: parseFloat(item.amount),
@@ -204,8 +204,8 @@ export default function NewBudgetPage() {
                     subLeaders: item.subLeaders.length > 0 ? item.subLeaders : undefined,
                     expirationDate: item.expirationDate || undefined,
                     year: currentYear
-                });
-            }
+                }))
+            });
 
             addToast(`${items.length} presupuesto(s) creado(s) exitosamente`, 'success');
             router.push("/budget");
