@@ -267,70 +267,72 @@ export default function ProfilePage() {
                     animate={{ opacity: 1, x: 0 }}
                     className="lg:col-span-2 space-y-8"
                 >
-                    {/* Edit Profile Form */}
-                    <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                        <div className="p-6 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-slate-900/50">
-                            <h3 className="text-lg font-black flex items-center gap-2">
-                                <User size={20} className="text-primary-600" />
-                                Editar Información
-                            </h3>
+                    {/* Edit Profile Form - Only for COORDINATOR, DIRECTOR, DEVELOPER */}
+                    {['COORDINATOR', 'DIRECTOR', 'DEVELOPER'].includes(profile.role) && (
+                        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                            <div className="p-6 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-slate-900/50">
+                                <h3 className="text-lg font-black flex items-center gap-2">
+                                    <User size={20} className="text-primary-600" />
+                                    Editar Información
+                                </h3>
+                            </div>
+                            <form onSubmit={handleSaveProfile} className="p-6 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="md:col-span-2 space-y-2">
+                                        <label className="text-xs font-black text-gray-600">Nombre Completo</label>
+                                        <input
+                                            type="text"
+                                            name="name"
+                                            value={profile.name}
+                                            onChange={handleProfileChange}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-600">Teléfono</label>
+                                        <input
+                                            type="tel"
+                                            name="phone"
+                                            value={profile.phone}
+                                            onChange={handleProfileChange}
+                                            placeholder="(604) 123-4567"
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-600">Cargo</label>
+                                        <input
+                                            type="text"
+                                            name="position"
+                                            value={profile.position}
+                                            onChange={handleProfileChange}
+                                            placeholder="Ej: Coordinador"
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex justify-end pt-4">
+                                    <button
+                                        type="submit"
+                                        disabled={savingProfile}
+                                        className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm transition-all ${profileSuccess
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-primary-600 text-white hover:bg-primary-700'
+                                            } disabled:opacity-50`}
+                                    >
+                                        {savingProfile ? (
+                                            <Loader2 size={18} className="animate-spin" />
+                                        ) : profileSuccess ? (
+                                            <Check size={18} />
+                                        ) : (
+                                            <Save size={18} />
+                                        )}
+                                        {profileSuccess ? 'Guardado' : 'Guardar Cambios'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                        <form onSubmit={handleSaveProfile} className="p-6 space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="md:col-span-2 space-y-2">
-                                    <label className="text-xs font-black text-gray-600">Nombre Completo</label>
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        value={profile.name}
-                                        onChange={handleProfileChange}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-gray-600">Teléfono</label>
-                                    <input
-                                        type="tel"
-                                        name="phone"
-                                        value={profile.phone}
-                                        onChange={handleProfileChange}
-                                        placeholder="(604) 123-4567"
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-gray-600">Cargo</label>
-                                    <input
-                                        type="text"
-                                        name="position"
-                                        value={profile.position}
-                                        onChange={handleProfileChange}
-                                        placeholder="Ej: Coordinador"
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex justify-end pt-4">
-                                <button
-                                    type="submit"
-                                    disabled={savingProfile}
-                                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm transition-all ${profileSuccess
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-primary-600 text-white hover:bg-primary-700'
-                                        } disabled:opacity-50`}
-                                >
-                                    {savingProfile ? (
-                                        <Loader2 size={18} className="animate-spin" />
-                                    ) : profileSuccess ? (
-                                        <Check size={18} />
-                                    ) : (
-                                        <Save size={18} />
-                                    )}
-                                    {profileSuccess ? 'Guardado' : 'Guardar Cambios'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                    )}
 
                     {/* Change Password Form */}
                     <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
