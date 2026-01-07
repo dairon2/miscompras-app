@@ -145,8 +145,11 @@ export default function ProfilePage() {
     const getRoleBadge = (role: string) => {
         const labels: any = {
             'ADMIN': 'Administrador',
-            'DIRECTOR': 'Director',
+            'DIRECTOR': 'Dirección Financiera',
+            'COORDINATOR': 'Coordinación de Compras',
             'LEADER': 'Líder / Aux. Compras',
+            'AUDITOR': 'Auditor',
+            'DEVELOPER': 'Desarrollador',
             'USER': 'Usuario'
         };
         return labels[role] || role;
