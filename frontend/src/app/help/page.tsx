@@ -42,28 +42,33 @@ const faqData: FAQItem[] = [
     {
         category: "Requerimientos",
         question: "¿Qué significan los estados de un requerimiento?",
-        answer: "PENDIENTE_APROBACIÓN: Esperando aprobación del líder/coordinador/director. APROBADO: Listo para gestión de compras. RECHAZADO: No fue aprobado, revisa los comentarios. EN_TRÁMITE: Se está gestionando la compra. FINALIZADO: Proceso completado."
+        answer: "PENDIENTE_APROBACIÓN: Esperando aprobación de Coordinación de Compras y de Dirección Financiera. APROBADO: Listo para gestión de compras. RECHAZADO: No fue aprobado, revisa los comentarios. EN_TRÁMITE: Se está gestionando la compra. FINALIZADO: Proceso completado."
     },
     {
         category: "Requerimientos",
         question: "¿Puedo editar un requerimiento después de enviarlo?",
-        answer: "Solo puedes editar requerimientos que estén en estado PENDIENTE_APROBACIÓN y que hayas creado tú. Una vez aprobado o rechazado, no se puede modificar."
+        answer: "No, los  requerimientos una vez creados se le notifica a Coordinación de Compras y de Dirección Financiera, pasan a  estado PENDIENTE_APROBACIÓN. "
     },
     // Presupuestos
     {
         category: "Presupuestos",
         question: "¿Cómo funciona el sistema de presupuestos?",
-        answer: "Cada presupuesto tiene un monto asignado y un saldo disponible. Cuando se aprueba un requerimiento, el monto estimado se descuenta del saldo disponible. El Director es el único que puede crear y aprobar presupuestos."
+        answer: "Cada presupuesto tiene un monto asignado y un saldo disponible. Cuando se aprueba un requerimiento y se registra el pago, el monto  se descuenta del saldo disponible. La Dirección Financiera es la que crear los presupuestos yl Líder gestor es el único que puede aprobar su presupuesto "
     },
     {
         category: "Presupuestos",
         question: "¿Qué es un ajuste de presupuesto?",
-        answer: "Un ajuste puede ser: INCREMENTO (agregar fondos) o TRANSFERENCIA (mover fondos entre presupuestos). Ambos requieren aprobación del Director."
+        answer: "Un ajuste puede ser: INCREMENTO (agregar fondos) o TRANSFERENCIA (mover fondos entre presupuestos). Ambos requieren aprobación de la Dirección Financiera."
+    },
+    {
+        category: "Presupuestos",
+        question: "¿Cómo solicito un ajuste presupuestal (aumento o movimiento)?",
+        answer: "Ve a la sección 'Presupuestos' → selecciona el presupuesto que deseas ajustar → haz clic en el botón 'Solicitar Ajuste'. Selecciona el tipo de ajuste: INCREMENTO (para agregar fondos adicionales) o TRANSFERENCIA (para mover fondos desde otro presupuesto). Ingresa el monto, justificación y envía la solicitud. La Dirección Financiera recibirá una notificación para aprobar o rechazar el ajuste."
     },
     {
         category: "Presupuestos",
         question: "¿Por qué no veo todos los presupuestos?",
-        answer: "Solo puedes ver los presupuestos donde eres Manager o Sublíder. Los administradores y directores ven todos los presupuestos."
+        answer: "Solo puedes ver los presupuestos donde eres Líder o Sublíder. Los administradores del sistema ven todos los presupuestos."
     },
     // Pagos y Facturas
     {
@@ -80,7 +85,7 @@ const faqData: FAQItem[] = [
     {
         category: "Usuarios y Roles",
         question: "¿Qué permisos tiene cada rol?",
-        answer: "USER: Crea requerimientos y ve solo sus proyectos asignados. LEADER: Aprueba requerimientos de su área. COORDINATOR: Aprueba después del líder. DIRECTOR: Aprobación final, gestión de presupuestos. ADMIN: Acceso total al sistema."
+        answer: "Usuario: Crea requerimientos y ve solo sus proyectos asignados. LEADER: Aprueba requerimientos de su área. COORDINATOR: Aprueba después del líder. DIRECTOR: Aprobación final, gestión de presupuestos. ADMIN: Acceso total al sistema."
     },
     {
         category: "Usuarios y Roles",
