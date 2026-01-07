@@ -258,7 +258,7 @@ export default function RequirementsPage() {
                         onChange={setSelectedYear}
                     />
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-2 md:gap-4">
                     <button
                         onClick={() => {
                             try {
@@ -268,11 +268,11 @@ export default function RequirementsPage() {
                                 alert('Error al generar el archivo Excel');
                             }
                         }}
-                        className="flex items-center gap-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-6 py-4 rounded-2xl font-black shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 transition-all uppercase text-[10px] tracking-widest"
+                        className="flex items-center gap-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-4 md:px-6 py-3 md:py-4 rounded-2xl font-black shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 transition-all uppercase text-[10px] tracking-widest"
                     >
                         <FileSpreadsheet size={18} className="text-green-600" />
                         <Download size={18} className="text-primary-600" />
-                        <span>EXPORTAR XLSX</span>
+                        <span className="hidden md:inline">EXPORTAR XLSX</span>
                     </button>
                     <div className="bg-white dark:bg-slate-800 p-1.5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex gap-1">
                         <button
@@ -291,18 +291,18 @@ export default function RequirementsPage() {
                     {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && (
                         <button
                             onClick={() => router.push('/asientos')}
-                            className="flex items-center gap-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-6 py-4 rounded-2xl font-black shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 transition-all uppercase text-[10px] tracking-widest"
+                            className="flex items-center gap-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-4 md:px-6 py-3 md:py-4 rounded-2xl font-black shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 transition-all uppercase text-[10px] tracking-widest"
                         >
                             <BookOpen size={18} className="text-indigo-600" />
-                            <span>Asientos</span>
+                            <span className="hidden md:inline">Asientos</span>
                         </button>
                     )}
                     <button
                         onClick={() => router.push('/requirements/new')}
-                        className="flex items-center gap-2 bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap uppercase text-[10px] tracking-widest"
+                        className="flex items-center gap-2 bg-primary-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap uppercase text-[10px] tracking-widest"
                     >
                         <Plus className="w-5 h-5" />
-                        Nueva Solicitud
+                        <span className="hidden sm:inline">Nueva</span>
                     </button>
                 </div>
             </motion.div>

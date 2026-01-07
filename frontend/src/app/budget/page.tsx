@@ -399,15 +399,15 @@ export default function BudgetsPage() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3">
                     {/* Export to Excel button */}
                     <button
                         onClick={exportToExcel}
-                        className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:from-green-600 hover:to-emerald-700 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
+                        className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-2xl font-black shadow-lg hover:from-green-600 hover:to-emerald-700 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
                         title="Descargar Excel"
                     >
                         <FileSpreadsheet size={18} />
-                        <span>Descargar Excel</span>
+                        <span className="hidden md:inline">Descargar Excel</span>
                     </button>
 
                     {/* Year selector */}
@@ -420,29 +420,29 @@ export default function BudgetsPage() {
                     {/* Pending approval button - for all users who might have assigned budgets */}
                     <button
                         onClick={() => router.push("/budget/pending")}
-                        className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:from-amber-600 hover:to-orange-600 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
+                        className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 md:px-6 py-3 md:py-4 rounded-2xl font-black shadow-lg hover:from-amber-600 hover:to-orange-600 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
                     >
                         <Clock size={18} />
-                        <span>Pendientes</span>
+                        <span className="hidden md:inline">Pendientes</span>
                     </button>
 
                     {isDirector && (
                         <button
                             onClick={() => router.push("/budget/adjustments")}
-                            className="flex items-center gap-2 bg-amber-500 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-amber-600 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
+                            className="flex items-center gap-2 bg-amber-500 text-white px-4 md:px-6 py-3 md:py-4 rounded-2xl font-black shadow-lg hover:bg-amber-600 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
                         >
                             <FileText size={18} />
-                            <span>Ajustes Presupuestales</span>
+                            <span className="hidden lg:inline">Ajustes</span>
                         </button>
                     )}
 
                     {canManageBudgets && (
                         <button
                             onClick={() => router.push('/budget/new')}
-                            className="flex items-center gap-2 bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
+                            className="flex items-center gap-2 bg-primary-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all uppercase text-[10px] tracking-widest"
                         >
                             <Plus size={18} />
-                            <span>Nuevo Presupuesto</span>
+                            <span className="hidden sm:inline">Nuevo</span>
                         </button>
                     )}
                 </div>
