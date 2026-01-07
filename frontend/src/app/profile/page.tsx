@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import {
     User,
@@ -15,7 +15,8 @@ import {
     EyeOff,
     Save,
     Check,
-    Calendar
+    Calendar,
+    Camera
 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
@@ -29,6 +30,9 @@ export default function ProfilePage() {
     const [passwordSuccess, setPasswordSuccess] = useState(false);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
+    const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [profile, setProfile] = useState({
         name: '',
@@ -62,6 +66,7 @@ export default function ProfilePage() {
                 role: data.role || '',
                 area: data.area?.name || ''
             });
+            setProfilePhoto(data.profilePhoto || null);
         } catch (err) {
             console.error("Error fetching profile", err);
         } finally {
@@ -177,9 +182,52 @@ export default function ProfilePage() {
                     className="lg:col-span-1"
                 >
                     <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-700 p-8 text-center">
-                        <div className="w-24 h-24 rounded-[2rem] bg-primary-600 flex items-center justify-center text-white text-4xl font-black mx-auto mb-6 shadow-xl">
-                            {profile.name?.charAt(0)?.toUpperCase() || 'U'}
+                        {/* Profile Photo */}
+                        <div className="relative w-24 h-24 mx-auto mb-6">
+                            <div
+                                className="w-24 h-24 rounded-[2rem] bg-primary-600 flex items-center justify-center text-white text-4xl font-black shadow-xl overflow-hidden cursor-pointer group"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                {profilePhoto ? (
+                                    <img src={profilePhoto} alt="Foto de perfil" className="w-full h-full object-cover" />
+                                ) : (
+                                    profile.name?.charAt(0)?.toUpperCase() || 'U'
+                                )}
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    {uploadingPhoto ? (
+                                        <Loader2 size={24} className="text-white animate-spin" />
+                                    ) : (
+                                        <Camera size={24} className="text-white" />
+                                    )}
+                                </div>
+                            </div>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/gif,image/webp"
+                                className="hidden"
+                                onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+
+                                    setUploadingPhoto(true);
+                                    try {
+                                        const formData = new FormData();
+                                        formData.append('photo', file);
+                                        const response = await api.post('/users/me/photo', formData, {
+                                            headers: { 'Content-Type': 'multipart/form-data' }
+                                        });
+                                        setProfilePhoto(response.data.profilePhoto);
+                                    } catch (err: any) {
+                                        alert(err.response?.data?.error || 'Error al subir la foto');
+                                    } finally {
+                                        setUploadingPhoto(false);
+                                        e.target.value = '';
+                                    }
+                                }}
+                            />
                         </div>
+                        <p className="text-[10px] text-gray-400 font-bold mb-4">Haz clic para cambiar foto</p>
                         <h3 className="text-2xl font-black mb-1">{profile.name || 'Usuario'}</h3>
                         <p className="text-gray-400 text-sm font-bold mb-4">{profile.email}</p>
 

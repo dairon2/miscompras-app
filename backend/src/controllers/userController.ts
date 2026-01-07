@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../index';
+import { uploadBufferToBlobStorage } from '../services/blobStorageService';
 
 // Get all users with filters
 export const getUsers = async (req: AuthRequest, res: Response) => {
@@ -320,6 +321,7 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
                 area: { select: { id: true, name: true } },
                 phone: true,
                 position: true,
+                profilePhoto: true,
                 createdAt: true,
                 lastLoginAt: true
             }
@@ -340,4 +342,67 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
 export const generatePassword = async (req: AuthRequest, res: Response) => {
     const password = crypto.randomBytes(8).toString('hex');
     res.json({ password });
+};
+
+// Upload profile photo
+export const uploadProfilePhoto = async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.id;
+
+    if (!userId) {
+        return res.status(401).json({ error: 'No autenticado' });
+    }
+
+    if (!req.file) {
+        return res.status(400).json({ error: 'No se proporcionó ninguna imagen' });
+    }
+
+    try {
+        const file = req.file;
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.mimetype)) {
+            return res.status(400).json({ error: 'Solo se permiten imágenes (JPEG, PNG, GIF, WEBP)' });
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            return res.status(400).json({ error: 'La imagen no puede superar 5MB' });
+        }
+
+        // Generate unique blob name
+        const ext = file.originalname.split('.').pop() || 'jpg';
+        const blobName = `profile-photos/${userId}-${Date.now()}.${ext}`;
+
+        // Upload to Blob Storage
+        const photoUrl = await uploadBufferToBlobStorage(
+            file.buffer,
+            blobName,
+            file.mimetype
+        );
+
+        if (!photoUrl) {
+            return res.status(500).json({ error: 'Error al subir la imagen. Intenta de nuevo.' });
+        }
+
+        // Update user profile with new photo URL
+        const user = await prisma.user.update({
+            where: { id: userId },
+            data: { profilePhoto: photoUrl },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                profilePhoto: true
+            }
+        });
+
+        res.json({
+            message: 'Foto de perfil actualizada',
+            profilePhoto: user.profilePhoto
+        });
+    } catch (error: any) {
+        console.error('Error uploading profile photo:', error);
+        res.status(500).json({ error: 'Error al subir la foto de perfil' });
+    }
 };

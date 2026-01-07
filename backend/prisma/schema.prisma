@@ -25,6 +25,7 @@ model User {
   isActive             Boolean            @default(true)
   phone                String?
   position             String?
+  profilePhoto         String?
   budgetsApproved      Budget[]           @relation("BudgetApprovedBy")
   budgetsCreated       Budget[]           @relation("BudgetCreatedBy")
   managedBudgets       Budget[]           @relation("BudgetManager")
