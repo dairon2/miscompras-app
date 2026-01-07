@@ -512,16 +512,6 @@ export default function BudgetsPage() {
                         <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                 </select>
-                <select
-                    value={filters.status}
-                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                    className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 font-bold text-sm"
-                >
-                    <option value="">Todos los estados</option>
-                    <option value="PENDING">Pendiente</option>
-                    <option value="APPROVED">Aprobado</option>
-                    <option value="REJECTED">Rechazado</option>
-                </select>
                 <div className="flex gap-2">
                     <button
                         onClick={() => setViewMode('visual')}
@@ -561,7 +551,7 @@ export default function BudgetsPage() {
                     transition={{ delay: 0.3 }}
                     className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden"
                 >
-                    <div className="hidden lg:block overflow-x-auto">
+                    <div className="hidden lg:block overflow-x-auto max-h-[600px] overflow-y-auto">
                         <table className="w-full text-left">
                             <thead className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700">
                                 <tr>
