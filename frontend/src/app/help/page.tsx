@@ -85,18 +85,18 @@ const faqData: FAQItem[] = [
     {
         category: "Usuarios y Roles",
         question: "¿Qué permisos tiene cada rol?",
-        answer: "Usuario: Crea requerimientos y ve solo sus proyectos asignados. LEADER: Aprueba requerimientos de su área. COORDINATOR: Aprueba después del líder. DIRECTOR: Aprobación final, gestión de presupuestos. ADMIN: Acceso total al sistema."
+        answer: "Usuario: Crea requerimientos y ve solo sus proyectos asignados.Coordinación: Aprueba después  y Dirección Financiera: Aprobación final, gestión de presupuestos. ADMIN: Acceso total al sistema para gestionar los requerimientos."
     },
     {
         category: "Usuarios y Roles",
         question: "¿Cómo cambio mi contraseña?",
-        answer: "Ve a tu perfil haciendo clic en tu avatar → 'Mi Cuenta'. Ahí encontrarás la opción para cambiar tu contraseña."
+        answer: "Haz clic en tu avatar (esquina superior derecha) → 'Mi Perfil'. Ahí encontrarás la sección 'Cambiar Contraseña' donde puedes ingresar tu contraseña actual y definir una nueva."
     },
     // General
     {
         category: "General",
         question: "¿Cómo descargo reportes?",
-        answer: "Ve a la sección 'Reportes' en el menú lateral. Encontrarás diferentes tipos de reportes que puedes filtrar por fecha, área, proyecto y exportar a Excel."
+        answer: "Busca en cada pantalla el botón de descargar en Excel. Al dar clic se decargara un archvio de excel con la informacion que tengas filtradas en esa pantalla, la cual puedes filtrar por fecha, área, proyecto entre otros."
     },
     {
         category: "General",

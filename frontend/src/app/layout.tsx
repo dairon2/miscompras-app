@@ -288,13 +288,14 @@ export default function RootLayout({
                           </div>
 
                           <div className="p-3 bg-[#0f172a]">
-                            <button
-                              onClick={() => { setShowAccountModal(true); setShowProfileMenu(false); }}
+                            <Link
+                              href="/profile"
+                              onClick={() => setShowProfileMenu(false)}
                               className="w-full flex items-center gap-4 p-4 text-[13px] font-bold text-slate-300 hover:bg-slate-800/50 hover:text-white rounded-2xl transition-all group"
                             >
                               <Shield className="w-5 h-5 text-slate-500 group-hover:text-primary-400 transition-colors" />
-                              <span>Mi Cuenta</span>
-                            </button>
+                              <span>Mi Perfil</span>
+                            </Link>
 
                             {(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') || user?.isAreaDirector) && (
                               <Link
