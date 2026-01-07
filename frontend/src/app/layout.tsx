@@ -440,30 +440,17 @@ function NavItem({ href, icon, label, active, badge }: any) {
 function MobileNavbar({ pathname, userRole }: { pathname: string, userRole: string }) {
   const router = useRouter();
 
+  // Fixed order: Inicio, Reqs, Presupuestos, Proveedores, Aprobaciones
+  // Aprobaciones only visible to roles with approval permissions
+  const canApprove = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
+
   const navItems = [
     { href: "/", icon: <LayoutDashboard size={20} />, label: "Inicio" },
     { href: "/requirements", icon: <FileText size={20} />, label: "Reqs" },
     { href: "/budget", icon: <Building2 size={20} />, label: "Presu" },
     { href: "/suppliers", icon: <Package size={20} />, label: "Prov" },
+    ...(canApprove ? [{ href: "/approvals", icon: <CheckCircle size={20} />, label: "Aprobar" }] : []),
   ];
-
-  // If user is ADMIN/DIRECTOR/LEADER/COORDINATOR/DEVELOPER and there's space, add Approvals
-  if (['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole)) {
-    navItems.splice(1, 0, { href: "/approvals", icon: <CheckCircle size={20} />, label: "Aprobar" });
-  }
-
-  // Add Config for administrative roles
-  if (['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole)) {
-    navItems.splice(navItems.length - 1, 0, { href: "/admin", icon: <Settings size={20} />, label: "Config" });
-  }
-
-  // Ensure we don't exceed a reasonable count for mobile
-  while (navItems.length > 5) {
-    // Prefer removing "Prov" or "Presu" if we have too many items
-    const indexToRemove = navItems.findIndex(i => i.label === "Prov" || i.label === "Presu");
-    if (indexToRemove !== -1) navItems.splice(indexToRemove, 1);
-    else navItems.pop();
-  }
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-4 py-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-white/5 flex items-center justify-around pb-safe">
