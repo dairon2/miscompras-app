@@ -249,8 +249,12 @@ export default function UsersPage() {
                                     >
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 font-black text-lg">
-                                                    {u.name?.charAt(0)?.toUpperCase() || 'U'}
+                                                <div className="w-12 h-12 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 font-black text-lg overflow-hidden">
+                                                    {u.profilePhoto ? (
+                                                        <img src={u.profilePhoto} alt={u.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        u.name?.charAt(0)?.toUpperCase() || 'U'
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <p className="font-black text-sm">{u.name || 'Sin nombre'}</p>
