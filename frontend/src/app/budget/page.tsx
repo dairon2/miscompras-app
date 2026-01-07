@@ -565,6 +565,7 @@ export default function BudgetsPage() {
                         <table className="w-full text-left">
                             <thead className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700">
                                 <tr>
+                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Código</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Proyecto</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Rubro</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Líder</th>
@@ -577,7 +578,7 @@ export default function BudgetsPage() {
                             <tbody>
                                 {filteredBudgets.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="px-6 py-12 text-center text-gray-400 font-bold">
+                                        <td colSpan={8} className="px-6 py-12 text-center text-gray-400 font-bold">
                                             No hay presupuestos para mostrar
                                         </td>
                                     </tr>
@@ -597,6 +598,7 @@ export default function BudgetsPage() {
                                                 onClick={() => router.push(`/budget/${budget.id}`)}
                                                 className="border-b border-gray-50 dark:border-gray-700 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-colors cursor-pointer"
                                             >
+                                                <td className="px-6 py-4 text-xs font-black text-primary-600">{budget.project?.code || budget.code || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-500 font-bold">{budget.project?.name}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-500">{budget.category?.name || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-500">{budget.manager?.name || '-'}</td>

@@ -393,7 +393,7 @@ export default function RootLayout({
 
           {!isAuthPage && (
             <footer className="py-12 border-t border-gray-100 dark:border-gray-800">
-              <div className="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+              <div className="max-w-[1600px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="flex items-center gap-4 opacity-70 group cursor-pointer" onClick={() => router.push("/")}>
                   <img src="/images/logo-museo.png" alt="Museo de Antioquia" className="h-10 w-auto grayscale group-hover:grayscale-0 transition-all mix-blend-multiply dark:invert dark:mix-blend-screen" />
                   <div className="flex flex-col">
