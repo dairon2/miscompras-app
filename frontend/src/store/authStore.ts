@@ -10,6 +10,7 @@ export interface User {
     isAreaDirector?: boolean;
     directedAreas?: Array<{ id: string; name: string }>;
     mustChangePassword?: boolean;
+    profilePhoto?: string;
 }
 
 interface AuthState {

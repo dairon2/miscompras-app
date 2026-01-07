@@ -132,7 +132,8 @@ export const login = async (req: Request, res: Response) => {
                 areaId: user.areaId,
                 isAreaDirector: (user as any).areasDirected?.length > 0,
                 directedAreas: (user as any).areasDirected || [],
-                mustChangePassword: user.mustChangePassword
+                mustChangePassword: user.mustChangePassword,
+                profilePhoto: (user as any).profilePhoto
             }
         });
     } catch (error: any) {
