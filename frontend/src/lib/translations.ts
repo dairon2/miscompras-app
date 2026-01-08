@@ -56,6 +56,23 @@ export const translateAction = (action: string): string => {
         'INVOICE_ADDED': 'Factura agregada',
         'BUDGET_ASSIGNED': 'Presupuesto asignado',
         'AMOUNT_UPDATED': 'Monto actualizado',
+        // Asiento-related actions
+        'CREATED_ASIENTO': 'Asiento creado',
+        'UPDATED_ASIENTO': 'Asiento actualizado',
+        'ASIENTO_CREATED': 'Asiento creado',
+        'ASIENTO_STATUS_UPDATED': 'Estado del asiento actualizado',
+        'EDITED': 'Editado',
+        'OBSERVATIONS_UPDATED': 'Observaciones actualizadas',
+        // Group-related actions
+        'GROUP_APPROVED': 'Grupo aprobado',
+        'GROUP_REJECTED': 'Grupo rechazado',
+        'GROUP_CREATED': 'Grupo creado',
+        'COORDINATOR_APPROVED': 'Aprobado por Coordinación',
+        'COORDINATOR_REJECTED': 'Rechazado por Coordinación',
+        'DIRECTOR_APPROVED': 'Aprobado por Dirección',
+        'DIRECTOR_REJECTED': 'Rechazado por Dirección',
+        'LEADER_APPROVED': 'Aprobado por Líder',
+        'LEADER_REJECTED': 'Rechazado por Líder',
     };
 
     return actionMap[action] || action.replace(/_/g, ' ');
@@ -84,7 +101,24 @@ export const translateLogDetails = (details: string): string => {
         .replace(/Approved by/gi, 'Aprobado por')
         .replace(/Rejected by/gi, 'Rechazado por')
         .replace(/Comment:/gi, 'Comentario:')
-        .replace(/Por:/gi, 'Por:');
+        .replace(/Por:/gi, 'Por:')
+        // Group-related translations
+        .replace(/Group (\d+) approved by/gi, 'Grupo $1 aprobado por')
+        .replace(/Group (\d+) rejected by/gi, 'Grupo $1 rechazado por')
+        .replace(/Group approved by/gi, 'Grupo aprobado por')
+        .replace(/Group rejected by/gi, 'Grupo rechazado por')
+        .replace(/approved by Director/gi, 'aprobado por Dirección')
+        .replace(/approved by Coordinator/gi, 'aprobado por Coordinación')
+        .replace(/rejected by Director/gi, 'rechazado por Dirección')
+        .replace(/rejected by Coordinator/gi, 'rechazado por Coordinación')
+        // Asiento-related translations
+        .replace(/Asiento contable creado por/gi, 'Asiento contable creado por')
+        .replace(/Accounting entry created by/gi, 'Asiento contable creado por')
+        .replace(/Pre-approved requirement created as asiento/gi, 'Requerimiento pre-aprobado creado como asiento')
+        .replace(/created as asiento/gi, 'creado como asiento')
+        .replace(/Requirement created/gi, 'Requerimiento creado')
+        .replace(/Budget updated/gi, 'Presupuesto actualizado')
+        .replace(/Status updated/gi, 'Estado actualizado');
 
     return translated;
 };

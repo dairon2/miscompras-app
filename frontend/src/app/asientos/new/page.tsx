@@ -25,6 +25,7 @@ import { useAuthStore } from "@/store/authStore";
 import { BudgetCascadeSelector } from "@/components";
 import { useToastStore } from "@/store/toastStore";
 
+// Forced recompile
 export default function NewAsientoPage() {
     const router = useRouter();
     const { user } = useAuthStore();
@@ -46,9 +47,11 @@ export default function NewAsientoPage() {
         supplierId: '',
         budgetId: '',
         reqCategory: 'COMPRA',
+        processStatus: 'EN_TRAMITE',
         purchaseOrderNumber: '',
         invoiceNumber: '',
-        hasMultiplePayments: false
+        hasMultiplePayments: false,
+        groupId: ''
     });
 
     const categories = [
@@ -61,6 +64,18 @@ export default function NewAsientoPage() {
         { value: 'ORDEN_PRODUCCION', label: 'Orden de Producción' },
         { value: 'SERVICIO', label: 'Servicio' }
     ];
+
+    const processStatuses = [
+        { value: 'EN_TRAMITE', label: 'En trámite' },
+        { value: 'PENDIENTES', label: 'Pendientes' },
+        { value: 'ENTREGADO', label: 'Entregado' },
+        { value: 'FINALIZADO', label: 'Finalizado' },
+        { value: 'POSTERGADO', label: 'Postergado' },
+        { value: 'ANULADO', label: 'Anulado' }
+    ];
+
+    // Get selected budget manager
+    const selectedBudget = budgets.find((b: any) => b.id === form.budgetId);
 
     useEffect(() => {
         fetchCatalogs();
@@ -178,6 +193,39 @@ export default function NewAsientoPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-10 space-y-8">
+
+                    {/* Budget Selection - Moved to Top */}
+                    <div className="p-6 bg-gradient-to-r from-primary-50/50 to-indigo-50/50 dark:from-primary-900/10 dark:to-indigo-900/10 rounded-3xl border border-primary-100 dark:border-primary-800">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-600 mb-4 flex items-center gap-2">
+                            <Building size={14} /> Selección de Presupuesto
+                        </h4>
+                        <BudgetCascadeSelector
+                            budgets={budgets}
+                            projects={projects}
+                            selectedBudgetId={form.budgetId}
+                            onBudgetSelect={(budgetId, projectId, areaId) => {
+                                setForm(prev => ({
+                                    ...prev,
+                                    budgetId,
+                                    projectId,
+                                    areaId
+                                }));
+                            }}
+                        />
+                        {/* Show budget manager when budget is selected */}
+                        {selectedBudget && (selectedBudget as any).manager && (
+                            <div className="mt-4 flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-2xl border border-primary-200 dark:border-primary-800">
+                                <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 font-black text-sm">
+                                    <User size={18} />
+                                </div>
+                                <div>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Líder del Presupuesto</p>
+                                    <p className="font-bold text-sm text-gray-800 dark:text-gray-200">{(selectedBudget as any).manager?.name || 'Sin asignar'}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Basic Information */}
                     <div className="space-y-6">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
@@ -235,6 +283,32 @@ export default function NewAsientoPage() {
                                     className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
                                 />
                             </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-gray-600">Estado del Trámite</label>
+                                <select
+                                    name="processStatus"
+                                    value={form.processStatus}
+                                    onChange={handleChange}
+                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
+                                >
+                                    {processStatuses.map(status => (
+                                        <option key={status.value} value={status.value}>{status.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-gray-600">Solicitud # <span className="text-[10px] font-normal text-gray-400">(Opcional)</span></label>
+                                <input
+                                    type="number"
+                                    name="groupId"
+                                    value={form.groupId}
+                                    onChange={handleChange}
+                                    placeholder="ID de Grupo"
+                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -245,25 +319,8 @@ export default function NewAsientoPage() {
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Replaced manual selectors with Cascade Selector */}
-                            <div className="md:col-span-2 p-6 bg-gradient-to-r from-primary-50/50 to-indigo-50/50 dark:from-primary-900/10 dark:to-indigo-900/10 rounded-3xl border border-primary-100 dark:border-primary-800">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-600 mb-4">Selección de Presupuesto</h4>
-                                <BudgetCascadeSelector
-                                    budgets={budgets}
-                                    projects={projects}
-                                    selectedBudgetId={form.budgetId}
-                                    onBudgetSelect={(budgetId, projectId, areaId) => {
-                                        setForm(prev => ({
-                                            ...prev,
-                                            budgetId,
-                                            projectId,
-                                            areaId
-                                        }));
-                                    }}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
+                            {/* Supplier Selector Only */}
+                            <div className="md:col-span-2 space-y-2">
                                 <label className="text-xs font-black text-gray-600">Proveedor</label>
                                 <select
                                     name="supplierId"

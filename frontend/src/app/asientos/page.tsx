@@ -32,6 +32,17 @@ interface Asiento {
     area?: { name: string };
     category: string;
     executor?: { name: string };
+    budget?: { code: string; name: string };
+    supplier?: { name: string };
+    invoiceNumber?: string;
+    purchaseOrderNumber?: string;
+    groupId?: number;
+    createdAt: string;
+    payments?: any[];
+    createdBy?: { name: string; email: string };
+    reqCategory: string;
+    totalAmount?: number;
+    hasMultiplePayments?: boolean;
 }
 
 export default function AsientosPage() {
@@ -94,13 +105,30 @@ export default function AsientosPage() {
         }
     };
 
-    // Filter by search term
-    const filteredAsientos = asientos.filter((a) => {
-        const matchesSearch = !searchTerm ||
-            a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            a.description?.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesSearch;
-    });
+    // Filters
+    const [selectedSupplier, setSelectedSupplier] = useState('');
+    const [selectedProject, setSelectedProject] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [projects, setProjects] = useState([]);
+    const [suppliers, setSuppliers] = useState([]);
+
+    useEffect(() => {
+        fetchCatalogs();
+    }, []);
+
+    const fetchCatalogs = async () => {
+        try {
+            const [p, s] = await Promise.all([
+                api.get('/projects'),
+                api.get('/suppliers')
+            ]);
+            setProjects(p.data);
+            setSuppliers(s.data);
+        } catch (err) {
+            console.error("Error fetching catalogs", err);
+        }
+    };
 
     const getCategoryLabel = (category: string) => {
         const labels: any = {
@@ -115,6 +143,25 @@ export default function AsientosPage() {
         };
         return labels[category] || category;
     };
+
+    // Filter and Sort logic
+    const filteredAsientos = asientos.filter((a) => {
+        const matchesSearch = !searchTerm ||
+            a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (a.description?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (a.invoiceNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (a.purchaseOrderNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesSupplier = !selectedSupplier || a.supplier?.name === selectedSupplier; // Simplistic match by name, ideally ID
+        const matchesProject = !selectedProject || a.project?.name === selectedProject; // Simplistic match by name
+        const matchesCategory = !selectedCategory || a.reqCategory === selectedCategory;
+
+        return matchesSearch && matchesSupplier && matchesProject && matchesCategory;
+    }).sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
 
     if (loading) {
         return (
@@ -161,23 +208,84 @@ export default function AsientosPage() {
                 </div>
             </motion.div>
 
-            {/* Search Bar */}
+            {/* Filters and Search Bar */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
                 className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden mb-8"
             >
-                <div className="p-6 flex flex-wrap gap-4 border-b border-gray-50 dark:border-gray-700">
-                    <div className="flex-1 min-w-[250px] relative">
+                <div className="p-6 flex flex-col gap-6 border-b border-gray-50 dark:border-gray-700">
+
+                    {/* Search */}
+                    <div className="relative">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         <input
                             type="text"
-                            placeholder="Buscar por título o descripción..."
+                            placeholder="Buscar por título, descripción, factura, OC..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-slate-900 border-none rounded-2xl font-bold outline-none focus:ring-2 ring-primary-500"
                         />
+                    </div>
+
+                    {/* Filters Row */}
+                    <div className="flex flex-wrap items-center gap-4">
+                        {/* Supplier Filter */}
+                        <div className="relative min-w-[200px]">
+                            <select
+                                value={selectedSupplier}
+                                onChange={(e) => setSelectedSupplier(e.target.value)}
+                                className="w-full appearance-none bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-3 px-4 pr-10 font-bold text-xs text-gray-600 dark:text-gray-300 focus:ring-2 ring-primary-500 outline-none"
+                            >
+                                <option value="">Todos los Proveedores</option>
+                                {suppliers.map((s: any) => (
+                                    <option key={s.id} value={s.name}>{s.name}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                        </div>
+
+                        {/* Project Filter */}
+                        <div className="relative min-w-[200px]">
+                            <select
+                                value={selectedProject}
+                                onChange={(e) => setSelectedProject(e.target.value)}
+                                className="w-full appearance-none bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-3 px-4 pr-10 font-bold text-xs text-gray-600 dark:text-gray-300 focus:ring-2 ring-primary-500 outline-none"
+                            >
+                                <option value="">Todos los Proyectos</option>
+                                {projects.map((p: any) => (
+                                    <option key={p.id} value={p.name}>{p.name}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                        </div>
+
+                        {/* Category Filter */}
+                        <div className="relative min-w-[200px]">
+                            <select
+                                value={selectedCategory}
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                className="w-full appearance-none bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-3 px-4 pr-10 font-bold text-xs text-gray-600 dark:text-gray-300 focus:ring-2 ring-primary-500 outline-none"
+                            >
+                                <option value="">Todas las Categorías</option>
+                                {['ANTICIPO', 'COMPRA', 'COMPRA_ONLINE', 'CONTRATO', 'ORDEN_COMPRA', 'ORDEN_SERVICIO', 'ORDEN_PRODUCCION', 'SERVICIO'].map((cat) => (
+                                    <option key={cat} value={cat}>{getCategoryLabel(cat)}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                        </div>
+
+                        <div className="flex-1"></div>
+
+                        {/* Sort Toggle */}
+                        <button
+                            onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                            className="flex items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-slate-900 rounded-2xl font-bold text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                        >
+                            <Calendar size={14} />
+                            {sortOrder === 'desc' ? 'Más recientes' : 'Más antiguos'}
+                        </button>
                     </div>
                 </div>
 
@@ -187,28 +295,32 @@ export default function AsientosPage() {
                         <thead className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700">
                             <tr>
                                 <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Título</th>
-                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Categoría</th>
-                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Proyecto</th>
-                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Monto Total</th>
+                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Presupuesto</th>
+                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Proveedor</th>
+                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Factura</th>
+                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Orden de Compra</th>
+                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Valor</th>
                                 <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Pagos</th>
-                                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Creado por</th>
                                 <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredAsientos.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center">
+                                    <td colSpan={8} className="px-6 py-12 text-center">
                                         <BookOpen className="mx-auto mb-4 text-gray-300" size={48} />
                                         <p className="text-gray-400 font-bold">No hay asientos registrados</p>
-                                        <p className="text-gray-300 text-sm">Crea un nuevo asiento para comenzar</p>
+                                        <p className="text-gray-300 text-sm">Prueba ajustando los filtros</p>
                                     </td>
                                 </tr>
                             ) : (
-                                filteredAsientos.map((asiento: any) => {
+                                filteredAsientos.map((asiento) => {
                                     const totalPaid = asiento.payments?.reduce((sum: number, p: any) => sum + parseFloat(p.amount || 0), 0) || 0;
-                                    const totalAmount = parseFloat(asiento.totalAmount || asiento.actualAmount || 0);
-                                    const paymentProgress = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
+                                    const totalAmount = parseFloat((asiento.totalAmount || asiento.actualAmount || 0).toString());
+                                    // If NOT multiple payments, we assume it's a single full payment or just show 100% bar if specific status needs it.
+                                    // Actually user asked: "si el asiento no fue marcado para varios pagos, en la columna de pagos debe mostrar la barra al 100% o indicativo de un solo pago"
+                                    const isSinglePayment = (asiento as any).hasMultiplePayments === false;
+                                    const paymentProgress = isSinglePayment ? 100 : (totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0);
 
                                     return (
                                         <tr
@@ -223,20 +335,37 @@ export default function AsientosPage() {
                                                     </div>
                                                     <div>
                                                         <p className="font-black text-sm">{asiento.title}</p>
-                                                        <p className="text-[10px] text-gray-400 font-bold">{new Date(asiento.createdAt).toLocaleDateString()}</p>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            {asiento.groupId && (
+                                                                <span className="text-[10px] font-black text-primary-600 bg-primary-50 dark:bg-primary-900/30 px-1.5 py-0.5 rounded">
+                                                                    #{asiento.groupId}
+                                                                </span>
+                                                            )}
+                                                            <p className="text-[10px] text-gray-400 font-bold">{new Date(asiento.createdAt).toLocaleDateString()}</p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5">
-                                                <span className="px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-                                                    {getCategoryLabel(asiento.reqCategory)}
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <Building size={14} className="text-gray-400" />
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold">{asiento.project?.name || '-'}</span>
+                                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{getCategoryLabel(asiento.reqCategory)}</span>
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-2">
-                                                    <Building size={14} className="text-gray-400" />
-                                                    <span className="text-sm font-bold">{asiento.project?.name || '-'}</span>
+                                                    <User size={14} className="text-gray-400" />
+                                                    <span className="text-xs font-bold truncate max-w-[150px]">{asiento.supplier?.name || '-'}</span>
                                                 </div>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{asiento.invoiceNumber || '-'}</span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{asiento.purchaseOrderNumber || '-'}</span>
                                             </td>
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-2">
@@ -248,22 +377,26 @@ export default function AsientosPage() {
                                             </td>
                                             <td className="px-6 py-5">
                                                 <div className="w-32">
-                                                    <div className="flex justify-between text-[9px] font-bold text-gray-500 mb-1">
-                                                        <span>{asiento.payments?.length || 0} pagos</span>
-                                                        <span>{paymentProgress.toFixed(0)}%</span>
-                                                    </div>
-                                                    <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-green-500 rounded-full transition-all"
-                                                            style={{ width: `${Math.min(paymentProgress, 100)}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-2">
-                                                    <User size={14} className="text-gray-400" />
-                                                    <span className="text-sm font-bold">{asiento.createdBy?.name || asiento.createdBy?.email || '-'}</span>
+                                                    {isSinglePayment ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="px-2 py-1 bg-green-50 text-green-700 rounded-lg text-[9px] font-black uppercase tracking-wide border border-green-100">
+                                                                Pago Único
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div className="flex justify-between text-[9px] font-bold text-gray-500 mb-1">
+                                                                <span>{asiento.payments?.length || 0} pagos</span>
+                                                                <span>{paymentProgress.toFixed(0)}%</span>
+                                                            </div>
+                                                            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className="h-full bg-green-500 rounded-full transition-all"
+                                                                    style={{ width: `${Math.min(paymentProgress, 100)}%` }}
+                                                                />
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5">
@@ -308,7 +441,7 @@ export default function AsientosPage() {
                             <p className="text-gray-400 font-bold">No hay asientos registrados</p>
                         </div>
                     ) : (
-                        filteredAsientos.map((asiento: any) => (
+                        filteredAsientos.map((asiento) => (
                             <div
                                 key={asiento.id}
                                 onClick={() => router.push(`/requirements/${asiento.id}`)}
@@ -331,7 +464,7 @@ export default function AsientosPage() {
                                 <div className="space-y-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                                     <div className="flex justify-between items-center">
                                         <span className="text-[10px] font-black text-gray-400 uppercase">Monto Total:</span>
-                                        <span className="font-black text-green-600">${parseFloat(asiento.totalAmount || asiento.actualAmount || 0).toLocaleString()}</span>
+                                        <span className="font-black text-green-600">${parseFloat((asiento.totalAmount || asiento.actualAmount || 0).toString()).toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-[10px] font-black text-gray-400 uppercase">Pagos:</span>

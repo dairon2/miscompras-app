@@ -310,14 +310,14 @@ export default function ApprovalsPage() {
                                                     {/* Indicadores de Aprobación */}
                                                     <div className="flex items-center gap-2">
                                                         <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${group.requirements.every((r: Requirement) => r.coordinatorApproval)
-                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                                             }`}>
                                                             Coordinación: {group.requirements.every((r: Requirement) => r.coordinatorApproval) ? 'SÍ' : 'NO'}
                                                         </span>
                                                         <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${group.requirements.every((r: Requirement) => r.directorApproval)
-                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                                             }`}>
                                                             Dirección: {group.requirements.every((r: Requirement) => r.directorApproval) ? 'SÍ' : 'NO'}
                                                         </span>
@@ -326,35 +326,33 @@ export default function ApprovalsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
-                                            {group.pdfUrl ? (
-                                                <a
-                                                    href={resolveApiUrl(group.pdfUrl)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl text-gray-400 hover:text-red-500 transition-colors border border-gray-100 dark:border-gray-700"
-                                                    title="Descargar PDF Administrativo"
+                                        <div className="flex items-center gap-3">
+                                            <div onClick={e => e.stopPropagation()} className="flex items-center gap-3">
+                                                {group.pdfUrl && (
+                                                    <a
+                                                        href={resolveApiUrl(group.pdfUrl)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl text-gray-400 hover:text-red-500 transition-colors border border-gray-100 dark:border-gray-700"
+                                                        title="Descargar PDF Administrativo"
+                                                    >
+                                                        <Download size={20} />
+                                                    </a>
+                                                )}
+                                                <button
+                                                    onClick={() => setCommentModal({ id: group.id, type: 'REJECT', creatorId: group.creator.id })}
+                                                    className="px-6 py-4 bg-red-50 text-red-600 rounded-2xl font-black text-xs hover:bg-red-100 transition-colors uppercase tracking-widest"
                                                 >
-                                                    <Download size={20} />
-                                                </a>
-                                            ) : (
-                                                <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl text-gray-300 border border-gray-100 dark:border-gray-700 italic text-[10px] font-bold">
-                                                    PDF No Disponible
-                                                </div>
-                                            )}
-                                            <button
-                                                onClick={() => setCommentModal({ id: group.id, type: 'REJECT', creatorId: group.creator.id })}
-                                                className="px-6 py-4 bg-red-50 text-red-600 rounded-2xl font-black text-xs hover:bg-red-100 transition-colors uppercase tracking-widest"
-                                            >
-                                                Rechazar
-                                            </button>
-                                            <button
-                                                onClick={() => setCommentModal({ id: group.id, type: 'APPROVE', creatorId: group.creator.id })}
-                                                className="px-6 py-4 bg-primary-600 text-white rounded-2xl font-black text-xs hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all uppercase tracking-widest"
-                                            >
-                                                Aprobar
-                                            </button>
-                                            <div className="ml-4 p-2 text-gray-400">
+                                                    Rechazar
+                                                </button>
+                                                <button
+                                                    onClick={() => setCommentModal({ id: group.id, type: 'APPROVE', creatorId: group.creator.id })}
+                                                    className="px-6 py-4 bg-primary-600 text-white rounded-2xl font-black text-xs hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all uppercase tracking-widest"
+                                                >
+                                                    Aprobar
+                                                </button>
+                                            </div>
+                                            <div className="ml-4 p-2 text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
                                                 {expandedGroup === group.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                             </div>
                                         </div>
@@ -487,20 +485,22 @@ export default function ApprovalsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
-                                            <button
-                                                onClick={() => setCommentModal({ id: adj.id, type: 'REJECT', isAdj: true })}
-                                                className="px-6 py-4 bg-red-50 text-red-600 rounded-2xl font-black text-xs hover:bg-red-100 transition-colors uppercase tracking-widest"
-                                            >
-                                                Rechazar
-                                            </button>
-                                            <button
-                                                onClick={() => setCommentModal({ id: adj.id, type: 'APPROVE', isAdj: true })}
-                                                className="px-6 py-4 bg-primary-600 text-white rounded-2xl font-black text-xs hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all uppercase tracking-widest"
-                                            >
-                                                Aprobar
-                                            </button>
-                                            <div className="ml-4 p-2 text-gray-400">
+                                        <div className="flex items-center gap-3">
+                                            <div onClick={e => e.stopPropagation()} className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => setCommentModal({ id: adj.id, type: 'REJECT', isAdj: true })}
+                                                    className="px-6 py-4 bg-red-50 text-red-600 rounded-2xl font-black text-xs hover:bg-red-100 transition-colors uppercase tracking-widest"
+                                                >
+                                                    Rechazar
+                                                </button>
+                                                <button
+                                                    onClick={() => setCommentModal({ id: adj.id, type: 'APPROVE', isAdj: true })}
+                                                    className="px-6 py-4 bg-primary-600 text-white rounded-2xl font-black text-xs hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all uppercase tracking-widest"
+                                                >
+                                                    Aprobar
+                                                </button>
+                                            </div>
+                                            <div className="ml-4 p-2 text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
                                                 {expandedAdj === adj.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                             </div>
                                         </div>

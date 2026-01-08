@@ -704,6 +704,7 @@ export const getAsientos = async (req: AuthRequest, res: Response) => {
                 area: true,
                 supplier: true,
                 payments: true,
+                budget: true,
                 createdBy: {
                     select: {
                         id: true,
@@ -1425,7 +1426,8 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
         reqCategory,
         purchaseOrderNumber,
         invoiceNumber,
-        hasMultiplePayments
+        hasMultiplePayments,
+        groupId
     } = req.body;
 
     try {
@@ -1460,6 +1462,7 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
                 hasMultiplePayments: hasMultiplePayments === 'true' || hasMultiplePayments === true,
                 status: 'APPROVED',  // Auto-approved for asientos
                 procurementStatus: 'EN_TRAMITE',
+                groupId: (groupId && groupId !== 'null' && !isNaN(parseInt(groupId))) ? parseInt(groupId) : undefined,
                 attachments: {
                     create: await processFileUploads(req.files as Express.Multer.File[] || [], 'asientos')
                 }

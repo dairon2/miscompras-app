@@ -72,6 +72,7 @@ export default function BudgetsPage() {
     const [filters, setFilters] = useState({
         projectId: '',
         areaId: '',
+        categoryId: '',
         status: ''
     });
 
@@ -119,6 +120,7 @@ export default function BudgetsPage() {
             const params = new URLSearchParams();
             params.append('year', selectedYear.toString());
             if (filters.projectId) params.append('projectId', filters.projectId);
+            if (filters.categoryId) params.append('categoryId', filters.categoryId);
             if (filters.areaId) params.append('areaId', filters.areaId);
             if (filters.status) params.append('status', filters.status);
 
@@ -512,6 +514,16 @@ export default function BudgetsPage() {
                         <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                 </select>
+                <select
+                    value={filters.categoryId}
+                    onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
+                    className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 font-bold text-sm"
+                >
+                    <option value="">Todas las categorías</option>
+                    {categories.map((c: any) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                </select>
                 <div className="flex gap-2">
                     <button
                         onClick={() => setViewMode('visual')}
@@ -588,12 +600,12 @@ export default function BudgetsPage() {
                                                 onClick={() => router.push(`/budget/${budget.id}`)}
                                                 className="border-b border-gray-50 dark:border-gray-700 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-colors cursor-pointer"
                                             >
-                                                <td className="px-6 py-4 text-xs font-black text-primary-600">{budget.project?.code || budget.code || '-'}</td>
+                                                <td className="px-6 py-4 text-xs font-black" style={{ color: '#4c6ef5' }}>{budget.project?.code || budget.code || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-500 font-bold">{budget.project?.name}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-500">{budget.category?.name || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-500">{budget.manager?.name || '-'}</td>
                                                 <td className="px-6 py-4 font-bold">{formatCurrency(totalAmount)}</td>
-                                                <td className="px-6 py-4 font-bold text-amber-600">{formatCurrency(executedAmount)}</td>
+                                                <td className="px-6 py-4 font-black" style={{ color: '#d97706' }}>{formatCurrency(executedAmount)}</td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-2">
                                                         <span className={`font-bold ${isLow ? 'text-red-600' : 'text-green-600'}`}>

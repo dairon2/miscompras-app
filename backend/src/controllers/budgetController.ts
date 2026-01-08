@@ -10,7 +10,7 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.id;
         const userRole = req.user?.role;
-        const { year, projectId, areaId, status } = req.query;
+        const { year, projectId, areaId, status, categoryId } = req.query;
 
         // Default year to current
         const filterYear = year ? parseInt(year as string) : new Date().getFullYear();
@@ -20,6 +20,7 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
 
         if (projectId) where.projectId = projectId;
         if (areaId) where.areaId = areaId;
+        if (categoryId) where.categoryId = categoryId;
         if (status) where.status = status;
 
         // Role-based access logic
