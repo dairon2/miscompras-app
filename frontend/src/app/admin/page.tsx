@@ -336,8 +336,8 @@ export default function AdminPage() {
             >
                 {activeTab === 'general' ? (
                     <div className="p-8 lg:p-12 space-y-12">
-                        {/* System Configuration Section */}
-                        {['ADMIN', 'DEVELOPER', 'DIRECTOR', 'COORDINATOR'].includes(user?.role || '') && (
+                        {/* System Configuration Section - Only for DEVELOPER */}
+                        {user?.role === 'DEVELOPER' && (
                             <section>
                                 <div className="flex items-center gap-3 mb-8">
                                     <div className="p-3 bg-primary-100 dark:bg-primary-900/30 text-primary-600 rounded-2xl">
@@ -421,7 +421,7 @@ export default function AdminPage() {
                             </section>
                         )}
 
-                        {['ADMIN', 'DEVELOPER', 'DIRECTOR', 'COORDINATOR'].includes(user?.role || '') && <div className="h-px bg-gray-100 dark:bg-gray-700" />}
+                        {user?.role === 'DEVELOPER' && <div className="h-px bg-gray-100 dark:bg-gray-700" />}
 
                         {/* Submission Rules Link - for ADMIN, DIRECTOR, LEADER */}
                         {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && (
