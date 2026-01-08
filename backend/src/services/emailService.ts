@@ -80,6 +80,14 @@ const getEmailTemplate = (title: string, content: string, actionButton?: { text:
 const sendEmail = async (to: string, subject: string, htmlContent: string) => {
     console.log(`[Email] Attempting to send email to: ${to}, subject: "${subject}"`);
 
+    // Check if emails are disabled (for development/testing)
+    if (process.env.DISABLE_EMAILS === 'true') {
+        console.log('[Email] 🚫 EMAILS DISABLED - Skipping actual send');
+        console.log(`[Email] 📧 Would have sent to: ${to}`);
+        console.log(`[Email] 📝 Subject: ${subject}`);
+        return;
+    }
+
     const client = getEmailClient();
     if (!client) {
         console.warn('[Email] ⚠️ Email client not configured - AZURE_COMMUNICATION_CONNECTION_STRING is missing');
