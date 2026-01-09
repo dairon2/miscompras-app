@@ -35,6 +35,8 @@ import { exportRequirements } from "@/lib/excelExport";
 import { useAuthStore } from "@/store/authStore";
 import YearSelector from "@/components/YearSelector";
 import { translateStatus } from "@/lib/translations";
+import AlertModal from "@/components/AlertModal";
+
 import BulkEditModal from "@/components/BulkEditModal";
 
 interface Requirement {
@@ -52,8 +54,7 @@ interface Requirement {
     budget?: {
         id: string;
         title: string;
-        code?: string;
-        category?: { id: string; name: string; code?: string }
+        category?: { id: string; name: string }
     };
     supplier?: { name: string };
     manualSupplierName?: string;
@@ -63,11 +64,23 @@ interface Requirement {
     groupId?: number;
     attachments?: { id: string }[];
     receivedAtSatisfaction?: boolean;
+    createdById: string;
+    createdBy?: { name: string; email: string };
 }
 
 export default function RequirementsPage() {
     const router = useRouter();
     const { user } = useAuthStore();
+
+    // Alert State
+    const [alertState, setAlertState] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'error' | 'info' }>({
+        open: false, title: '', message: '', type: 'info'
+    });
+
+    const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setAlertState({ open: true, title, message, type });
+    };
+
     const [requirements, setRequirements] = useState<Requirement[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
@@ -180,9 +193,13 @@ export default function RequirementsPage() {
             setRequirements(requirements.filter((r: any) => r.id !== requirementToDelete.id));
             setDeleteModalOpen(false);
             setRequirementToDelete(null);
-        } catch (err) {
+            showAlert("Eliminado", "Requerimiento eliminado correctamente", "success");
+        } catch (err: any) {
             console.error("Error deleting requirement", err);
-            alert("Error al eliminar el requerimiento");
+            const msg = err.response?.data?.error === 'Unauthorized access'
+                ? 'No tienes permiso para eliminar este requerimiento.'
+                : (err.response?.data?.error || "Error al eliminar el requerimiento");
+            showAlert("Error", msg, "error");
         }
     };
 
@@ -194,9 +211,13 @@ export default function RequirementsPage() {
             setRequirements(requirements.filter((r: any) => !selectedIds.includes(r.id)));
             setSelectedIds([]);
             setIsBulkDeleteOpen(false);
-        } catch (err) {
+            showAlert("Eliminación Masiva", "Requerimientos eliminados correctamente", "success");
+        } catch (err: any) {
             console.error("Error deleting requirements", err);
-            alert("Error al eliminar algunos requerimientos");
+            const msg = err.response?.data?.error === 'Unauthorized access'
+                ? 'No tienes permiso para eliminar algunos de estos requerimientos.'
+                : (err.response?.data?.error || "Error al eliminar algunos requerimientos");
+            showAlert("Error", msg, "error");
         } finally {
             setIsDeletingBulk(false);
         }
@@ -812,6 +833,14 @@ export default function RequirementsPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <AlertModal
+                isOpen={alertState.open}
+                onClose={() => setAlertState({ ...alertState, open: false })}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+            />
         </div >
     );
 }

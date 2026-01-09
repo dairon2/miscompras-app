@@ -35,6 +35,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import PaymentsSection from "@/components/PaymentsSection";
 import StarRating from "@/components/StarRating";
+import AlertModal from "@/components/AlertModal";
 
 interface Attachment {
     id: string;
@@ -115,6 +116,15 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     const [statusForm, setStatusForm] = useState<StatusForm>({ status: '', procurementStatus: '', remarks: '', receivedAtSatisfaction: false, overallRating: 0, deliveryRating: 0, qualityRating: 0, priceRating: 0 });
     const [formError, setFormError] = useState('');
     const [selectedFile, setSelectedFile] = useState<Attachment | null>(null);
+
+    // Alert State
+    const [alertState, setAlertState] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'error' | 'info' }>({
+        open: false, title: '', message: '', type: 'info'
+    });
+
+    const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setAlertState({ open: true, title, message, type });
+    };
 
     const requestStatusOptions = [
         { value: 'PENDING_APPROVAL', label: 'En espera por aprobación' },
@@ -272,9 +282,13 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
             setIsEditing(false);
             await fetchRequirement();
-        } catch (err) {
+            showAlert("Guardado", "Cambios guardados correctamente", "success");
+        } catch (err: any) {
             console.error("Save error:", err);
-            alert("Error al guardar los cambios");
+            const msg = err.response?.data?.error === 'Unauthorized access'
+                ? 'No tienes permiso para editar este requerimiento.'
+                : (err.response?.data?.error || "Error al guardar los cambios");
+            showAlert("Error", msg, "error");
         } finally {
             setActionLoading(false);
         }
@@ -336,9 +350,9 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
             if (requirement) {
                 pdf.save(`Requerimiento-${requirement.id}.pdf`);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error generating PDF", err);
-            alert("Error al generar el PDF");
+            showAlert("Error", "Error al generar el PDF", "error");
         } finally {
             setActionLoading(false);
         }
@@ -418,6 +432,13 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
     return (
         <div className="p-6 lg:p-12 max-w-6xl mx-auto">
+            <AlertModal
+                isOpen={alertState.open}
+                onClose={() => setAlertState({ ...alertState, open: false })}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+            />
             <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}

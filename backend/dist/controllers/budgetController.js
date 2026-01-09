@@ -9,7 +9,7 @@ const getBudgets = async (req, res) => {
     try {
         const userId = req.user?.id;
         const userRole = req.user?.role;
-        const { year, projectId, areaId, status } = req.query;
+        const { year, projectId, areaId, status, categoryId } = req.query;
         // Default year to current
         const filterYear = year ? parseInt(year) : new Date().getFullYear();
         // Base where clause
@@ -18,6 +18,8 @@ const getBudgets = async (req, res) => {
             where.projectId = projectId;
         if (areaId)
             where.areaId = areaId;
+        if (categoryId)
+            where.categoryId = categoryId;
         if (status)
             where.status = status;
         // Role-based access logic

@@ -34,6 +34,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
+import AlertModal from "@/components/AlertModal";
 
 type TabType = 'areas' | 'projects' | 'categories' | 'suppliers' | 'users' | 'account' | 'general';
 
@@ -73,7 +74,17 @@ export default function AdminPage() {
     const [formData, setFormData] = useState<any>({});
 
     // Search
+    // Search
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Alert State
+    const [alertState, setAlertState] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'error' | 'info' }>({
+        open: false, title: '', message: '', type: 'info'
+    });
+
+    const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setAlertState({ open: true, title, message, type });
+    };
 
     // ADMIN, DIRECTOR, LEADER and COORDINATOR can access management features
     const isAdmin = user?.role === 'ADMIN' || user?.role === 'DEVELOPER';
@@ -172,8 +183,12 @@ export default function AdminPage() {
                 fetchData(activeTab as TabType);
             }
             fetchStats();
+            showAlert("Guardado", `${getTabLabel()} guardado correctamente`, "success");
         } catch (err: any) {
-            alert(err.response?.data?.error || 'Error al guardar');
+            const msg = err.response?.data?.error === 'Unauthorized access'
+                ? 'No tienes permiso para realizar esta acción.'
+                : (err.response?.data?.error || 'Error al guardar');
+            showAlert("Error", msg, "error");
         } finally {
             setSaving(false);
         }
@@ -194,8 +209,12 @@ export default function AdminPage() {
                 fetchData(activeTab as TabType);
             }
             fetchStats();
+            showAlert("Eliminado", `${getTabLabel()} eliminado correctamente`, "success");
         } catch (err: any) {
-            alert(err.response?.data?.error || 'Error al eliminar');
+            const msg = err.response?.data?.error === 'Unauthorized access'
+                ? 'No tienes permiso para eliminar este elemento.'
+                : (err.response?.data?.error || 'Error al eliminar');
+            showAlert("Error", msg, "error");
         }
     };
 
@@ -404,9 +423,9 @@ export default function AdminPage() {
                                             setSavingConfig(true);
                                             try {
                                                 await api.patch('/admin/config', systemConfig);
-                                                alert('Configuración guardada exitosamente');
+                                                showAlert("Configuración", "Configuración guardada exitosamente", "success");
                                             } catch (err: any) {
-                                                alert(err.response?.data?.error || 'Error al guardar');
+                                                showAlert("Error", err.response?.data?.error || 'Error al guardar', "error");
                                             } finally {
                                                 setSavingConfig(false);
                                             }
@@ -757,7 +776,7 @@ export default function AdminPage() {
                                                                             await api.patch(`/admin/users/toggle/${item.id}`);
                                                                             fetchData('users' as any);
                                                                         } catch (err) {
-                                                                            alert('Error al cambiar estado');
+                                                                            showAlert("Error", "Error al cambiar estado del usuario", "error");
                                                                         }
                                                                     }}
                                                                     className={`p-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all ${item.isActive !== false ? 'text-amber-600 hover:bg-amber-600' : 'text-green-600 hover:bg-green-600'} hover:text-white bg-white dark:bg-slate-800`}
@@ -1108,6 +1127,13 @@ export default function AdminPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+            <AlertModal
+                isOpen={alertState.open}
+                onClose={() => setAlertState({ ...alertState, open: false })}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+            />
+        </div >
     );
 }

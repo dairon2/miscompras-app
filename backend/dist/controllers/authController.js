@@ -117,7 +117,8 @@ const login = async (req, res) => {
                 areaId: user.areaId,
                 isAreaDirector: user.areasDirected?.length > 0,
                 directedAreas: user.areasDirected || [],
-                mustChangePassword: user.mustChangePassword
+                mustChangePassword: user.mustChangePassword,
+                profilePhoto: user.profilePhoto
             }
         });
     }

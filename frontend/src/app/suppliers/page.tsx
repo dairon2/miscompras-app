@@ -11,7 +11,9 @@ import {
 import api from "@/lib/api";
 import { exportSuppliers } from "@/lib/excelExport";
 import { useAuthStore } from "@/store/authStore";
+
 import { StarRatingDisplay } from "@/components/StarRating";
+import AlertModal from "@/components/AlertModal";
 
 export default function SuppliersPage() {
     const { user } = useAuthStore();
@@ -37,6 +39,15 @@ export default function SuppliersPage() {
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importing, setImporting] = useState(false);
     const [importResult, setImportResult] = useState<any>(null);
+
+    // Alert State
+    const [alertState, setAlertState] = useState<{ open: boolean; title: string; message: string; type: 'success' | 'error' | 'info' }>({
+        open: false, title: '', message: '', type: 'info'
+    });
+
+    const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setAlertState({ open: true, title, message, type });
+    };
 
     // Role-based permissions for supplier management
     const userRole = user?.role || 'USER';
@@ -87,10 +98,12 @@ export default function SuppliersPage() {
             setShowCreateModal(false);
             setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "" });
             fetchSuppliers();
-            alert("Proveedor registrado exitosamente");
+            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "" });
+            fetchSuppliers();
+            showAlert("Registrado", "Proveedor registrado exitosamente", "success");
         } catch (error) {
             console.error("Error creating supplier", error);
-            alert("Error al registrar proveedor");
+            showAlert("Error", "Error al registrar proveedor", "error");
         }
     };
 
@@ -203,7 +216,7 @@ export default function SuppliersPage() {
                                 exportSuppliers(filteredSuppliers);
                             } catch (error) {
                                 console.error('Error al exportar:', error);
-                                alert('Error al generar el archivo Excel');
+                                showAlert("Error", "Error al generar el archivo Excel", "error");
                             }
                         }}
                         className="bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-6 py-4 rounded-2xl font-black shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 uppercase text-[10px] tracking-widest"
@@ -577,6 +590,13 @@ export default function SuppliersPage() {
                     )
                 }
             </AnimatePresence >
+            <AlertModal
+                isOpen={alertState.open}
+                onClose={() => setAlertState({ ...alertState, open: false })}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+            />
         </div >
     );
 }

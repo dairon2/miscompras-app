@@ -10,6 +10,25 @@ const requirementGroupService_1 = require("../services/requirementGroupService")
 const blobStorageService_1 = require("../services/blobStorageService");
 const submissionRulesService_1 = require("../services/submissionRulesService");
 const emailService_1 = require("../services/emailService");
+// Helper function to translate status to Spanish
+const translateStatus = (status) => {
+    const translations = {
+        'PENDING_APPROVAL': 'Pendiente de Aprobación',
+        'PENDING_COORDINATION': 'Pendiente de Coordinación',
+        'PENDING_FINANCE': 'Pendiente de Finanzas',
+        'APPROVED': 'Aprobado',
+        'APPROVED_FOR_PURCHASE': 'Aprobado para Compra',
+        'REJECTED': 'Rechazado',
+        'CANCELLED': 'Cancelado',
+        'FINALIZADO': 'Finalizado',
+        'ENTREGADO': 'Entregado',
+        'EN_TRAMITE': 'En Trámite',
+        'PENDIENTE': 'Pendiente',
+        'POSTERGADO': 'Postergado',
+        'ANULADO': 'Anulado'
+    };
+    return translations[status] || status;
+};
 const createRequirement = async (req, res) => {
     const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, suggestedSupplier, budgetId } = req.body;
     const userId = req.user?.id;
@@ -272,7 +291,7 @@ const getRequirementById = async (req, res) => {
 exports.getRequirementById = getRequirementById;
 const updateRequirementStatus = async (req, res) => {
     const { id } = req.params;
-    const { status, procurementStatus, remarks, receivedAtSatisfaction, satisfactionComments } = req.body;
+    const { status, procurementStatus, remarks, receivedAtSatisfaction, satisfactionComments, overallRating, deliveryRating, qualityRating, priceRating } = req.body;
     try {
         const requirement = await index_1.prisma.requirement.update({
             where: { id },
@@ -281,7 +300,8 @@ const updateRequirementStatus = async (req, res) => {
                 procurementStatus: procurementStatus || undefined,
                 receivedAtSatisfaction: receivedAtSatisfaction !== undefined ? receivedAtSatisfaction : undefined,
                 satisfactionComments: satisfactionComments || undefined
-            }
+            },
+            include: { supplier: true }
         });
         await index_1.prisma.historyLog.create({
             data: {
@@ -290,6 +310,34 @@ const updateRequirementStatus = async (req, res) => {
                 details: `Cambio de estado a ${status}. Por: ${req.user?.email}. Comentario: ${remarks || 'Sin comentarios'}`
             }
         });
+        // Create Supplier Rating if ratings are provided and requirement has a supplier
+        if (requirement.supplierId && overallRating && overallRating > 0) {
+            // Check if rating already exists for this requirement
+            const existingRating = await index_1.prisma.supplierRating.findUnique({
+                where: { requirementId: id }
+            });
+            if (!existingRating) {
+                await index_1.prisma.supplierRating.create({
+                    data: {
+                        supplierId: requirement.supplierId,
+                        requirementId: id,
+                        overallRating: Number(overallRating),
+                        deliveryRating: Number(deliveryRating) || Number(overallRating),
+                        qualityRating: Number(qualityRating) || Number(overallRating),
+                        priceRating: Number(priceRating) || Number(overallRating),
+                        comment: remarks || satisfactionComments || null,
+                        evaluatedById: req.user?.id || ''
+                    }
+                });
+                await index_1.prisma.historyLog.create({
+                    data: {
+                        action: 'SUPPLIER_RATED',
+                        requirementId: id,
+                        details: `Proveedor ${requirement.supplier?.name} evaluado con ${overallRating}/5 estrellas por ${req.user?.email}`
+                    }
+                });
+            }
+        }
         // In-app Notification for Creator
         const fullReq = await index_1.prisma.requirement.findUnique({
             where: { id },
@@ -300,7 +348,7 @@ const updateRequirementStatus = async (req, res) => {
                 data: {
                     userId: fullReq.createdById,
                     title: `Requerimiento Actualizado`,
-                    message: `Tu solicitud "${fullReq.title}" ha sido actualizada. Estado: ${status}`,
+                    message: `Tu solicitud "${fullReq.title}" ha sido actualizada. Estado: ${translateStatus(status)}`,
                     type: status === 'REJECTED' ? 'ERROR' : 'INFO',
                     requirementId: fullReq.id
                 }
@@ -404,13 +452,98 @@ const updateRequirement = async (req, res) => {
                 attachments: true
             }
         });
-        // Log significant changes
+        // Log significant changes - track all editable fields
         let changes = [];
+        // Title
+        if (title !== undefined && title !== currentReq.title) {
+            changes.push(`Título actualizado a "${title}"`);
+        }
+        // Description
+        if (description !== undefined && description !== currentReq.description) {
+            changes.push(`Descripción actualizada`);
+        }
+        // Quantity
+        if (quantity !== undefined && quantity !== currentReq.quantity) {
+            changes.push(`Cantidad actualizada a ${quantity}`);
+        }
+        // Actual Amount
         if (actualAmount && parseFloat(actualAmount) !== parseFloat(currentReq.actualAmount?.toString() || '0')) {
             changes.push(`Monto actualizado a $${actualAmount}`);
         }
-        if (purchaseOrderNumber !== currentReq.purchaseOrderNumber)
-            changes.push(`OC actualizada a ${purchaseOrderNumber}`);
+        // Purchase Order Number (OC)
+        const newOC = purchaseOrderNumber === 'null' ? null : purchaseOrderNumber;
+        if (purchaseOrderNumber !== undefined && newOC !== currentReq.purchaseOrderNumber) {
+            if (newOC) {
+                changes.push(`OC actualizada a ${newOC}`);
+            }
+            else if (currentReq.purchaseOrderNumber) {
+                changes.push(`OC eliminada (era: ${currentReq.purchaseOrderNumber})`);
+            }
+        }
+        // Invoice Number
+        const newInvoice = invoiceNumber === 'null' ? null : invoiceNumber;
+        if (invoiceNumber !== undefined && newInvoice !== currentReq.invoiceNumber) {
+            if (newInvoice) {
+                changes.push(`Factura actualizada a ${newInvoice}`);
+            }
+            else if (currentReq.invoiceNumber) {
+                changes.push(`Factura eliminada (era: ${currentReq.invoiceNumber})`);
+            }
+        }
+        // Delivery Date
+        const newDeliveryDate = parseSafeDate(deliveryDate);
+        if (deliveryDate !== undefined && newDeliveryDate?.toISOString() !== currentReq.deliveryDate?.toISOString()) {
+            if (newDeliveryDate) {
+                changes.push(`Fecha acordada actualizada a ${newDeliveryDate.toLocaleDateString('es-CO')}`);
+            }
+            else if (currentReq.deliveryDate) {
+                changes.push(`Fecha acordada eliminada`);
+            }
+        }
+        // Received Date
+        const newReceivedDate = parseSafeDate(receivedDate);
+        if (receivedDate !== undefined && newReceivedDate?.toISOString() !== currentReq.receivedDate?.toISOString()) {
+            if (newReceivedDate) {
+                changes.push(`Fecha de recepción actualizada a ${newReceivedDate.toLocaleDateString('es-CO')}`);
+            }
+            else if (currentReq.receivedDate) {
+                changes.push(`Fecha de recepción eliminada`);
+            }
+        }
+        // Supplier
+        const newSupplierId = (supplierId === 'null' || !supplierId) ? null : supplierId;
+        if (supplierId !== undefined && newSupplierId !== currentReq.supplierId) {
+            if (newSupplierId) {
+                changes.push(`Proveedor asignado`);
+            }
+            else if (currentReq.supplierId) {
+                changes.push(`Proveedor removido`);
+            }
+        }
+        // Manual Supplier Name
+        const newManualSupplier = manualSupplierName === 'null' ? null : manualSupplierName;
+        if (manualSupplierName !== undefined && newManualSupplier !== currentReq.manualSupplierName) {
+            if (newManualSupplier) {
+                changes.push(`Proveedor manual actualizado a ${newManualSupplier}`);
+            }
+            else if (currentReq.manualSupplierName) {
+                changes.push(`Proveedor manual eliminado`);
+            }
+        }
+        // Category
+        if (reqCategory !== undefined && reqCategory !== 'null' && reqCategory !== currentReq.reqCategory) {
+            changes.push(`Categoría actualizada a ${reqCategory}`);
+        }
+        // Procurement Status
+        if (procurementStatus !== undefined && procurementStatus !== 'null' && procurementStatus !== currentReq.procurementStatus) {
+            changes.push(`Estado del trámite actualizado a ${procurementStatus}`);
+        }
+        // Has Multiple Payments
+        const newHasMultiple = hasMultiplePayments === 'true' || hasMultiplePayments === true;
+        if (hasMultiplePayments !== undefined && newHasMultiple !== currentReq.hasMultiplePayments) {
+            changes.push(`Pagos múltiples ${newHasMultiple ? 'habilitados' : 'deshabilitados'}`);
+        }
+        // Attachments
         if (files?.length > 0)
             changes.push(`${files.length} nuevos adjuntos añadidos`);
         if (deleteAttachmentIds)
@@ -627,6 +760,7 @@ const getAsientos = async (req, res) => {
                 area: true,
                 supplier: true,
                 payments: true,
+                budget: true,
                 createdBy: {
                     select: {
                         id: true,
@@ -1267,7 +1401,7 @@ const createAsiento = async (req, res) => {
     if (!['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole || '')) {
         return res.status(403).json({ error: 'No tienes permiso para crear asientos' });
     }
-    const { title, description, quantity, totalAmount, actualAmount, projectId, areaId, supplierId, manualSupplierName, budgetId, reqCategory, purchaseOrderNumber, invoiceNumber, hasMultiplePayments } = req.body;
+    const { title, description, quantity, totalAmount, actualAmount, projectId, areaId, supplierId, manualSupplierName, budgetId, reqCategory, purchaseOrderNumber, invoiceNumber, hasMultiplePayments, groupId } = req.body;
     try {
         // Budget deduction for asientos (immediate)
         if (budgetId && totalAmount) {
@@ -1299,6 +1433,7 @@ const createAsiento = async (req, res) => {
                 hasMultiplePayments: hasMultiplePayments === 'true' || hasMultiplePayments === true,
                 status: 'APPROVED', // Auto-approved for asientos
                 procurementStatus: 'EN_TRAMITE',
+                groupId: (groupId && groupId !== 'null' && !isNaN(parseInt(groupId))) ? parseInt(groupId) : undefined,
                 attachments: {
                     create: await (0, blobStorageService_1.processFileUploads)(req.files || [], 'asientos')
                 }

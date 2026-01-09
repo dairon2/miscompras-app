@@ -3,10 +3,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generatePassword = exports.getProfile = exports.updateProfile = exports.changePassword = exports.deleteUser = exports.toggleUserStatus = exports.updateUser = exports.createUser = exports.getUserById = exports.getUsers = void 0;
+exports.uploadProfilePhoto = exports.generatePassword = exports.getProfile = exports.updateProfile = exports.changePassword = exports.deleteUser = exports.toggleUserStatus = exports.updateUser = exports.createUser = exports.getUserById = exports.getUsers = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
 const index_1 = require("../index");
+const blobStorageService_1 = require("../services/blobStorageService");
 // Get all users with filters
 const getUsers = async (req, res) => {
     const { role, areaId, isActive, search } = req.query;
@@ -299,6 +300,7 @@ const getProfile = async (req, res) => {
                 area: { select: { id: true, name: true } },
                 phone: true,
                 position: true,
+                profilePhoto: true,
                 createdAt: true,
                 lastLoginAt: true
             }
@@ -320,3 +322,53 @@ const generatePassword = async (req, res) => {
     res.json({ password });
 };
 exports.generatePassword = generatePassword;
+// Upload profile photo
+const uploadProfilePhoto = async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ error: 'No autenticado' });
+    }
+    if (!req.file) {
+        return res.status(400).json({ error: 'No se proporcionó ninguna imagen' });
+    }
+    try {
+        const file = req.file;
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.mimetype)) {
+            return res.status(400).json({ error: 'Solo se permiten imágenes (JPEG, PNG, GIF, WEBP)' });
+        }
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            return res.status(400).json({ error: 'La imagen no puede superar 5MB' });
+        }
+        // Generate unique blob name
+        const ext = file.originalname.split('.').pop() || 'jpg';
+        const blobName = `profile-photos/${userId}-${Date.now()}.${ext}`;
+        // Upload to Blob Storage
+        const photoUrl = await (0, blobStorageService_1.uploadBufferToBlobStorage)(file.buffer, blobName, file.mimetype);
+        if (!photoUrl) {
+            return res.status(500).json({ error: 'Error al subir la imagen. Intenta de nuevo.' });
+        }
+        // Update user profile with new photo URL
+        const user = await index_1.prisma.user.update({
+            where: { id: userId },
+            data: { profilePhoto: photoUrl },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                profilePhoto: true
+            }
+        });
+        res.json({
+            message: 'Foto de perfil actualizada',
+            profilePhoto: user.profilePhoto
+        });
+    }
+    catch (error) {
+        console.error('Error uploading profile photo:', error);
+        res.status(500).json({ error: 'Error al subir la foto de perfil' });
+    }
+};
+exports.uploadProfilePhoto = uploadProfilePhoto;
