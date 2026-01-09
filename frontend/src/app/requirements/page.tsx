@@ -81,6 +81,8 @@ export default function RequirementsPage() {
     // Bulk Edit State
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+    const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+    const [isDeletingBulk, setIsDeletingBulk] = useState(false);
     const isAdminOrLeader = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR'].includes(user?.role || '');
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,7 +127,8 @@ export default function RequirementsPage() {
     // Role-based permissions
     const userRole = user?.role || 'USER';
     const isAdmin = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(userRole);
-    const canDelete = ['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(userRole);
+    // PERMISO DE ELIMINACIÓN: Solo Director, Coordinador y Admin (Developer para debug si necesario, pero instruccion dice nadie mas)
+    const canDelete = ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole);
 
     useEffect(() => {
         if (user) {
@@ -180,6 +183,22 @@ export default function RequirementsPage() {
         } catch (err) {
             console.error("Error deleting requirement", err);
             alert("Error al eliminar el requerimiento");
+        }
+    };
+
+    const handleConfirmBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        setIsDeletingBulk(true);
+        try {
+            await Promise.all(selectedIds.map(id => api.delete(`/requirements/${id}`)));
+            setRequirements(requirements.filter((r: any) => !selectedIds.includes(r.id)));
+            setSelectedIds([]);
+            setIsBulkDeleteOpen(false);
+        } catch (err) {
+            console.error("Error deleting requirements", err);
+            alert("Error al eliminar algunos requerimientos");
+        } finally {
+            setIsDeletingBulk(false);
         }
     };
 
@@ -669,6 +688,15 @@ export default function RequirementsPage() {
                             <FileSpreadsheet size={16} />
                             Editar Detalles
                         </button>
+                        {canDelete && (
+                            <button
+                                onClick={() => setIsBulkDeleteOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg font-bold text-sm transition-colors"
+                            >
+                                <Trash2 size={16} />
+                                Eliminar ({selectedIds.length})
+                            </button>
+                        )}
                         <button
                             onClick={() => setSelectedIds([])}
                             className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 transition-colors"
@@ -730,6 +758,52 @@ export default function RequirementsPage() {
                                     className="flex-1 py-3 px-6 rounded-2xl bg-red-600 text-white font-bold hover:bg-red-700 transition-all"
                                 >
                                     Eliminar
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            {/* Bulk Delete Confirmation Modal */}
+            <AnimatePresence>
+                {isBulkDeleteOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+                        onClick={() => !isDeletingBulk && setIsBulkDeleteOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Trash2 className="w-8 h-8 text-red-600" />
+                                </div>
+                                <h3 className="text-xl font-black mb-2">¿Eliminar {selectedIds.length} requerimientos?</h3>
+                                <p className="text-gray-500 text-sm">
+                                    Esta acción eliminará permanentemente <strong>{selectedIds.length}</strong> elementos seleccionados. No se puede deshacer.
+                                </p>
+                            </div>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setIsBulkDeleteOpen(false)}
+                                    disabled={isDeletingBulk}
+                                    className="flex-1 py-3 px-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700 font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all disabled:opacity-50"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleConfirmBulkDelete}
+                                    disabled={isDeletingBulk}
+                                    className="flex-1 py-3 px-6 rounded-2xl bg-red-600 text-white font-bold hover:bg-red-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {isDeletingBulk ? 'Eliminando...' : 'Eliminar Todo'}
                                 </button>
                             </div>
                         </motion.div>
