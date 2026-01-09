@@ -353,14 +353,16 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
 
     // Role-based permissions
-    // isAdmin: Can edit details (includes COORDINATOR now)
-    const isAdmin = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
-    // isApprover: Can approve/reject PENDING_APPROVAL requests (Director and Coordinator, NOT Leader)
+    // Role-based permissions
+    // isAdmin: Can edit details (LEADER removed - read only)
+    const isAdmin = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
+    // isApprover: Can approve/reject PENDING_APPROVAL requests
     const isApprover = ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole);
-    const canDelete = ['ADMIN', 'DIRECTOR'].includes(userRole);
+    // canDelete: Admin, Director, Coordinator
+    const canDelete = ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole);
 
     // Approval permissions for different stages
-    const canApproveCoordination = requirement.status === 'PENDING_COORDINATION' && ['ADMIN', 'LEADER', 'COORDINATOR'].includes(userRole);
+    const canApproveCoordination = requirement.status === 'PENDING_COORDINATION' && ['ADMIN', 'COORDINATOR'].includes(userRole);
     const canApproveFinance = requirement.status === 'PENDING_FINANCE' && ['ADMIN', 'DIRECTOR'].includes(userRole);
 
     // Generic approve for PENDING_APPROVAL - Director and Coordinator can approve

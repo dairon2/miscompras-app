@@ -317,13 +317,15 @@ export default function RequirementsPage() {
                             <span className="hidden md:inline">Asientos</span>
                         </button>
                     )}
-                    <button
-                        onClick={() => router.push('/requirements/new')}
-                        className="flex items-center gap-2 bg-primary-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap uppercase text-[10px] tracking-widest"
-                    >
-                        <Plus className="w-5 h-5" />
-                        <span className="hidden sm:inline">Nueva</span>
-                    </button>
+                    {!['LEADER', 'AUDITOR'].includes(user?.role || '') && (
+                        <button
+                            onClick={() => router.push('/requirements/new')}
+                            className="flex items-center gap-2 bg-primary-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap uppercase text-[10px] tracking-widest"
+                        >
+                            <Plus className="w-5 h-5" />
+                            <span className="hidden sm:inline">Nueva</span>
+                        </button>
+                    )}
                 </div>
             </motion.div>
 

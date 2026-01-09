@@ -263,10 +263,10 @@ export default function EditUserPage() {
                                     className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
                                 >
                                     <option value="USER">Usuario</option>
-                                    <option value="LEADER">Líder / Auxiliar de Compra</option>
+                                    <option value="LEADER">Sublíder</option>
                                     <option value="COORDINATOR">Coordinador</option>
                                     <option value="DIRECTOR">Director</option>
-                                    <option value="ADMIN">Administrador</option>
+                                    <option value="ADMIN">Administrador / Auxiliar de Compra</option>
                                     <option value="AUDITOR">Auditor</option>
                                     <option value="DEVELOPER">Desarrollador</option>
                                 </select>

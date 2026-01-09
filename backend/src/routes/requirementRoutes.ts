@@ -39,15 +39,16 @@ const router = Router();
 router.use(authMiddleware);
 
 // Asientos Routes (must be before /:id to avoid conflicts)
+// Asientos Routes (must be before /:id to avoid conflicts)
 router.get('/years', getAvailableYears);
 router.get('/asientos', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getAsientos);
-router.post('/asientos', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), createAsiento);
+router.post('/asientos', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), createAsiento);
 
 // Requirements Routes
 router.get('/pending-count', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), getPendingApprovalCount);
-router.put('/mass-update', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), updateMassRequirements);
-router.post('/', upload.array('attachments'), createRequirement);
-router.post('/mass-create', upload.any(), createMassRequirements);
+router.put('/mass-update', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), updateMassRequirements);
+router.post('/', roleCheck(['USER', 'ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), createRequirement);
+router.post('/mass-create', roleCheck(['USER', 'ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), upload.any(), createMassRequirements);
 
 router.get('/me', getMyRequirements);
 router.get('/dashboard-stats', getDashboardStats);
@@ -55,10 +56,10 @@ router.get('/all', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEV
 router.get('/groups', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getRequirementGroups);
 router.get('/:id', getRequirementById);
 router.put('/:id', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), updateRequirement);
-router.patch('/:id/status', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'LEADER', 'DEVELOPER', 'USER']), updateRequirementStatus);
+router.patch('/:id/status', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER', 'USER']), updateRequirementStatus); // LEADER removed
 router.post('/group/:id/approve', roleCheck(['COORDINATOR', 'DIRECTOR', 'DEVELOPER']), approveRequirementGroup);
 router.post('/group/:id/reject', roleCheck(['COORDINATOR', 'DIRECTOR', 'DEVELOPER']), rejectRequirementGroup);
 router.patch('/:id/observations', updateObservations);
-router.delete('/:id', roleCheck(['ADMIN', 'DIRECTOR', 'DEVELOPER']), deleteRequirement);
+router.delete('/:id', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), deleteRequirement);
 
 export default router;
