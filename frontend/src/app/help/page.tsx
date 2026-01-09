@@ -49,6 +49,11 @@ const faqData: FAQItem[] = [
         question: "¿Puedo editar un requerimiento después de enviarlo?",
         answer: "No, los  requerimientos una vez creados se le notifica a Coordinación de Compras y de Dirección Financiera, pasan a  estado PENDIENTE_APROBACIÓN. "
     },
+    {
+        category: "Requerimientos",
+        question: "¿Cómo confirmo el recibido a satisfacción?",
+        answer: "Cuando tu requerimiento tenga estado 'ENTREGADO', ve al detalle del requerimiento. Verás un panel verde titulado 'Confirmar Recibido a Satisfacción'. Escribe un comentario sobre la entrega (es obligatorio) y haz clic en 'Confirmar Recepción'. Esto marcará el requerimiento como FINALIZADO y quedará registrado en el historial."
+    },
     // Presupuestos
     {
         category: "Presupuestos",

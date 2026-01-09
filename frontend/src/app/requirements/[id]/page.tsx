@@ -34,6 +34,7 @@ import { translateAction, translateLogDetails } from "@/lib/translations";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import PaymentsSection from "@/components/PaymentsSection";
+import StarRating from "@/components/StarRating";
 
 interface Attachment {
     id: string;
@@ -103,10 +104,15 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
         procurementStatus: string;
         remarks: string;
         receivedAtSatisfaction: boolean;
+        // Supplier Rating fields
+        overallRating: number;
+        deliveryRating: number;
+        qualityRating: number;
+        priceRating: number;
     }
 
     const [showStatusModal, setShowStatusModal] = useState(false);
-    const [statusForm, setStatusForm] = useState<StatusForm>({ status: '', procurementStatus: '', remarks: '', receivedAtSatisfaction: false });
+    const [statusForm, setStatusForm] = useState<StatusForm>({ status: '', procurementStatus: '', remarks: '', receivedAtSatisfaction: false, overallRating: 0, deliveryRating: 0, qualityRating: 0, priceRating: 0 });
     const [formError, setFormError] = useState('');
     const [selectedFile, setSelectedFile] = useState<Attachment | null>(null);
 
@@ -176,7 +182,11 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                 status: response.data.status,
                 procurementStatus: response.data.procurementStatus,
                 remarks: '',
-                receivedAtSatisfaction: false
+                receivedAtSatisfaction: false,
+                overallRating: 0,
+                deliveryRating: 0,
+                qualityRating: 0,
+                priceRating: 0
             });
             setNewFiles([]);
             setDeleteAttachmentIds([]);
@@ -220,7 +230,12 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                 procurementStatus: statusForm.procurementStatus,
                 remarks: statusForm.remarks,
                 receivedAtSatisfaction: statusForm.receivedAtSatisfaction,
-                satisfactionComments: statusForm.remarks
+                satisfactionComments: statusForm.remarks,
+                // Supplier rating fields
+                overallRating: statusForm.overallRating || undefined,
+                deliveryRating: statusForm.deliveryRating || undefined,
+                qualityRating: statusForm.qualityRating || undefined,
+                priceRating: statusForm.priceRating || undefined
             });
             setShowStatusModal(false);
             await fetchRequirement();
@@ -283,11 +298,41 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                 format: 'a4'
             });
 
-            const imgProps = pdf.getImageProperties(imgData);
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            const pdfHeight = pdf.internal.pageSize.getHeight();
 
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            // Add logo at the top
+            const logoImg = document.createElement('img');
+            logoImg.crossOrigin = 'anonymous';
+            logoImg.src = '/images/logo-museo.png';
+
+            await new Promise((resolve) => {
+                logoImg.onload = resolve;
+                logoImg.onerror = resolve; // Continue even if logo fails to load
+            });
+
+            const logoHeight = 15;
+            const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
+            const logoX = (pdfWidth - logoWidth) / 2;
+
+            try {
+                pdf.addImage(logoImg, 'PNG', logoX, 5, logoWidth, logoHeight);
+            } catch (e) {
+                console.warn('Could not add logo to PDF');
+            }
+
+            const contentY = 25; // Start content after logo
+            const imgProps = pdf.getImageProperties(imgData);
+            const contentWidth = pdfWidth - 10; // 5mm margin on each side
+            const contentHeight = (imgProps.height * contentWidth) / imgProps.width;
+
+            pdf.addImage(imgData, 'PNG', 5, contentY, contentWidth, Math.min(contentHeight, pdfHeight - contentY - 15));
+
+            // Add footer with logo
+            pdf.setFontSize(8);
+            pdf.setTextColor(128);
+            pdf.text('Museo de Antioquia - Plaza Botero', pdfWidth / 2, pdfHeight - 5, { align: 'center' });
+
             if (requirement) {
                 pdf.save(`Requerimiento-${requirement.id}.pdf`);
             }
@@ -495,15 +540,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                 </div>
                             )}
 
-                            {canManage && (
-                                <button
-                                    onClick={() => setShowStatusModal(true)}
-                                    disabled={actionLoading}
-                                    className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-4 rounded-2xl font-black border border-slate-200 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Settings size={20} /> Cambiar Estado
-                                </button>
-                            )}
+
 
                             {canFullEdit && (
                                 <button
@@ -650,44 +687,98 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             animate={{ opacity: 1, y: 0 }}
                             className="mt-12 bg-premium-gradient p-[2px] rounded-[3rem] shadow-2xl relative overflow-hidden group"
                         >
-                            <div className="bg-white dark:bg-slate-800 p-10 rounded-[2.9rem] flex flex-col md:flex-row gap-8 items-center">
-                                <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-[2rem] flex items-center justify-center text-green-500 flex-shrink-0 animate-pulse">
-                                    <CheckCircle size={40} />
-                                </div>
-                                <div className="flex-1 space-y-4 text-center md:text-left">
-                                    <h3 className="text-2xl font-black tracking-tight">Confirmar Recibido a Satisfacción</h3>
-                                    <p className="text-gray-500 font-medium text-sm">¿Has recibido los productos o servicios solicitados tal como se esperaba? Por favor deja un comentario sobre la entrega.</p>
-                                    <textarea
-                                        value={statusForm.remarks}
-                                        onChange={(e) => setStatusForm({ ...statusForm, procurementStatus: 'FINALIZADO', receivedAtSatisfaction: true, remarks: e.target.value })}
-                                        placeholder="Escribe tu comentario de satisfacción aquí... (Requerido)"
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl p-6 font-bold focus:ring-2 ring-green-500 outline-none resize-none transition-all shadow-inner text-sm"
-                                        rows={3}
-                                    />
-                                    <div className="flex flex-col sm:flex-row gap-4">
-                                        <button
-                                            onClick={handleStatusUpdate}
-                                            disabled={actionLoading || !statusForm.remarks}
-                                            className="flex-[2] bg-green-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 disabled:grayscale uppercase tracking-widest text-xs"
-                                        >
-                                            <CheckCircle size={20} />
-                                            {actionLoading ? "Confirmando..." : "Confirmar Recepción"}
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setStatusForm({ ...statusForm, status: 'REJECTED', remarks: '' });
-                                                setShowStatusModal(true);
-                                            }}
-                                            className="flex-1 bg-red-50 text-red-600 py-4 rounded-2xl font-black border border-red-100 hover:bg-red-100 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
-                                        >
-                                            <XCircle size={18} /> Reportar Problema
-                                        </button>
+                            <div className="bg-white dark:bg-slate-800 p-10 rounded-[2.9rem]">
+                                <div className="flex flex-col md:flex-row gap-8 items-start">
+                                    <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-[2rem] flex items-center justify-center text-green-500 flex-shrink-0 animate-pulse">
+                                        <CheckCircle size={40} />
+                                    </div>
+                                    <div className="flex-1 space-y-6">
+                                        <div>
+                                            <h3 className="text-2xl font-black tracking-tight">Confirmar Recibido a Satisfacción</h3>
+                                            <p className="text-gray-500 font-medium text-sm mt-1">¿Has recibido los productos o servicios solicitados tal como se esperaba? Evalúa al proveedor y deja un comentario.</p>
+                                        </div>
+
+                                        {/* Supplier Rating Section */}
+                                        {requirement.supplier && (
+                                            <div className="bg-amber-50 dark:bg-amber-900/20 p-6 rounded-2xl border border-amber-100 dark:border-amber-800">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-4">
+                                                    Evaluar a: {requirement.supplier.name}
+                                                </p>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <StarRating
+                                                        label="Calificación General"
+                                                        value={statusForm.overallRating}
+                                                        onChange={(v) => setStatusForm({ ...statusForm, overallRating: v, procurementStatus: 'FINALIZADO', receivedAtSatisfaction: true })}
+                                                    />
+                                                    <StarRating
+                                                        label="Puntualidad de Entrega"
+                                                        value={statusForm.deliveryRating}
+                                                        onChange={(v) => setStatusForm({ ...statusForm, deliveryRating: v, procurementStatus: 'FINALIZADO', receivedAtSatisfaction: true })}
+                                                    />
+                                                    <StarRating
+                                                        label="Calidad del Producto/Servicio"
+                                                        value={statusForm.qualityRating}
+                                                        onChange={(v) => setStatusForm({ ...statusForm, qualityRating: v, procurementStatus: 'FINALIZADO', receivedAtSatisfaction: true })}
+                                                    />
+                                                    <StarRating
+                                                        label="Relación Calidad-Precio"
+                                                        value={statusForm.priceRating}
+                                                        onChange={(v) => setStatusForm({ ...statusForm, priceRating: v, procurementStatus: 'FINALIZADO', receivedAtSatisfaction: true })}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <textarea
+                                            value={statusForm.remarks}
+                                            onChange={(e) => setStatusForm({ ...statusForm, procurementStatus: 'FINALIZADO', receivedAtSatisfaction: true, remarks: e.target.value })}
+                                            placeholder="Escribe tu comentario de satisfacción aquí... (Requerido)"
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl p-6 font-bold focus:ring-2 ring-green-500 outline-none resize-none transition-all shadow-inner text-sm"
+                                            rows={3}
+                                        />
+                                        <div className="flex flex-col sm:flex-row gap-4">
+                                            <button
+                                                onClick={handleStatusUpdate}
+                                                disabled={actionLoading || !statusForm.remarks || (requirement.supplier && statusForm.overallRating === 0)}
+                                                className="flex-[2] bg-green-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 disabled:grayscale uppercase tracking-widest text-xs"
+                                            >
+                                                <CheckCircle size={20} />
+                                                {actionLoading ? "Confirmando..." : "Confirmar Recepción"}
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setStatusForm({ ...statusForm, status: 'REJECTED', remarks: '' });
+                                                    setShowStatusModal(true);
+                                                }}
+                                                className="flex-1 bg-red-50 text-red-600 py-4 rounded-2xl font-black border border-red-100 hover:bg-red-100 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+                                            >
+                                                <XCircle size={18} /> Reportar Problema
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </motion.div>
                     )}
 
+                    {/* Satisfaction Completed Banner */}
+                    {requirement.receivedAtSatisfaction && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-8 bg-gradient-to-r from-green-500 to-emerald-600 p-6 rounded-[2rem] shadow-xl text-white"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center">
+                                    <CheckCircle size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black">✓ Recibido a Satisfacción</h3>
+                                    <p className="text-green-100 text-sm font-medium">Este requerimiento fue recibido y confirmado exitosamente.</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
 
                 </div>
 
@@ -755,8 +846,8 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                         <input
                                             type="text"
                                             value={editForm.title}
-                                            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                            readOnly
+                                            className="w-full bg-gray-100 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-medium text-gray-500 cursor-not-allowed outline-none"
                                         />
                                     </div>
 

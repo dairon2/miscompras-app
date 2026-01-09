@@ -185,9 +185,33 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
 
         const suppliers = await prisma.supplier.findMany({
             where: whereClause,
-            orderBy: { name: 'asc' }
+            orderBy: { name: 'asc' },
+            include: {
+                ratings: {
+                    select: { overallRating: true }
+                },
+                _count: {
+                    select: { requirements: true }
+                }
+            }
         });
-        res.json(suppliers);
+
+        // Calculate average rating for each supplier
+        const suppliersWithRatings = suppliers.map(supplier => {
+            const ratingsCount = supplier.ratings.length;
+            const avgRating = ratingsCount > 0
+                ? Math.round((supplier.ratings.reduce((sum, r) => sum + r.overallRating, 0) / ratingsCount) * 10) / 10
+                : 0;
+
+            return {
+                ...supplier,
+                ratings: undefined, // Remove detailed ratings from list
+                avgRating,
+                ratingsCount
+            };
+        });
+
+        res.json(suppliersWithRatings);
     } catch (e) {
         console.error('Error fetching suppliers:', e);
         res.status(500).json({ error: 'Error fetching suppliers' });
@@ -214,6 +238,14 @@ app.get('/api/suppliers/:id', authMiddleware, async (req, res) => {
                     include: {
                         requirement: true
                     }
+                },
+                ratings: {
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        requirement: {
+                            select: { id: true, title: true }
+                        }
+                    }
                 }
             }
         });
@@ -231,6 +263,17 @@ app.get('/api/suppliers/:id', authMiddleware, async (req, res) => {
         const approvedRequirements = supplier.requirements.filter(r => r.status === 'APPROVED').length;
         const pendingRequirements = supplier.requirements.filter(r => r.status === 'PENDING_APPROVAL').length;
 
+        // Calculate rating averages
+        const ratingsCount = supplier.ratings.length;
+        let avgOverall = 0, avgDelivery = 0, avgQuality = 0, avgPrice = 0;
+
+        if (ratingsCount > 0) {
+            avgOverall = supplier.ratings.reduce((sum, r) => sum + r.overallRating, 0) / ratingsCount;
+            avgDelivery = supplier.ratings.reduce((sum, r) => sum + r.deliveryRating, 0) / ratingsCount;
+            avgQuality = supplier.ratings.reduce((sum, r) => sum + r.qualityRating, 0) / ratingsCount;
+            avgPrice = supplier.ratings.reduce((sum, r) => sum + r.priceRating, 0) / ratingsCount;
+        }
+
         res.json({
             ...supplier,
             stats: {
@@ -239,6 +282,13 @@ app.get('/api/suppliers/:id', authMiddleware, async (req, res) => {
                 totalAmount,
                 approvedRequirements,
                 pendingRequirements
+            },
+            ratingStats: {
+                count: ratingsCount,
+                avgOverall: Math.round(avgOverall * 10) / 10,
+                avgDelivery: Math.round(avgDelivery * 10) / 10,
+                avgQuality: Math.round(avgQuality * 10) / 10,
+                avgPrice: Math.round(avgPrice * 10) / 10
             }
         });
     } catch (e) {

@@ -56,6 +56,7 @@ export const translateAction = (action: string): string => {
         'INVOICE_ADDED': 'Factura agregada',
         'BUDGET_ASSIGNED': 'Presupuesto asignado',
         'AMOUNT_UPDATED': 'Monto actualizado',
+        'SUPPLIER_RATED': 'Proveedor Evaluado',
         // Asiento-related actions
         'CREATED_ASIENTO': 'Asiento creado',
         'UPDATED_ASIENTO': 'Asiento actualizado',

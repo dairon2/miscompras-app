@@ -26,21 +26,20 @@ model User {
   phone                String?
   position             String?
   profilePhoto         String?
+  areasDirected        Area[]             @relation("AreaDirector")
   budgetsApproved      Budget[]           @relation("BudgetApprovedBy")
   budgetsCreated       Budget[]           @relation("BudgetCreatedBy")
   managedBudgets       Budget[]           @relation("BudgetManager")
   adjustmentsRequested BudgetAdjustment[] @relation("AdjustmentRequestedBy")
   adjustmentsReviewed  BudgetAdjustment[] @relation("AdjustmentReviewedBy")
+  budgetGroups         BudgetGroup[]      @relation("BudgetGroupCreator")
   budgetSubLeader      BudgetSubLeader[]
+  invoicesCreated      Invoice[]          @relation("InvoiceCreator")
+  projectsLed          Project[]          @relation("ProjectLeader")
   requirementsCreated  Requirement[]      @relation("CreatedBy")
   requirementsOwned    Requirement[]      @relation("OwnedBy")
   groupsCreated        RequirementGroup[] @relation("GroupCreator")
-  budgetGroups         BudgetGroup[]      @relation("BudgetGroupCreator")
   area                 Area?              @relation("AreaUsers", fields: [areaId], references: [id])
-  areasDirected        Area[]             @relation("AreaDirector")
-  invoicesCreated      Invoice[]          @relation("InvoiceCreator")
-
-  projectsLed          Project[]          @relation("ProjectLeader")
 }
 
 model Project {
@@ -48,22 +47,22 @@ model Project {
   name         String
   code         String        @unique
   description  String?
-  funder       String?       // Financiador - Texto libre (antes relación User)
-  leaderId     String?
-  leader       User?         @relation("ProjectLeader", fields: [leaderId], references: [id])
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  leaderId     String?
+  funder       String?
   budgets      Budget[]
+  leader       User?         @relation("ProjectLeader", fields: [leaderId], references: [id])
   requirements Requirement[]
 }
 
 model Area {
   id           String        @id @default(uuid())
   name         String        @unique
-  directorId   String?
-  director     User?         @relation("AreaDirector", fields: [directorId], references: [id])
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  directorId   String?
+  director     User?         @relation("AreaDirector", fields: [directorId], references: [id])
   budgets      Budget[]
   requirements Requirement[]
   users        User[]        @relation("AreaUsers")
@@ -82,22 +81,27 @@ model Supplier {
   email        String?
   nit          String?          @unique
   phone        String?
-  activity     String?          // Actividad de la empresa
-  supplierType SupplierType     @default(SUPPLIER)
   criticality  Criticality      @default(LOW)
-  requirements Requirement[]
+  supplierType SupplierType     @default(SUPPLIER)
+  activity     String?
   invoices     Invoice[]
+  requirements Requirement[]
+  ratings      SupplierRating[]
 }
 
-enum SupplierType {
-  SUPPLIER          // Proveedor
-  SERVICE_PROVIDER  // Prestador de servicio
-}
-
-enum Criticality {
-  LOW     // Baja
-  MEDIUM  // Media
-  HIGH    // Alta
+model SupplierRating {
+  id             String      @id @default(uuid())
+  supplierId     String
+  requirementId  String      @unique
+  overallRating  Int
+  deliveryRating Int
+  qualityRating  Int
+  priceRating    Int
+  comment        String?
+  evaluatedById  String
+  createdAt      DateTime    @default(now())
+  requirement    Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  supplier       Supplier    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 }
 
 model Category {
@@ -131,29 +135,28 @@ model Budget {
   version           Int                @default(1)
   year              Int                @default(2026)
   expirationDate    DateTime?
+  groupId           Int?
   adjustmentSources AdjustmentSource[]
   approvedBy        User?              @relation("BudgetApprovedBy", fields: [approvedById], references: [id])
   area              Area               @relation(fields: [areaId], references: [id])
-  category          Category?          @relation(fields: [categoryId], references: [id])
+  category          Category           @relation(fields: [categoryId], references: [id])
   createdBy         User?              @relation("BudgetCreatedBy", fields: [createdById], references: [id])
+  group             BudgetGroup?       @relation(fields: [groupId], references: [id])
   manager           User?              @relation("BudgetManager", fields: [managerId], references: [id])
   project           Project            @relation(fields: [projectId], references: [id])
   adjustments       BudgetAdjustment[]
   subLeaders        BudgetSubLeader[]
   requirements      Requirement[]
 
-  groupId           Int?
-  group             BudgetGroup?       @relation(fields: [groupId], references: [id])
-
   @@unique([projectId, areaId, categoryId, year])
 }
 
 model BudgetGroup {
-  id           Int      @id @default(autoincrement())
-  creatorId    String
-  creator      User     @relation("BudgetGroupCreator", fields: [creatorId], references: [id])
-  createdAt    DateTime @default(now())
-  budgets      Budget[]
+  id        Int      @id @default(autoincrement())
+  creatorId String
+  createdAt DateTime @default(now())
+  budgets   Budget[]
+  creator   User     @relation("BudgetGroupCreator", fields: [creatorId], references: [id])
 }
 
 model BudgetSubLeader {
@@ -209,14 +212,12 @@ model Requirement {
   areaId                 String
   supplierId             String?
   manualSupplierName     String?
-  suggestedSupplier      String?
   createdById            String
   currentOwnerId         String?
   budgetId               String?
   purchaseOrderNumber    String?
   invoiceNumber          String?
   deliveryDate           DateTime?
-  receivedDate           DateTime?
   receivedAtSatisfaction Boolean             @default(false)
   satisfactionComments   String?
   createdAt              DateTime            @default(now())
@@ -226,33 +227,36 @@ model Requirement {
   reqCategory            RequirementCategory @default(ORDEN_COMPRA)
   totalAmount            Decimal?            @db.Decimal(15, 2)
   year                   Int                 @default(2026)
+  coordinatorApproval    Boolean?
+  coordinatorComment     String?
+  directorApproval       Boolean?
+  directorComment        String?
   groupId                Int?
   leaderApproval         Boolean?
-  coordinatorApproval    Boolean?
-  directorApproval       Boolean?
   leaderComment          String?
-  coordinatorComment     String?
-  directorComment        String?
+  receivedDate           DateTime?
+  suggestedSupplier      String?
   attachments            Attachment[]
   logs                   HistoryLog[]
+  invoices               Invoice[]
   payments               Payment[]
   area                   Area                @relation(fields: [areaId], references: [id])
   budget                 Budget?             @relation(fields: [budgetId], references: [id])
   createdBy              User                @relation("CreatedBy", fields: [createdById], references: [id])
   currentOwner           User?               @relation("OwnedBy", fields: [currentOwnerId], references: [id])
+  group                  RequirementGroup?   @relation(fields: [groupId], references: [id])
   project                Project             @relation(fields: [projectId], references: [id])
   supplier               Supplier?           @relation(fields: [supplierId], references: [id])
-  group                  RequirementGroup?   @relation(fields: [groupId], references: [id])
-  invoices               Invoice[]
+  supplierRating         SupplierRating?
 }
 
 model RequirementGroup {
   id           Int           @id @default(autoincrement())
   creatorId    String
-  creator      User          @relation("GroupCreator", fields: [creatorId], references: [id])
   pdfUrl       String?
   createdAt    DateTime      @default(now())
   requirements Requirement[]
+  creator      User          @relation("GroupCreator", fields: [creatorId], references: [id])
 }
 
 model Attachment {
@@ -289,13 +293,72 @@ model Payment {
   paymentNumber Int
   amount        Decimal     @db.Decimal(15, 2)
   invoiceNumber String?
-  purchaseOrder String?     // Orden de Compra
   paymentDate   DateTime?
   observations  String?
   requirementId String
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  purchaseOrder String?
   requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+}
+
+model SystemConfig {
+  id                    String   @id @default("main")
+  activeYear            Int      @default(2026)
+  appName               String   @default("MisCompras")
+  isRegistrationEnabled Boolean  @default(true)
+  maintenanceMode       Boolean  @default(false)
+  updatedAt             DateTime @updatedAt
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String
+  supplierId    String
+  requirementId String?
+  amount        Decimal       @db.Decimal(15, 2)
+  issueDate     DateTime
+  dueDate       DateTime?
+  status        InvoiceStatus @default(RECEIVED)
+  fileUrl       String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  createdById   String
+  createdBy     User          @relation("InvoiceCreator", fields: [createdById], references: [id])
+  requirement   Requirement?  @relation(fields: [requirementId], references: [id])
+  supplier      Supplier      @relation(fields: [supplierId], references: [id])
+}
+
+model SubmissionRule {
+  id            String   @id @default(uuid())
+  name          String
+  dayOfWeek     Int
+  startTime     String
+  endTime       String
+  isHolidayRule Boolean  @default(false)
+  holidayShift  Int?
+  isActive      Boolean  @default(true)
+  priority      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ColombianHoliday {
+  id   String   @id @default(uuid())
+  date DateTime @unique
+  name String
+  year Int
+}
+
+enum SupplierType {
+  SUPPLIER
+  SERVICE_PROVIDER
+}
+
+enum Criticality {
+  LOW
+  MEDIUM
+  HIGH
 }
 
 enum Role {
@@ -340,15 +403,6 @@ enum ProcurementStatus {
   POSTERGADO
 }
 
-model SystemConfig {
-  id                    String   @id @default("main")
-  activeYear            Int      @default(2026)
-  appName               String   @default("MisCompras")
-  isRegistrationEnabled Boolean  @default(true)
-  maintenanceMode       Boolean  @default(false)
-  updatedAt             DateTime @updatedAt
-}
-
 enum RequirementCategory {
   ANTICIPO
   COMPRA
@@ -360,25 +414,6 @@ enum RequirementCategory {
   SERVICIO
 }
 
-
-model Invoice {
-  id              String         @id @default(uuid())
-  invoiceNumber   String
-  supplierId      String
-  supplier        Supplier       @relation(fields: [supplierId], references: [id])
-  requirementId   String?
-  requirement     Requirement?   @relation(fields: [requirementId], references: [id])
-  amount          Decimal        @db.Decimal(15, 2)
-  issueDate       DateTime
-  dueDate         DateTime?
-  status          InvoiceStatus  @default(RECEIVED)
-  fileUrl         String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  createdById     String
-  createdBy       User           @relation("InvoiceCreator", fields: [createdById], references: [id])
-}
-
 enum InvoiceStatus {
   RECEIVED
   VERIFIED
@@ -386,27 +421,3 @@ enum InvoiceStatus {
   PAID
   REJECTED
 }
-
-// Reglas de horario para envío de requerimientos
-model SubmissionRule {
-  id            String   @id @default(uuid())
-  name          String   // "Lunes regular", "Martes regular", etc.
-  dayOfWeek     Int      // 0=Domingo, 1=Lunes, 2=Martes, 3=Miércoles, etc.
-  startTime     String   // "08:00"
-  endTime       String   // "16:00"
-  isHolidayRule Boolean  @default(false) // Si es regla alternativa cuando el día anterior es festivo
-  holidayShift  Int?     // Días a desplazar (ej: 1 = si lunes festivo, aplica a martes)
-  isActive      Boolean  @default(true)
-  priority      Int      @default(0) // Mayor prioridad se evalúa primero
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-// Festivos colombianos
-model ColombianHoliday {
-  id    String   @id @default(uuid())
-  date  DateTime @unique
-  name  String   // "Año Nuevo", "Día del Trabajo", etc.
-  year  Int
-}
-

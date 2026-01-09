@@ -11,6 +11,7 @@ import {
 import api from "@/lib/api";
 import { exportSuppliers } from "@/lib/excelExport";
 import { useAuthStore } from "@/store/authStore";
+import { StarRatingDisplay } from "@/components/StarRating";
 
 export default function SuppliersPage() {
     const { user } = useAuthStore();
@@ -620,8 +621,11 @@ function SupplierCard({ supplier, index, onClick }: any) {
 
             <div className="pt-6 border-t border-gray-50 dark:border-gray-700 flex justify-between items-center opacity-60 group-hover:opacity-100 transition-opacity">
                 <div className="flex items-center gap-2">
-                    <Building2 size={14} className="text-gray-400" />
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Acreditado</span>
+                    {supplier.avgRating > 0 ? (
+                        <StarRatingDisplay value={supplier.avgRating} count={supplier.ratingsCount} />
+                    ) : (
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sin calificar</span>
+                    )}
                 </div>
                 <div className="flex items-center gap-1 text-[10px] font-black text-primary-600 uppercase">
                     Ver Historial

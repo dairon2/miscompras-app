@@ -55,7 +55,7 @@ router.get('/all', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEV
 router.get('/groups', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getRequirementGroups);
 router.get('/:id', getRequirementById);
 router.put('/:id', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), updateRequirement);
-router.patch('/:id/status', roleCheck(['DIRECTOR', 'COORDINATOR', 'DEVELOPER']), updateRequirementStatus);
+router.patch('/:id/status', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'LEADER', 'DEVELOPER', 'USER']), updateRequirementStatus);
 router.post('/group/:id/approve', roleCheck(['COORDINATOR', 'DIRECTOR', 'DEVELOPER']), approveRequirementGroup);
 router.post('/group/:id/reject', roleCheck(['COORDINATOR', 'DIRECTOR', 'DEVELOPER']), rejectRequirementGroup);
 router.patch('/:id/observations', updateObservations);

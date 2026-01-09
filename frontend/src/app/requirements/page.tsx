@@ -62,6 +62,7 @@ interface Requirement {
     createdAt: string;
     groupId?: number;
     attachments?: { id: string }[];
+    receivedAtSatisfaction?: boolean;
 }
 
 export default function RequirementsPage() {
@@ -509,9 +510,9 @@ export default function RequirementsPage() {
                                                                         <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold ${getStatusStyle(req.status)}`}>
                                                                             {getStatusLabel(req.status)}
                                                                         </span>
-                                                                        {req.procurementStatus && (
-                                                                            <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 dark:bg-slate-800">
-                                                                                {req.procurementStatus}
+                                                                        {req.receivedAtSatisfaction && (
+                                                                            <span className="px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 text-[9px] font-bold flex items-center gap-0.5">
+                                                                                <CheckCircle size={10} /> Satisfecho
                                                                             </span>
                                                                         )}
                                                                     </div>
@@ -586,9 +587,16 @@ export default function RequirementsPage() {
                                                                 }
 
                                                                 return (
-                                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${colorClass}`}>
-                                                                        {req.procurementStatus || 'PENDIENTE'}
-                                                                    </span>
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${colorClass}`}>
+                                                                            {req.procurementStatus || 'PENDIENTE'}
+                                                                        </span>
+                                                                        {req.receivedAtSatisfaction && (
+                                                                            <span className="px-2 py-0.5 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 text-[10px] font-bold flex items-center gap-0.5">
+                                                                                <CheckCircle size={10} /> ✓
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 );
                                                             })()}
                                                         </td>

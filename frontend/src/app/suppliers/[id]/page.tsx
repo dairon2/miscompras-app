@@ -24,6 +24,18 @@ import {
     Receipt
 } from "lucide-react";
 import api from "@/lib/api";
+import { StarRatingDisplay } from "@/components/StarRating";
+
+interface SupplierRating {
+    id: string;
+    overallRating: number;
+    deliveryRating: number;
+    qualityRating: number;
+    priceRating: number;
+    comment?: string;
+    createdAt: string;
+    requirement?: { id: string; title: string };
+}
 
 interface SupplierDetail {
     id: string;
@@ -63,6 +75,14 @@ interface SupplierDetail {
         approvedRequirements: number;
         pendingRequirements: number;
     };
+    ratings?: SupplierRating[];
+    ratingStats?: {
+        count: number;
+        avgOverall: number;
+        avgDelivery: number;
+        avgQuality: number;
+        avgPrice: number;
+    };
 }
 
 export default function SupplierDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -70,7 +90,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
     const router = useRouter();
     const [supplier, setSupplier] = useState<SupplierDetail | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'requirements' | 'invoices'>('requirements');
+    const [activeTab, setActiveTab] = useState<'requirements' | 'invoices' | 'ratings'>('requirements');
 
     useEffect(() => {
         fetchSupplier();
@@ -218,6 +238,12 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                         >
                             <Receipt size={18} /> Facturas ({supplier.invoices?.length || 0})
                         </button>
+                        <button
+                            onClick={() => setActiveTab('ratings')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm transition-all ${activeTab === 'ratings' ? 'bg-white dark:bg-slate-700 shadow-sm text-amber-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        >
+                            <StarRatingDisplay value={supplier.ratingStats?.avgOverall || 0} /> ({supplier.ratingStats?.count || 0})
+                        </button>
                     </div>
 
                     {/* Requirements List */}
@@ -294,6 +320,75 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                                 </div>
                             ) : (
                                 <p className="text-gray-400 text-sm text-center py-10 bg-gray-50 dark:bg-slate-900 rounded-2xl">No hay facturas registradas para este proveedor</p>
+                            )}
+                        </motion.div>
+                    )}
+
+                    {/* Ratings List */}
+                    {activeTab === 'ratings' && (
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-xl border border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
+                                    <CheckCircle size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black">Evaluaciones de Clientes</h3>
+                                    {supplier.ratingStats && supplier.ratingStats.count > 0 && (
+                                        <div className="flex items-center gap-4 mt-1">
+                                            <StarRatingDisplay value={supplier.ratingStats.avgOverall} count={supplier.ratingStats.count} />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Rating Stats Summary */}
+                            {supplier.ratingStats && supplier.ratingStats.count > 0 && (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl">
+                                    <div className="text-center">
+                                        <p className="text-[9px] font-black uppercase text-gray-400">General</p>
+                                        <p className="text-xl font-black text-amber-600">{supplier.ratingStats.avgOverall}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-[9px] font-black uppercase text-gray-400">Puntualidad</p>
+                                        <p className="text-xl font-black text-blue-600">{supplier.ratingStats.avgDelivery}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-[9px] font-black uppercase text-gray-400">Calidad</p>
+                                        <p className="text-xl font-black text-green-600">{supplier.ratingStats.avgQuality}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-[9px] font-black uppercase text-gray-400">Precio</p>
+                                        <p className="text-xl font-black text-purple-600">{supplier.ratingStats.avgPrice}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {supplier.ratings && supplier.ratings.length > 0 ? (
+                                <div className="space-y-3 max-h-96 overflow-y-auto">
+                                    {supplier.ratings.map(rating => (
+                                        <div key={rating.id} className="p-4 bg-gray-50 dark:bg-slate-900 rounded-xl">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <StarRatingDisplay value={rating.overallRating} />
+                                                <span className="text-[10px] text-gray-400">{new Date(rating.createdAt).toLocaleDateString()}</span>
+                                            </div>
+                                            {rating.requirement && (
+                                                <p className="text-[10px] text-primary-600 font-bold mb-2 cursor-pointer hover:underline" onClick={() => router.push(`/requirements/${rating.requirement?.id}`)}>
+                                                    Requerimiento: {rating.requirement.title}
+                                                </p>
+                                            )}
+                                            {rating.comment && (
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 italic">"{rating.comment}"</p>
+                                            )}
+                                            <div className="flex gap-4 mt-2 text-[9px] text-gray-400">
+                                                <span>Entrega: {rating.deliveryRating}★</span>
+                                                <span>Calidad: {rating.qualityRating}★</span>
+                                                <span>Precio: {rating.priceRating}★</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-gray-400 text-sm text-center py-10 bg-gray-50 dark:bg-slate-900 rounded-2xl">Este proveedor aún no tiene evaluaciones</p>
                             )}
                         </motion.div>
                     )}
