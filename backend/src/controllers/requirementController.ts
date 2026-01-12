@@ -628,6 +628,44 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        // Special handling for Problem Reports (receivedAtSatisfaction = false with remarks)
+        const isProblemReport = receivedAtSatisfaction === false || receivedAtSatisfaction === 'false';
+        const hasRemarks = req.body.remarks && String(req.body.remarks).includes('PROBLEMA REPORTADO');
+
+        if (isProblemReport && hasRemarks) {
+            const problemDetails = String(req.body.remarks);
+
+            // Log the problem in history
+            await prisma.historyLog.create({
+                data: {
+                    action: 'PROBLEM_REPORTED',
+                    requirementId: id,
+                    details: `${problemDetails} - Reportado por ${req.user?.email}`
+                }
+            });
+
+            // Notify DIRECTOR, COORDINATOR and ADMIN
+            const recipientUsers = await prisma.user.findMany({
+                where: {
+                    role: { in: ['DIRECTOR', 'COORDINATOR', 'ADMIN'] },
+                    isActive: true
+                },
+                select: { id: true }
+            });
+
+            const notificationData = recipientUsers.map((u: { id: string }) => ({
+                userId: u.id,
+                title: `⚠️ Problema Reportado en Requerimiento`,
+                message: `${req.user?.email} reportó un problema en "${updatedRequirement.title}": ${problemDetails}`,
+                type: 'ERROR' as const,
+                requirementId: id
+            }));
+
+            if (notificationData.length > 0) {
+                await prisma.notification.createMany({ data: notificationData });
+            }
+        }
+
         res.json(updatedRequirement);
     } catch (error: any) {
         console.error("Update requirement error:", error);
