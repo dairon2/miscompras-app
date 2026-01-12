@@ -494,7 +494,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                         disabled={actionLoading}
                                         className="flex-1 bg-green-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-2"
                                     >
-                                        <CheckCircle size={20} /> Aprobar Solicitud
+                                        <CheckCircle size={20} /> Aprobar Requerimiento
                                     </button>
                                     <button
                                         onClick={() => {
@@ -590,7 +590,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-600 mb-2">Detalle de Requerimiento</p>
                                 <h1 className="text-3xl font-black tracking-tight">{requirement.title}</h1>
-                                <p className="text-gray-400 font-bold text-xs mt-2 uppercase tracking-tighter">Solicitud #{requirement.groupId ? requirement.groupId : requirement.id.slice(-8).toUpperCase()}</p>
+                                <p className="text-gray-400 font-bold text-xs mt-2 uppercase tracking-tighter">Requerimiento #{requirement.groupId ? requirement.groupId : requirement.id.slice(-8).toUpperCase()}</p>
                             </div>
                             <div className="flex flex-col items-end gap-2">
                                 <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Estado Solicitud</span>

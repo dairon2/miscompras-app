@@ -289,7 +289,7 @@ export default function RequirementsPage() {
             >
                 <div className="flex items-center gap-6">
                     <div>
-                        <h2 className="text-4xl font-black tracking-tight mb-2">Solicitudes de Compra</h2>
+                        <h2 className="text-4xl font-black tracking-tight mb-2">Requerimientos de Compra</h2>
                         <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.2em]">Gestión Institucional de Requerimientos</p>
                     </div>
 
@@ -359,7 +359,7 @@ export default function RequirementsPage() {
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Buscar por título, ID o número de solicitud..."
+                            placeholder="Buscar por título, ID o número de requerimiento..."
                             className="w-full bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold text-sm"
                         />
                     </div>
@@ -459,7 +459,7 @@ export default function RequirementsPage() {
                 <div className="px-6 py-4 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-gray-500">
-                            {filteredReqs.length} {filteredReqs.length === 1 ? 'solicitud' : 'solicitudes'}
+                            {filteredReqs.length} {filteredReqs.length === 1 ? 'requerimiento' : 'requerimientos'}
                         </span>
                         {filteredReqs.length !== requirements.length && (
                             <span className="text-xs text-gray-400">
@@ -487,9 +487,9 @@ export default function RequirementsPage() {
 
                 <AnimatePresence mode="wait">
                     {loading ? (
-                        <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-20 text-center font-black uppercase text-gray-400 tracking-widest text-[10px]">Cargando solicitudes...</motion.div>
+                        <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-20 text-center font-black uppercase text-gray-400 tracking-widest text-[10px]">Cargando requerimientos...</motion.div>
                     ) : filteredReqs.length === 0 ? (
-                        <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-20 text-center font-black uppercase text-gray-400 tracking-widest text-[10px]">No se encontraron solicitudes</motion.div>
+                        <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-20 text-center font-black uppercase text-gray-400 tracking-widest text-[10px]">No se encontraron requerimientos</motion.div>
                     ) : (
                         <>
                             {viewMode === 'table' ? (
@@ -506,7 +506,7 @@ export default function RequirementsPage() {
                                             <thead className="bg-gray-50/50 dark:bg-slate-900/50">
                                                 <tr className="border-b border-gray-100 dark:border-white/5">
 
-                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Solicitud</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Requerimiento</th>
                                                     {isAdmin && <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hidden xl:table-cell">Creado por</th>}
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Presupuesto</th>
                                                     <th className="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Categoría</th>
