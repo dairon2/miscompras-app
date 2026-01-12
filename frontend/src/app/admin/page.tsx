@@ -87,10 +87,11 @@ export default function AdminPage() {
     };
 
     // ADMIN, DIRECTOR, LEADER and COORDINATOR can access management features
+    // USER role is explicitly excluded from catalog management
     const isAdmin = user?.role === 'ADMIN' || user?.role === 'DEVELOPER';
     const isManagement = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '');
     const isAreaDirector = user?.isAreaDirector;
-    const canManageCatalogs = isManagement || isAreaDirector;
+    const canManageCatalogs = user?.role !== 'USER' && (isManagement || isAreaDirector);
 
     useEffect(() => {
         if (canManageCatalogs) {
