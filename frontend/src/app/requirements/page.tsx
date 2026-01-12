@@ -27,7 +27,8 @@ import {
     ArrowUpDown,
     ArrowUp,
     ArrowDown,
-    Paperclip
+    Paperclip,
+    Copy
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -657,7 +658,13 @@ export default function RequirementsPage() {
                                                                         className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
                                                                         title="Eliminar"
                                                                     >
-                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => router.push(`/requirements/new?sourceId=${req.id}`)}
+                                                                        className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-300 hover:text-blue-500 rounded-lg transition-colors"
+                                                                        title="Volver a Pedir (Duplicar)"
+                                                                    >
+                                                                        <Copy size={16} />
                                                                     </button>
                                                                 </div>
                                                             </td>
@@ -669,7 +676,15 @@ export default function RequirementsPage() {
                                     </motion.div>
                                     <div className="lg:hidden space-y-4 p-4">
                                         {filteredReqs.map((req: any) => (
-                                            <RequirementCard key={req.id} req={req} onClick={() => router.push(`/requirements/${req.id}`)} />
+                                            <RequirementCard
+                                                key={req.id}
+                                                req={req}
+                                                onClick={() => router.push(`/requirements/${req.id}`)}
+                                                onDuplicate={(e) => {
+                                                    e.stopPropagation();
+                                                    router.push(`/requirements/new?sourceId=${req.id}`);
+                                                }}
+                                            />
                                         ))}
                                     </div>
                                 </>
@@ -682,7 +697,15 @@ export default function RequirementsPage() {
                                     className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[600px] overflow-y-auto"
                                 >
                                     {filteredReqs.map((req: any) => (
-                                        <RequirementCard key={req.id} req={req} onClick={() => router.push(`/requirements/${req.id}`)} />
+                                        <RequirementCard
+                                            key={req.id}
+                                            req={req}
+                                            onClick={() => router.push(`/requirements/${req.id}`)}
+                                            onDuplicate={(e) => {
+                                                e.stopPropagation();
+                                                router.push(`/requirements/new?sourceId=${req.id}`);
+                                            }}
+                                        />
                                     ))}
                                 </motion.div>
                             )}
@@ -845,7 +868,7 @@ export default function RequirementsPage() {
     );
 }
 
-function RequirementCard({ req, onClick }: { req: Requirement, onClick: () => void }) {
+function RequirementCard({ req, onClick, onDuplicate }: { req: Requirement, onClick: () => void, onDuplicate: (e: any) => void }) {
     const getStatusStyle = (status: string) => {
         switch (status) {
             case 'APPROVED':
@@ -918,14 +941,24 @@ function RequirementCard({ req, onClick }: { req: Requirement, onClick: () => vo
                             </div>
                         )}
                         Ver más <ArrowRight size={12} />
+                        Ver más <ArrowRight size={12} />
                     </div>
                 </div>
-                <div className="flex items-center gap-2 pt-2">
-                    <Package size={12} className="text-gray-400" />
-                    <span className="text-[9px] font-black uppercase text-gray-400">Proveedor:</span>
-                    <span className="text-[9px] font-black uppercase text-primary-600 truncate max-w-[100px]">
-                        {req.supplier?.name || req.manualSupplierName || 'No definido'}
-                    </span>
+                <div className="flex items-center justify-between pt-2">
+                    <div className="flex items-center gap-2">
+                        <Package size={12} className="text-gray-400" />
+                        <span className="text-[9px] font-black uppercase text-gray-400">Proveedor:</span>
+                        <span className="text-[9px] font-black uppercase text-primary-600 truncate max-w-[100px]">
+                            {req.supplier?.name || req.manualSupplierName || 'No definido'}
+                        </span>
+                    </div>
+                    <button
+                        onClick={onDuplicate}
+                        className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-gray-400 hover:text-blue-500 rounded-lg transition-colors"
+                        title="Volver a Pedir"
+                    >
+                        <Copy size={14} />
+                    </button>
                 </div>
             </div>
         </motion.div>

@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Save, X, Info, Package, DollarSign, Building, Truck, Paperclip, FileText, AlertTriangle, PieChart, Plus, Trash2, List } from "lucide-react";
 import api from "@/lib/api";
@@ -43,7 +43,7 @@ interface RequirementItem {
     attachments?: File[];
 }
 
-export default function NewRequirementPage() {
+function NewRequirementContent() {
     const { user } = useAuthStore();
     const { addToast } = useToastStore();
     const router = useRouter();
@@ -114,6 +114,35 @@ export default function NewRequirementPage() {
             addToast('Error al cargar datos necesarios', 'error');
         }
     }, [addToast, isAdminRole, user?.id]);
+
+    const searchParams = useSearchParams();
+    const sourceId = searchParams.get('sourceId');
+
+    useEffect(() => {
+        if (sourceId && options.projects.length > 0) {
+            setLoading(true);
+            api.get(`/requirements/${sourceId}`)
+                .then(res => {
+                    const req = res.data;
+                    setFormData(prev => ({
+                        ...prev,
+                        title: `${req.title} (Copia)`,
+                        description: req.description || '',
+                        quantity: req.quantity || '1',
+                        projectId: req.projectId || '',
+                        areaId: req.areaId || '',
+                        budgetId: req.budgetId || '',
+                        suggestedSupplier: req.suggestedSupplier || req.supplier?.name || ''
+                    }));
+                    addToast('Datos cargados desde requerimiento previo. Por favor verifica antes de enviar.', 'info');
+                })
+                .catch(err => {
+                    console.error("Error loading source requirement:", err);
+                    addToast('No se pudieron cargar los datos del requerimiento original.', 'error');
+                })
+                .finally(() => setLoading(false));
+        }
+    }, [sourceId, options.projects, addToast]);
 
     useEffect(() => {
         fetchCatalogs();
@@ -462,5 +491,13 @@ export default function NewRequirementPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function NewRequirementPage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen items-center justify-center text-primary-600 font-bold">Cargando...</div>}>
+            <NewRequirementContent />
+        </Suspense>
     );
 }
