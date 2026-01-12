@@ -154,16 +154,20 @@ export const getRequirementsByStatus = async (req: AuthRequest, res: Response) =
         }
 
         const statuses = await prisma.requirement.groupBy({
-            by: ['status'],
+            by: ['procurementStatus'],
             where,
-            _count: { status: true }
+            _count: { procurementStatus: true }
         });
 
-        const data = statuses.map(s => ({
-            status: s.status,
-            count: s._count.status,
-            label: getStatusLabel(s.status)
-        }));
+        const data = statuses.map(s => {
+            // Handle null procurementStatus as 'PENDIENTE'
+            const status = s.procurementStatus || 'PENDIENTE';
+            return {
+                status: status,
+                count: s._count.procurementStatus,
+                label: getStatusLabel(status)
+            };
+        });
 
         res.json(data);
     } catch (error: any) {
@@ -174,7 +178,14 @@ export const getRequirementsByStatus = async (req: AuthRequest, res: Response) =
 
 const getStatusLabel = (status: string): string => {
     const labels: Record<string, string> = {
-        'PENDING_APPROVAL': 'Pendiente',
+        'PENDIENTE': 'Pendiente',
+        'EN_TRAMITE': 'En Trámite',
+        'FINALIZADO': 'Finalizado',
+        'ENTREGADO': 'Entregado',
+        'ANULADO': 'Anulado',
+        'POSTERGADO': 'Postergado',
+        // Fallbacks for approval status in case they exist mixed in DB or logic changes
+        'PENDING_APPROVAL': 'Por Aprobar',
         'APPROVED': 'Aprobado',
         'REJECTED': 'Rechazado'
     };

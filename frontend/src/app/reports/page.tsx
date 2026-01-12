@@ -34,7 +34,10 @@ const CHART_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3
 const STATUS_COLORS: Record<string, string> = {
     'Pendiente': COLORS.warning,
     'En Trámite': COLORS.info,
-    'Finalizado': COLORS.success
+    'Finalizado': COLORS.success,
+    'Entregado': COLORS.info, // Reuse info blue or pick another
+    'Anulado': COLORS.danger,
+    'Postergado': COLORS.slate
 };
 
 interface ExecutiveSummary {
