@@ -52,11 +52,11 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
             reqWhere.createdById = filterUserId;
         }
 
-        const [totalRequirements, pendingRequirements, approvedRequirements, rejectedRequirements] = await Promise.all([
+        const [totalRequirements, pendingProcurement, inProgressProcurement, completedProcurement] = await Promise.all([
             prisma.requirement.count({ where: reqWhere }),
-            prisma.requirement.count({ where: { ...reqWhere, status: 'PENDING_APPROVAL' } }),
-            prisma.requirement.count({ where: { ...reqWhere, status: 'APPROVED' } }),
-            prisma.requirement.count({ where: { ...reqWhere, status: 'REJECTED' } })
+            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'PENDING' } }),
+            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'IN_PROGRESS' } }),
+            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'COMPLETED' } })
         ]);
 
         // Get invoices summary
@@ -81,9 +81,9 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
             },
             requirements: {
                 total: totalRequirements,
-                pending: pendingRequirements,
-                approved: approvedRequirements,
-                rejected: rejectedRequirements
+                pending: pendingProcurement,
+                inProgress: inProgressProcurement,
+                completed: completedProcurement
             },
             invoices: {
                 total: invoices.length,

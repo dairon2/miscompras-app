@@ -33,8 +33,8 @@ const CHART_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3
 
 const STATUS_COLORS: Record<string, string> = {
     'Pendiente': COLORS.warning,
-    'Aprobado': COLORS.success,
-    'Rechazado': COLORS.danger
+    'En Trámite': COLORS.info,
+    'Finalizado': COLORS.success
 };
 
 interface ExecutiveSummary {
@@ -47,8 +47,8 @@ interface ExecutiveSummary {
     requirements: {
         total: number;
         pending: number;
-        approved: number;
-        rejected: number;
+        inProgress: number;
+        completed: number;
     };
     invoices: {
         total: number;
@@ -225,8 +225,8 @@ export default function ReportsPage() {
         );
     }
 
-    const approvalRate = summary?.requirements.total
-        ? ((summary.requirements.approved / summary.requirements.total) * 100).toFixed(1)
+    const completionRate = summary?.requirements.total
+        ? ((summary.requirements.completed / summary.requirements.total) * 100).toFixed(1)
         : '0';
 
     return (
@@ -262,8 +262,8 @@ export default function ReportsPage() {
                         <button
                             onClick={() => setShowFilters(!showFilters)}
                             className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all ${showFilters || selectedArea || selectedProject
-                                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
-                                    : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-700'
+                                ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                                : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-700'
                                 }`}
                         >
                             <Filter size={18} />
@@ -389,7 +389,7 @@ export default function ReportsPage() {
                     subValue={`${summary?.requirements.pending || 0} pendientes`}
                     icon={<FileText />}
                     color="warning"
-                    trendUp={summary?.requirements.approved > summary?.requirements.rejected}
+                    trendUp={(summary?.requirements.completed || 0) > (summary?.requirements.pending || 0)}
                     gradient="from-amber-500 to-orange-500"
                 />
             </div>
@@ -397,8 +397,8 @@ export default function ReportsPage() {
             {/* Secondary KPIs */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
                 <SmallKPICard
-                    label="Tasa Aprobación"
-                    value={`${approvalRate}%`}
+                    label="Tasa Finalización"
+                    value={`${completionRate}%`}
                     icon={<Award size={18} />}
                     color="green"
                 />
@@ -703,8 +703,8 @@ export default function ReportsPage() {
                                         >
                                             <td className="py-4">
                                                 <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm ${idx < 3
-                                                        ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg'
-                                                        : 'bg-gray-100 dark:bg-slate-700 text-gray-500'
+                                                    ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg'
+                                                    : 'bg-gray-100 dark:bg-slate-700 text-gray-500'
                                                     }`}>
                                                     {idx + 1}
                                                 </span>
@@ -800,19 +800,19 @@ export default function ReportsPage() {
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl text-center">
-                                <p className="text-3xl font-black text-green-600">{summary?.requirements.approved || 0}</p>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">Aprobados</p>
+                                <p className="text-3xl font-black text-green-600">{summary?.requirements.completed || 0}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">Finalizados</p>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl text-center">
+                                <p className="text-3xl font-black text-blue-600">{summary?.requirements.inProgress || 0}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">En Trámite</p>
                             </div>
                             <div className="p-4 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-2xl text-center">
                                 <p className="text-3xl font-black text-yellow-600">{summary?.requirements.pending || 0}</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">Pendientes</p>
                             </div>
-                            <div className="p-4 bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-2xl text-center">
-                                <p className="text-3xl font-black text-red-600">{summary?.requirements.rejected || 0}</p>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">Rechazados</p>
-                            </div>
-                            <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl text-center">
-                                <p className="text-3xl font-black text-blue-600">{summary?.requirements.total || 0}</p>
+                            <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl text-center">
+                                <p className="text-3xl font-black text-indigo-600">{summary?.requirements.total || 0}</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">Total</p>
                             </div>
                         </div>
@@ -951,8 +951,8 @@ function ChartCard({ title, icon, color, chartType, onChartTypeChange, available
                                 key={type}
                                 onClick={() => onChartTypeChange(type)}
                                 className={`p-2 rounded-lg transition-all ${chartType === type
-                                        ? 'bg-white dark:bg-slate-600 shadow-sm text-primary-600'
-                                        : 'text-gray-400 hover:text-gray-600'
+                                    ? 'bg-white dark:bg-slate-600 shadow-sm text-primary-600'
+                                    : 'text-gray-400 hover:text-gray-600'
                                     }`}
                             >
                                 {chartIcons[type]}
