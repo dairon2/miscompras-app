@@ -113,6 +113,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     }
 
     const [showStatusModal, setShowStatusModal] = useState(false);
+    const [showProblemModal, setShowProblemModal] = useState(false);
     const [statusForm, setStatusForm] = useState<StatusForm>({ status: '', procurementStatus: '', remarks: '', receivedAtSatisfaction: false, overallRating: 0, deliveryRating: 0, qualityRating: 0, priceRating: 0 });
     const [formError, setFormError] = useState('');
     const [selectedFile, setSelectedFile] = useState<Attachment | null>(null);
@@ -769,8 +770,8 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                             </button>
                                             <button
                                                 onClick={() => {
-                                                    setStatusForm({ ...statusForm, status: 'REJECTED', remarks: '' });
-                                                    setShowStatusModal(true);
+                                                    setStatusForm({ ...statusForm, procurementStatus: 'PENDIENTE', receivedAtSatisfaction: false, remarks: '' });
+                                                    setShowProblemModal(true);
                                                 }}
                                                 className="flex-1 bg-red-50 text-red-600 py-4 rounded-2xl font-black border border-red-100 hover:bg-red-100 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
                                             >
@@ -1179,7 +1180,90 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                 </div>
             )}
 
-            {/* File Viewer Modal */}
+            {/* Problem Report Modal */}
+            {showProblemModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
+                    >
+                        <div className="p-8 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-red-50 dark:bg-red-900/20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center text-red-500">
+                                    <XCircle size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black tracking-tight text-red-700 dark:text-red-400">Reportar Problema</h3>
+                                    <p className="text-xs text-red-500 font-medium">La entrega no fue satisfactoria</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowProblemModal(false)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition-colors text-red-500">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-10 space-y-6">
+                            <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-2xl border border-amber-100 dark:border-amber-800">
+                                <p className="text-sm text-amber-700 dark:text-amber-400 font-bold">
+                                    ⚠️ Al reportar un problema, el requerimiento volverá a estado <strong>"Pendiente"</strong> para que se tome acción correctiva.
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Describe el problema (Requerido)</label>
+                                {formError && <p className="text-[10px] font-bold text-red-500 ml-2 animate-pulse">{formError}</p>}
+                                <textarea
+                                    rows={4}
+                                    value={statusForm.remarks}
+                                    onChange={(e) => {
+                                        setStatusForm({ ...statusForm, remarks: e.target.value });
+                                        if (e.target.value) setFormError('');
+                                    }}
+                                    placeholder="Describe qué problema hubo con la entrega: producto incorrecto, cantidad diferente, daños, retrasos, etc..."
+                                    className={`w-full bg-gray-50 dark:bg-slate-900 border ${formError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-100 dark:border-gray-700'} p-5 rounded-2xl font-bold focus:ring-2 ring-red-500 outline-none resize-none transition-all`}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-8 bg-gray-50 dark:bg-slate-900/50 flex gap-4">
+                            <button
+                                onClick={() => setShowProblemModal(false)}
+                                className="flex-1 py-4 rounded-2xl font-black text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all tracking-widest uppercase text-[10px]"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!statusForm.remarks.trim()) {
+                                        setFormError('Debes describir el problema');
+                                        return;
+                                    }
+                                    setActionLoading(true);
+                                    try {
+                                        await api.put(`/requirements/${id}`, {
+                                            procurementStatus: 'PENDIENTE',
+                                            receivedAtSatisfaction: false,
+                                            remarks: `PROBLEMA REPORTADO: ${statusForm.remarks}`
+                                        });
+                                        showAlert('Problema Reportado', 'El problema ha sido registrado y el requerimiento vuelve a estado pendiente.', 'info');
+                                        setShowProblemModal(false);
+                                        fetchRequirement();
+                                    } catch (err: any) {
+                                        showAlert('Error', err.response?.data?.error || 'Error al reportar problema', 'error');
+                                    } finally {
+                                        setActionLoading(false);
+                                    }
+                                }}
+                                disabled={actionLoading}
+                                className="flex-[2] bg-red-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-red-600 transition-all flex items-center justify-center gap-2 tracking-widest uppercase text-[10px]"
+                            >
+                                {actionLoading ? "Enviando..." : "Confirmar Problema"}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
             {selectedFile && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
                     <motion.div
