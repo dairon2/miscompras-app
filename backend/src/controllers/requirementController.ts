@@ -1368,33 +1368,43 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
 
         console.log("[Dashboard] Fetching counts with where:", JSON.stringify(where));
 
-        let pending = 0, approved = 0, rejected = 0;
+        // Count by procurementStatus instead of approval status
+        let pendiente = 0, enTramite = 0, entregado = 0, finalizado = 0;
 
         try {
-            // Count pending - only PENDING_APPROVAL is a valid Status enum value
-            pending = await prisma.requirement.count({
-                where: {
-                    ...where,
-                    status: 'PENDING_APPROVAL'
-                }
+            pendiente = await prisma.requirement.count({
+                where: { ...where, procurementStatus: 'PENDIENTE' }
             });
-            console.log("[Dashboard] Pending count:", pending);
-        } catch (pendingErr: any) {
-            console.error("[Dashboard] Error counting pending:", pendingErr.message);
+            console.log("[Dashboard] Pendiente count:", pendiente);
+        } catch (err: any) {
+            console.error("[Dashboard] Error counting pendiente:", err.message);
         }
 
         try {
-            approved = await prisma.requirement.count({ where: { ...where, status: 'APPROVED' } });
-            console.log("[Dashboard] Approved count:", approved);
-        } catch (approvedErr: any) {
-            console.error("[Dashboard] Error counting approved:", approvedErr.message);
+            enTramite = await prisma.requirement.count({
+                where: { ...where, procurementStatus: 'EN_TRAMITE' }
+            });
+            console.log("[Dashboard] En Trámite count:", enTramite);
+        } catch (err: any) {
+            console.error("[Dashboard] Error counting enTramite:", err.message);
         }
 
         try {
-            rejected = await prisma.requirement.count({ where: { ...where, status: 'REJECTED' } });
-            console.log("[Dashboard] Rejected count:", rejected);
-        } catch (rejectedErr: any) {
-            console.error("[Dashboard] Error counting rejected:", rejectedErr.message);
+            entregado = await prisma.requirement.count({
+                where: { ...where, procurementStatus: 'ENTREGADO' }
+            });
+            console.log("[Dashboard] Entregado count:", entregado);
+        } catch (err: any) {
+            console.error("[Dashboard] Error counting entregado:", err.message);
+        }
+
+        try {
+            finalizado = await prisma.requirement.count({
+                where: { ...where, procurementStatus: 'FINALIZADO' }
+            });
+            console.log("[Dashboard] Finalizado count:", finalizado);
+        } catch (err: any) {
+            console.error("[Dashboard] Error counting finalizado:", err.message);
         }
 
         // Recent Activity Filters
@@ -1517,9 +1527,10 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         }
 
         res.json({
-            pending,
-            approved,
-            rejected,
+            pendiente,
+            enTramite,
+            entregado,
+            finalizado,
             totalAmount,
             recent
         });

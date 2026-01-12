@@ -11,7 +11,7 @@ import { translateStatus } from "@/lib/translations";
 export default function HomePage() {
   const { user, isAuthenticated } = useAuthStore();
   const router = useRouter();
-  const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, totalAmount: 0 });
+  const [stats, setStats] = useState({ pendiente: 0, enTramite: 0, entregado: 0, finalizado: 0, totalAmount: 0 });
   const [recentRequirements, setRecentRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submissionInfo, setSubmissionInfo] = useState<{
@@ -31,12 +31,13 @@ export default function HomePage() {
   const fetchDashboardData = async () => {
     try {
       const response = await api.get("/requirements/dashboard-stats");
-      const { pending, approved, rejected, totalAmount, recent } = response.data;
+      const { pendiente, enTramite, entregado, finalizado, totalAmount, recent } = response.data;
 
       setStats({
-        pending: pending || 0,
-        approved: approved || 0,
-        rejected: rejected || 0,
+        pendiente: pendiente || 0,
+        enTramite: enTramite || 0,
+        entregado: entregado || 0,
+        finalizado: finalizado || 0,
         totalAmount: totalAmount || 0
       });
       setRecentRequirements(recent || []);
@@ -98,39 +99,39 @@ export default function HomePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-10">
         <StatCard
           title="Pendientes"
-          value={stats.pending.toString()}
-          sub="Requieren atención"
+          value={stats.pendiente.toString()}
+          sub="Por tramitar"
           icon={<Clock />}
           color="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
-          trend={[30, 45, 35, 50, 40, stats.pending]}
+          trend={[30, 45, 35, 50, 40, stats.pendiente]}
           trendColor="text-yellow-500"
         />
         <StatCard
-          title="Aprobados"
-          value={stats.approved.toString()}
-          sub="En proceso"
-          icon={<CheckCircle />}
+          title="En Trámite"
+          value={stats.enTramite.toString()}
+          sub="En proceso de compra"
+          icon={<TrendingUp />}
+          color="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+          trend={[20, 35, 45, 55, 70, stats.enTramite]}
+          trendColor="text-blue-500"
+        />
+        <StatCard
+          title="Entregados"
+          value={stats.entregado.toString()}
+          sub="Recibidos"
+          icon={<Package />}
           color="bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-          trend={[20, 35, 45, 55, 70, stats.approved]}
+          trend={[40, 60, 55, 80, 75, stats.entregado]}
           trendColor="text-green-500"
         />
         <StatCard
-          title="Total Solicitado"
-          value={`$${(stats.totalAmount / 1e6).toFixed(1)}M`}
-          sub="Consumido"
-          icon={<DollarSign />}
-          color="bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400"
-          trend={[40, 60, 55, 80, 75, 90]}
-          trendColor="text-primary-500"
-        />
-        <StatCard
-          title="Rechazados"
-          value={stats.rejected.toString()}
-          sub="Corregir"
-          icon={<AlertCircle />}
-          color="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-          trend={[10, 15, 8, 12, 5, stats.rejected]}
-          trendColor="text-red-500"
+          title="Finalizados"
+          value={stats.finalizado.toString()}
+          sub="Completados"
+          icon={<CheckCircle />}
+          color="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+          trend={[10, 15, 25, 35, 45, stats.finalizado]}
+          trendColor="text-emerald-500"
         />
       </div>
 
