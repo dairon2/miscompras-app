@@ -387,9 +387,8 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     // pendingApprovalByCurrentUser DETERMINA SI SE MUESTRA EL BOTÓN
     let pendingApprovalByCurrentUser = false;
     if (requirement.status === 'PENDING_APPROVAL') {
-        if (userRole === 'COORDINATOR' && !alreadyApprovedByCoordinator) {
-            pendingApprovalByCurrentUser = true;
-        } else if (userRole === 'DIRECTOR' && !alreadyApprovedByDirector) {
+        // Coordinator NO debe aprobar desde esta pantalla, solo Director
+        if (userRole === 'DIRECTOR' && !alreadyApprovedByDirector) {
             pendingApprovalByCurrentUser = true;
         } else if (userRole === 'ADMIN') {
             // Admin can see buttons if anyone hasn't approved yet
