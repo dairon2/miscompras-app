@@ -491,6 +491,8 @@ export default function ReportsPage() {
                                                 color: '#fff',
                                                 boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
                                             }}
+                                            itemStyle={{ color: '#fff' }}
+                                            labelStyle={{ color: '#fff', fontWeight: 'bold' }}
                                         />
                                         <Legend />
                                     </RechartsPie>
@@ -508,6 +510,8 @@ export default function ReportsPage() {
                                                 borderRadius: '12px',
                                                 color: '#fff'
                                             }}
+                                            itemStyle={{ color: '#fff' }}
+                                            labelStyle={{ color: '#fff', fontWeight: 'bold' }}
                                         />
                                         <Bar dataKey="count" radius={[8, 8, 0, 0]}>
                                             {statusData.map((entry, index) => (
@@ -556,6 +560,8 @@ export default function ReportsPage() {
                                                 borderRadius: '12px',
                                                 color: '#fff'
                                             }}
+                                            itemStyle={{ color: '#fff' }}
+                                            labelStyle={{ color: '#fff', fontWeight: 'bold' }}
                                         />
                                         <Area
                                             type="monotone"
@@ -583,6 +589,8 @@ export default function ReportsPage() {
                                                 borderRadius: '12px',
                                                 color: '#fff'
                                             }}
+                                            itemStyle={{ color: '#fff' }}
+                                            labelStyle={{ color: '#fff', fontWeight: 'bold' }}
                                         />
                                         <Line
                                             type="monotone"
@@ -609,6 +617,8 @@ export default function ReportsPage() {
                                                 borderRadius: '12px',
                                                 color: '#fff'
                                             }}
+                                            itemStyle={{ color: '#fff' }}
+                                            labelStyle={{ color: '#fff', fontWeight: 'bold' }}
                                         />
                                         <Bar
                                             dataKey="amount"
