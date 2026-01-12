@@ -602,7 +602,12 @@ export default function BudgetsPage() {
                                             >
                                                 <td className="px-6 py-4 text-xs font-black" style={{ color: '#4c6ef5' }}>{budget.project?.code || budget.code || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-500 font-bold">{budget.project?.name}</td>
-                                                <td className="px-6 py-4 text-sm text-gray-500">{budget.category?.name || '-'}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm text-gray-500">{budget.category?.name || '-'}</div>
+                                                    {budget.title && (
+                                                        <div className="text-xs text-primary-600 font-medium mt-0.5">{budget.title}</div>
+                                                    )}
+                                                </td>
                                                 <td className="px-6 py-4 text-sm text-gray-500">{budget.manager?.name || '-'}</td>
                                                 <td className="px-6 py-4 font-bold">{formatCurrency(totalAmount)}</td>
                                                 <td className="px-6 py-4 font-black" style={{ color: '#d97706' }}>{formatCurrency(executedAmount)}</td>
@@ -805,7 +810,7 @@ export default function BudgetsPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2 space-y-2">
-                                    <label className="text-xs font-black text-gray-600">Título *</label>
+                                    <label className="text-xs font-black text-gray-600">Actividad *</label>
                                     <input
                                         type="text"
                                         value={formData.title}

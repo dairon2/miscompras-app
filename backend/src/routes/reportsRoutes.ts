@@ -15,18 +15,56 @@ const router = Router();
 // All routes require authentication
 router.use(authMiddleware);
 
-// Role-based middleware for finance reports
-const financeRoles = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'];
+// Role-based data filtering middleware - ALL authenticated users can access
+// but data is filtered based on role
+const setupDataFiltering = async (req: any, res: any, next: any) => {
+    try {
+        const userRole = req.user?.role;
+        const userId = req.user?.id;
 
-const requireFinanceRole = (req: any, res: any, next: any) => {
-    if (!financeRoles.includes(req.user?.role)) {
-        return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de finanzas.' });
+        // Roles that see all data
+        const fullAccessRoles = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'];
+
+        if (fullAccessRoles.includes(userRole)) {
+            req.dataScope = 'ALL';
+            return next();
+        }
+
+        // For USER role, determine scope
+        if (userRole === 'USER') {
+            const { prisma } = await import('../index');
+
+            // Check if user is an area director
+            const userAreasDirected = await prisma.area.findMany({
+                where: { directorId: userId },
+                select: { id: true }
+            });
+
+            if (userAreasDirected.length > 0) {
+                // Area director: filter by their areas
+                req.dataScope = 'AREA';
+                req.directedAreaIds = userAreasDirected.map(a => a.id);
+                return next();
+            }
+
+            // Normal user: filter by their own created data
+            req.dataScope = 'USER';
+            req.filterUserId = userId;
+            return next();
+        }
+
+        // Default: user-level access
+        req.dataScope = 'USER';
+        req.filterUserId = userId;
+        return next();
+    } catch (error) {
+        console.error('Error in data filtering middleware:', error);
+        return res.status(500).json({ error: 'Error interno del servidor' });
     }
-    next();
 };
 
-// Apply finance role check to all routes
-router.use(requireFinanceRole);
+// Apply data filtering to all routes
+router.use(setupDataFiltering);
 
 // Executive Dashboard
 router.get('/executive-summary', getExecutiveSummary);

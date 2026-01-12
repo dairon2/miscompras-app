@@ -173,7 +173,7 @@ export default function RootLayout({
                   <NavItem icon={<FileText size={14} />} label="Requerimientos" href="/requirements" active={pathname === "/requirements" || pathname.startsWith("/requirements/")} />
                   <NavItem icon={<Building2 size={14} />} label="Presupuesto" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
                   <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers" || pathname.startsWith("/suppliers/")} />
-                  {['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') && (
+                  {['DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') && (
                     <NavItem
                       icon={<CheckCircle size={14} />}
                       label="Aprobaciones"
@@ -183,9 +183,7 @@ export default function RootLayout({
                     />
                   )}
                   <NavItem icon={<FileText size={14} />} label="Facturas" href="/invoices" active={pathname === "/invoices" || pathname.startsWith("/invoices/")} />
-                  {['ADMIN', 'DIRECTOR', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'].includes(user?.role || '') && (
-                    <NavItem icon={<Briefcase size={14} />} label="Informes" href="/reports" active={pathname === "/reports" || pathname.startsWith("/reports/")} />
-                  )}
+                  <NavItem icon={<Briefcase size={14} />} label="Informes" href="/reports" active={pathname === "/reports" || pathname.startsWith("/reports/")} />
                 </nav>
 
                 <div className="flex items-center gap-6">
@@ -451,7 +449,7 @@ function MobileNavbar({ pathname, userRole }: { pathname: string, userRole: stri
 
   // Fixed order: Inicio, Reqs, Presupuestos, Proveedores, Aprobaciones
   // Aprobaciones only visible to roles with approval permissions
-  const canApprove = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
+  const canApprove = ['DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
 
   const navItems = [
     { href: "/", icon: <LayoutDashboard size={20} />, label: "Inicio" },

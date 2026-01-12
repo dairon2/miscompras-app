@@ -94,7 +94,7 @@ export default function LoginPage() {
         } catch (err: any) {
             const errorMessage = err.response?.data?.error || "Error al iniciar sesión";
             setError(errorMessage);
-            addToast(errorMessage, "error");
+            addToast(errorMessage, "error", 8000); // 8 seconds for login errors
         } finally {
             setLoading(false);
         }

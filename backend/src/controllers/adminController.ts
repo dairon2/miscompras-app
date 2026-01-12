@@ -334,6 +334,79 @@ export const getSuppliers = async (req: AuthRequest, res: Response) => {
     }
 };
 
+export const getSupplierById = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    try {
+        const supplier = await prisma.supplier.findUnique({
+            where: { id },
+            include: {
+                requirements: {
+                    take: 50,
+                    orderBy: { createdAt: 'desc' },
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        totalAmount: true,
+                        actualAmount: true,
+                        createdAt: true,
+                        area: { select: { name: true } },
+                        project: { select: { name: true } }
+                    }
+                },
+                ratings: {
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        requirement: { select: { id: true, title: true } }
+                    }
+                }
+            }
+        });
+
+        if (!supplier) {
+            return res.status(404).json({ error: 'Proveedor no encontrado' });
+        }
+
+        // Calculate stats
+        const totalRequirements = supplier.requirements.length;
+        const approvedRequirements = supplier.requirements.filter(r => r.status === 'APPROVED').length;
+        const pendingRequirements = supplier.requirements.filter(r => r.status === 'PENDING_APPROVAL').length;
+        const totalAmount = supplier.requirements.reduce((sum, r) => sum + (Number(r.actualAmount) || Number(r.totalAmount) || 0), 0);
+
+        // Calculate rating stats
+        const ratingStats = supplier.ratings.length > 0 ? {
+            count: supplier.ratings.length,
+            avgOverall: supplier.ratings.reduce((sum, r) => sum + r.overallRating, 0) / supplier.ratings.length,
+            avgDelivery: supplier.ratings.reduce((sum, r) => sum + r.deliveryRating, 0) / supplier.ratings.length,
+            avgQuality: supplier.ratings.reduce((sum, r) => sum + r.qualityRating, 0) / supplier.ratings.length,
+            avgPrice: supplier.ratings.reduce((sum, r) => sum + r.priceRating, 0) / supplier.ratings.length
+        } : null;
+
+        // Get invoice count
+        const invoiceCount = await prisma.invoice.count({
+            where: {
+                requirement: { supplierId: id }
+            }
+        });
+
+        res.json({
+            ...supplier,
+            stats: {
+                totalRequirements,
+                totalInvoices: invoiceCount,
+                totalAmount,
+                approvedRequirements,
+                pendingRequirements
+            },
+            ratingStats
+        });
+    } catch (error: any) {
+        console.error('Error fetching supplier:', error);
+        res.status(500).json({ error: 'Error al obtener proveedor' });
+    }
+};
+
 export const createSupplier = async (req: AuthRequest, res: Response) => {
     const { name, nit, contactName, email, phone, address } = req.body;
 

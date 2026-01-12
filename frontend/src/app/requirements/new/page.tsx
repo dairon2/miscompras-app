@@ -87,16 +87,33 @@ export default function NewRequirementPage() {
                 api.get('/budgets?status=APPROVED')
             ]);
 
+            let filteredProjects = p.data;
+            const filteredBudgets = b.data; // Backend already filters for USER role
+
+            // For USER role, only show projects that have budgets accessible to them
+            // The backend already filters budgets based on user permissions
+            if (!isAdminRole && user?.id) {
+                // Get unique project IDs from the budgets (which are already filtered by backend)
+                const allowedProjectIds = new Set(
+                    filteredBudgets.map((budget: any) => budget.projectId)
+                );
+
+                // Filter projects to only those with accessible budgets
+                filteredProjects = p.data.filter((project: Project) =>
+                    allowedProjectIds.has(project.id)
+                );
+            }
+
             setOptions({
-                projects: p.data,
+                projects: filteredProjects,
                 areas: a.data,
-                budgets: b.data
+                budgets: filteredBudgets
             });
         } catch (err) {
             console.error("Error fetching catalogs:", err);
             addToast('Error al cargar datos necesarios', 'error');
         }
-    }, [addToast]);
+    }, [addToast, isAdminRole, user?.id]);
 
     useEffect(() => {
         fetchCatalogs();
@@ -438,11 +455,8 @@ export default function NewRequirementPage() {
                                 className="w-full bg-premium-gradient text-white py-6 rounded-[1.8rem] font-black text-lg shadow-2xl hover:shadow-primary-500/30 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                             >
                                 <Save size={20} />
-                                {loading ? "Procesando..." : "Enviar Solicitud Administrativa"}
+                                {loading ? "Procesando..." : "Enviar Requerimiento"}
                             </button>
-                            <p className="mt-4 text-[9px] text-center font-bold text-gray-400 tracking-widest uppercase">
-                                Se generará un PDF automático con todos los ítems.
-                            </p>
                         </div>
                     </div>
                 </div>

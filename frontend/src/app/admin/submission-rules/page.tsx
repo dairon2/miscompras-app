@@ -69,7 +69,7 @@ export default function SubmissionRulesPage() {
     const [selectedYear, setSelectedYear] = useState(currentYear);
 
     // Check permissions
-    const canManage = ['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '');
+    const canManage = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR'].includes(user?.role || '');
 
     useEffect(() => {
         if (!canManage) {

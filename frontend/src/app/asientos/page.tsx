@@ -67,8 +67,8 @@ export default function AsientosPage() {
 
     // Role-based permissions
     const userRole = user?.role || 'USER';
-    const canCreate = ['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole);
-    const canDelete = ['ADMIN', 'DIRECTOR'].includes(userRole);
+    const canCreate = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR'].includes(userRole);
+    const canDelete = ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole);
 
     useEffect(() => {
         fetchAsientos();

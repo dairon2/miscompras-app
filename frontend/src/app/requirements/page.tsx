@@ -329,7 +329,7 @@ export default function RequirementsPage() {
                             <TableIcon size={18} />
                         </button>
                     </div>
-                    {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && (
+                    {['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR'].includes(user?.role || '') && (
                         <button
                             onClick={() => router.push('/asientos')}
                             className="flex items-center gap-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-4 md:px-6 py-3 md:py-4 rounded-2xl font-black shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 transition-all uppercase text-[10px] tracking-widest"

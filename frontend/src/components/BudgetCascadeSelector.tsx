@@ -176,7 +176,7 @@ export default function BudgetCascadeSelector({
                 <div>
                     <label className={labelClass}>
                         <Building size={10} className="inline mr-1" />
-                        3. Presupuesto Específico
+                        3. Actividad
                     </label>
                     <div className="relative">
                         <select

@@ -133,11 +133,11 @@ export default function PaymentsSection({
                     <div>
                         <h3 className="text-lg font-black">Pagos en Cuotas</h3>
                         <p className="text-xs text-gray-500">
-                            {payments.length} de máximo 12 pagos registrados
+                            {payments.length} de máximo 24 pagos registrados
                         </p>
                     </div>
                 </div>
-                {canEdit && payments.length < 12 && (
+                {canEdit && payments.length < 24 && (
                     <button
                         onClick={() => setShowModal(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-colors"

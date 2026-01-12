@@ -242,7 +242,7 @@ export default function HomePage() {
                   onClick={() => router.push('/requirements')}
                   className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border border-white/10 text-sm"
                 >
-                  Mis Solicitudes <ArrowRight size={16} />
+                  Mis Requerimientos <ArrowRight size={16} />
                 </button>
                 <button
                   onClick={() => router.push('/budget')}

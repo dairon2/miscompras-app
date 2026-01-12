@@ -442,8 +442,8 @@ export default function AdminPage() {
 
                         {user?.role === 'DEVELOPER' && <div className="h-px bg-gray-100 dark:bg-gray-700" />}
 
-                        {/* Submission Rules Link - for ADMIN, DIRECTOR, LEADER */}
-                        {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && (
+                        {/* Submission Rules Link - for ADMIN, DIRECTOR, LEADER, COORDINATOR */}
+                        {['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR'].includes(user?.role || '') && (
                             <section>
                                 <div className="flex items-center justify-between p-6 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-200 dark:border-amber-800">
                                     <div className="flex items-center gap-4">
@@ -468,7 +468,7 @@ export default function AdminPage() {
                             </section>
                         )}
 
-                        {['ADMIN', 'DIRECTOR', 'LEADER'].includes(user?.role || '') && <div className="h-px bg-gray-100 dark:bg-gray-700" />}
+                        {['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR'].includes(user?.role || '') && <div className="h-px bg-gray-100 dark:bg-gray-700" />}
 
                         {/* Theme Preferences */}
                         <section>

@@ -1556,8 +1556,8 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
-    // Only ADMIN, DIRECTOR, LEADER can create asientos
-    if (!['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole || '')) {
+    // Only ADMIN, DIRECTOR, COORDINATOR, DEVELOPER can create asientos
+    if (!['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole || '')) {
         return res.status(403).json({ error: 'No tienes permiso para crear asientos' });
     }
 
@@ -1579,62 +1579,88 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
         groupId
     } = req.body;
 
+    // ========== VALIDATIONS FIRST (before any DB operations) ==========
+
+    // Validate groupId - REQUIRED for asientos
+    if (!groupId || groupId === 'null' || groupId === '' || isNaN(parseInt(groupId))) {
+        return res.status(400).json({
+            error: 'El asiento debe estar vinculado a un número de Requerimiento existente'
+        });
+    }
+
+    const existingGroup = await prisma.requirementGroup.findUnique({
+        where: { id: parseInt(groupId) }
+    });
+
+    if (!existingGroup) {
+        return res.status(400).json({
+            error: `El Requerimiento #${groupId} no existe. Por favor ingresa un número de requerimiento válido.`
+        });
+    }
+
+    const validGroupId = parseInt(groupId);
+
     try {
-        // Budget deduction for asientos (immediate)
-        if (budgetId && totalAmount) {
-            await prisma.budget.update({
-                where: { id: budgetId },
+        // Use transaction to ensure atomicity - budget only decremented if asiento created successfully
+        const result = await prisma.$transaction(async (tx) => {
+            // Create the asiento first
+            const asiento = await tx.requirement.create({
                 data: {
-                    available: { decrement: parseFloat(totalAmount) }
+                    title,
+                    description,
+                    quantity,
+                    totalAmount: (totalAmount && totalAmount !== 'null' && !isNaN(parseFloat(totalAmount))) ? parseFloat(totalAmount) : null,
+                    actualAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : null,
+                    projectId: (projectId && projectId !== 'null') ? projectId : undefined,
+                    areaId: (areaId && areaId !== 'null') ? areaId : undefined,
+                    supplierId: (supplierId && supplierId !== 'null') ? supplierId : null,
+                    manualSupplierName: manualSupplierName === 'null' ? null : manualSupplierName,
+                    budgetId: (budgetId && budgetId !== 'null') ? budgetId : null,
+                    reqCategory: reqCategory || 'COMPRA',
+                    purchaseOrderNumber: purchaseOrderNumber === 'null' ? null : purchaseOrderNumber,
+                    invoiceNumber: invoiceNumber === 'null' ? null : invoiceNumber,
+                    createdById: userId!,
+                    year: new Date().getFullYear(),
+                    isAsiento: true,
+                    hasMultiplePayments: hasMultiplePayments === 'true' || hasMultiplePayments === true,
+                    status: 'APPROVED',  // Auto-approved for asientos
+                    procurementStatus: 'EN_TRAMITE',
+                    groupId: validGroupId,
+                    attachments: {
+                        create: await processFileUploads(req.files as Express.Multer.File[] || [], 'asientos')
+                    }
+                },
+                include: {
+                    project: true,
+                    area: true,
+                    supplier: true,
+                    attachments: true
                 }
             });
-        }
 
-        const asiento = await prisma.requirement.create({
-            data: {
-                title,
-                description,
-                quantity,
-                totalAmount: (totalAmount && totalAmount !== 'null' && !isNaN(parseFloat(totalAmount))) ? parseFloat(totalAmount) : null,
-                actualAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : null,
-                projectId: (projectId && projectId !== 'null') ? projectId : undefined,
-                areaId: (areaId && areaId !== 'null') ? areaId : undefined,
-                supplierId: (supplierId && supplierId !== 'null') ? supplierId : null,
-                manualSupplierName: manualSupplierName === 'null' ? null : manualSupplierName,
-                budgetId: (budgetId && budgetId !== 'null') ? budgetId : null,
-                reqCategory: reqCategory || 'COMPRA',
-                purchaseOrderNumber: purchaseOrderNumber === 'null' ? null : purchaseOrderNumber,
-                invoiceNumber: invoiceNumber === 'null' ? null : invoiceNumber,
-                createdById: userId!,
-                year: new Date().getFullYear(),
-                isAsiento: true,
-                hasMultiplePayments: hasMultiplePayments === 'true' || hasMultiplePayments === true,
-                status: 'APPROVED',  // Auto-approved for asientos
-                procurementStatus: 'EN_TRAMITE',
-                groupId: (groupId && groupId !== 'null' && !isNaN(parseInt(groupId))) ? parseInt(groupId) : undefined,
-                attachments: {
-                    create: await processFileUploads(req.files as Express.Multer.File[] || [], 'asientos')
+            // Only decrement budget AFTER asiento is created successfully (within transaction)
+            if (budgetId && budgetId !== 'null' && totalAmount && !isNaN(parseFloat(totalAmount))) {
+                await tx.budget.update({
+                    where: { id: budgetId },
+                    data: {
+                        available: { decrement: parseFloat(totalAmount) }
+                    }
+                });
+            }
+
+            // Log creation (within transaction)
+            await tx.historyLog.create({
+                data: {
+                    action: 'CREATED_ASIENTO',
+                    requirementId: asiento.id,
+                    details: `Asiento contable creado por ${req.user?.email}`
                 }
-            },
-            include: {
-                project: true,
-                area: true,
-                supplier: true,
-                attachments: true
-            }
+            });
+
+            return asiento;
         });
 
-        // Log creation
-        // Log creation
-        await prisma.historyLog.create({
-            data: {
-                action: 'CREATED_ASIENTO',
-                requirementId: asiento.id,
-                details: `Asiento contable creado por ${req.user?.email}`
-            }
-        });
-
-        res.status(201).json(asiento);
+        res.status(201).json(result);
     } catch (error: any) {
         console.error("Error creating asiento:", error);
         res.status(500).json({ error: 'Error al crear el asiento', details: error.message });

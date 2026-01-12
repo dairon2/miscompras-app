@@ -17,6 +17,7 @@ import {
     deleteCategory,
     // Suppliers
     getSuppliers,
+    getSupplierById,
     createSupplier,
     updateSupplier,
     deleteSupplier,
@@ -68,9 +69,10 @@ router.delete('/categories/:id', roleCheck(['DIRECTOR', 'DEVELOPER']), deleteCat
 
 // Suppliers CRUD - LEADER can manage suppliers as requested
 router.get('/suppliers', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getSuppliers);
+router.get('/suppliers/:id', authMiddleware, getSupplierById); // Open to all authenticated users
 router.post('/suppliers', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), createSupplier);
 router.put('/suppliers/:id', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), updateSupplier);
-router.delete('/suppliers/:id', roleCheck(['ADMIN', 'DIRECTOR', 'DEVELOPER']), deleteSupplier);
+router.delete('/suppliers/:id', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), deleteSupplier);
 router.post('/suppliers/bulk-import', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), bulkImportSuppliers);
 
 // Users Management

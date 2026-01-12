@@ -139,10 +139,10 @@ export default function ApprovalsPage() {
         }
     };
 
-    // Only users with these roles can access approvals
+    // Only users with these roles can access approvals (ADMIN excluded - they don't approve)
     const userRole = user?.role?.toUpperCase() || 'USER';
-    const canAccessApprovals = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(userRole);
-    const canApproveBudgets = ['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(userRole);
+    const canAccessApprovals = ['DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(userRole);
+    const canApproveBudgets = ['DIRECTOR', 'DEVELOPER'].includes(userRole);
 
     useEffect(() => {
         if (canAccessApprovals) {

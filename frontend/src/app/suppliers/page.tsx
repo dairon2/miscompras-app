@@ -51,7 +51,7 @@ export default function SuppliersPage() {
 
     // Role-based permissions for supplier management
     const userRole = user?.role || 'USER';
-    const canManageSuppliers = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER'].includes(userRole);
+    const canManageSuppliers = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
 
 
     // Search and Filter State

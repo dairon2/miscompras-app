@@ -123,6 +123,11 @@ export default function NewAsientoPage() {
             return;
         }
 
+        if (!form.groupId) {
+            addToast('Debes ingresar un número de Requerimiento válido para vincular el asiento', 'error');
+            return;
+        }
+
         setLoading(true);
         try {
             const formData = new FormData();
@@ -299,15 +304,17 @@ export default function NewAsientoPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-gray-600">Solicitud # <span className="text-[10px] font-normal text-gray-400">(Opcional)</span></label>
+                                <label className="text-xs font-black text-gray-600">Requerimiento # *</label>
                                 <input
                                     type="number"
                                     name="groupId"
                                     value={form.groupId}
                                     onChange={handleChange}
-                                    placeholder="ID de Grupo"
+                                    placeholder="Número de requerimiento"
                                     className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                    required
                                 />
+                                <p className="text-[10px] text-gray-400 font-medium">El asiento debe estar vinculado a un requerimiento existente</p>
                             </div>
                         </div>
                     </div>

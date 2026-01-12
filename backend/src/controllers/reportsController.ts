@@ -8,11 +8,23 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
     const projectId = req.query.projectId as string;
     const areaId = req.query.areaId as string;
 
+    // Data scope from middleware
+    const dataScope = (req as any).dataScope as string;
+    const directedAreaIds = (req as any).directedAreaIds as string[] | undefined;
+    const filterUserId = (req as any).filterUserId as string | undefined;
+
     try {
         // Build filter
         const budgetWhere: any = { year };
         if (projectId) budgetWhere.projectId = projectId;
         if (areaId) budgetWhere.areaId = areaId;
+
+        // Apply scope-based filtering
+        if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
+            budgetWhere.areaId = { in: directedAreaIds };
+        } else if (dataScope === 'USER' && filterUserId) {
+            budgetWhere.managerId = filterUserId;
+        }
 
         // Get all budgets
         const budgets = await prisma.budget.findMany({
@@ -32,6 +44,13 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
         const reqWhere: any = { year };
         if (projectId) reqWhere.projectId = projectId;
         if (areaId) reqWhere.areaId = areaId;
+
+        // Apply scope-based filtering for requirements
+        if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
+            reqWhere.areaId = { in: directedAreaIds };
+        } else if (dataScope === 'USER' && filterUserId) {
+            reqWhere.createdById = filterUserId;
+        }
 
         const [totalRequirements, pendingRequirements, approvedRequirements, rejectedRequirements] = await Promise.all([
             prisma.requirement.count({ where: reqWhere }),
@@ -122,9 +141,17 @@ export const getRequirementsByStatus = async (req: AuthRequest, res: Response) =
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
     const projectId = req.query.projectId as string;
 
+    // For area directors (USER role), filter by their directed areas
+    const directedAreaIds = (req as any).directedAreaIds as string[] | undefined;
+
     try {
         const where: any = { year };
         if (projectId) where.projectId = projectId;
+
+        // Apply area filter for area directors
+        if (directedAreaIds && directedAreaIds.length > 0) {
+            where.areaId = { in: directedAreaIds };
+        }
 
         const statuses = await prisma.requirement.groupBy({
             by: ['status'],
@@ -203,12 +230,20 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
     const projectId = req.query.projectId as string;
 
+    // For area directors (USER role), filter by their directed areas
+    const directedAreaIds = (req as any).directedAreaIds as string[] | undefined;
+
     try {
         const where: any = {
             year,
             status: 'APPROVED'
         };
         if (projectId) where.projectId = projectId;
+
+        // Apply area filter for area directors
+        if (directedAreaIds && directedAreaIds.length > 0) {
+            where.areaId = { in: directedAreaIds };
+        }
 
         const requirements = await prisma.requirement.findMany({
             where,

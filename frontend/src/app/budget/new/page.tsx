@@ -52,8 +52,9 @@ export default function NewBudgetPage() {
     // List of items to submit
     const [items, setItems] = useState<BudgetItem[]>([]);
 
-    // Current form data (title removed - auto-generated)
+    // Current form data
     const [formData, setFormData] = useState({
+        title: '',
         code: '',
         amount: '',
         description: '',
@@ -129,9 +130,20 @@ export default function NewBudgetPage() {
     };
 
     const addItem = () => {
-        // Validate required fields (title removed - auto-generated)
-        if (!formData.amount || !formData.projectId || !formData.areaId || !formData.categoryId) {
-            addToast('Completa los campos obligatorios: Proyecto, Área, Categoría y Monto', 'warning');
+        // Validate required fields including title (Actividad)
+        if (!formData.title || !formData.amount || !formData.projectId || !formData.areaId || !formData.categoryId) {
+            addToast('Completa los campos obligatorios: Actividad, Proyecto, Área, Categoría y Monto', 'warning');
+            return;
+        }
+
+        // Check for duplicate title within same project+category
+        const duplicate = items.find(
+            item => item.projectId === formData.projectId &&
+                item.categoryId === formData.categoryId &&
+                item.title.toLowerCase() === formData.title.toLowerCase()
+        );
+        if (duplicate) {
+            addToast('Ya existe un presupuesto con la misma Actividad para este proyecto y categoría', 'warning');
             return;
         }
 
@@ -140,12 +152,8 @@ export default function NewBudgetPage() {
         const category = categories.find(c => c.id === formData.categoryId);
         const manager = users.find(u => u.id === formData.managerId);
 
-        // Auto-generate title: "{Proyecto} - {Área} - {Categoría}"
-        const autoTitle = [project?.name, area?.name, category?.name].filter(Boolean).join(' - ');
-
         const newItem: BudgetItem = {
             ...formData,
-            title: autoTitle,
             id: Math.random().toString(36).substr(2, 9),
             projectName: project?.name || '',
             areaName: area?.name || '',
@@ -158,6 +166,7 @@ export default function NewBudgetPage() {
         // Reset form but keep project/area for convenience
         setFormData(prev => ({
             ...prev,
+            title: '',
             amount: '',
             description: '',
             categoryId: '',
@@ -344,7 +353,25 @@ export default function NewBudgetPage() {
                                     </select>
                                 </div>
 
-                                {/* 4. Monto */}
+                                {/* 4. Actividad (título manual) */}
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">
+                                        Actividad *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="title"
+                                        value={formData.title}
+                                        onChange={handleChange}
+                                        className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold"
+                                        placeholder="Nombre de la actividad o concepto..."
+                                    />
+                                    <p className="text-[9px] text-gray-400 mt-2 ml-1 font-medium">
+                                        Debe ser única para cada combinación de proyecto y categoría.
+                                    </p>
+                                </div>
+
+                                {/* 5. Monto */}
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">
                                         Monto Presupuestado *
