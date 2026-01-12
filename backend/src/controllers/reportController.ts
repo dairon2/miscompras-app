@@ -26,7 +26,7 @@ export const exportRequirements = async (req: AuthRequest, res: Response) => {
         ];
 
         const rows = requirements.map((r: any) => ({
-            id: r.id.substring(0, 8).toUpperCase(),
+            id: r.groupId ? r.groupId.toString() : r.id.substring(0, 8).toUpperCase(),
             title: r.title,
             totalAmount: r.totalAmount ? parseFloat(r.totalAmount.toString()) : 0,
             procurementStatus: r.procurementStatus || 'PENDIENTE',
