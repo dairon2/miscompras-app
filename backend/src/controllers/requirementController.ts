@@ -83,7 +83,7 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
         // Notify Admins/Leaders
         const admins = await prisma.user.findMany({
             where: {
-                role: { in: ['ADMIN', 'LEADER', 'DIRECTOR'] }
+                role: { in: ['COORDINATOR', 'DIRECTOR'] }
             }
         });
 
@@ -106,7 +106,7 @@ export const createRequirement = async (req: AuthRequest, res: Response) => {
             await prisma.notification.create({
                 data: {
                     userId: admin.id,
-                    title: 'Nueva Solicitud Pendiente',
+                    title: 'Nuevo Requerimiento Creado',
                     message: `Se ha creado el requerimiento: ${title}`,
                     type: 'INFO',
                     requirementId: requirement.id
@@ -180,7 +180,7 @@ export const createMassRequirements = async (req: AuthRequest, res: Response) =>
             try {
                 const approvers = await prisma.user.findMany({
                     where: {
-                        role: { in: ['LEADER', 'COORDINATOR', 'DIRECTOR', 'ADMIN'] }
+                        role: { in: ['COORDINATOR', 'DIRECTOR'] }
                     }
                 });
 
@@ -190,7 +190,7 @@ export const createMassRequirements = async (req: AuthRequest, res: Response) =>
                 await prisma.notification.createMany({
                     data: approvers.map(approver => ({
                         userId: approver.id,
-                        title: 'Nueva Solicitud Múltiple',
+                        title: 'Nuevo Requerimiento Creado',
                         message: `Se ha creado una solicitud agrupada (ID: ${result.group.id}) con ${requirements.length} items.`,
                         type: 'INFO'
                     }))
@@ -203,7 +203,7 @@ export const createMassRequirements = async (req: AuthRequest, res: Response) =>
                         type: 'REQUIREMENT_CREATED',
                         requirementId: result.group.id.toString(),
                         groupId: result.group.id,
-                        requirementTitle: `Solicitud Agrupada de ${(req.user as any)?.name || req.user?.email}`,
+                        requirementTitle: `Nuevo Requerimiento Creado de ${(req.user as any)?.name || req.user?.email}`,
                         requesterName: (req.user as any)?.name || req.user?.email || 'Desconocido',
                         amount: totalAmt
                     }).catch(err => console.error(`Failed to send email to ${approver.email}`, err))
