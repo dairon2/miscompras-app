@@ -190,7 +190,7 @@ export default function SuppliersPage() {
                         onClick={() => setTypeFilter('SERVICE_PROVIDER')}
                         className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${typeFilter === 'SERVICE_PROVIDER' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
                     >
-                        Servicios
+                        Prestadores de Servicios
                     </button>
                 </div>
 
