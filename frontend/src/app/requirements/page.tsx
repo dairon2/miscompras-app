@@ -406,14 +406,26 @@ export default function RequirementsPage() {
                             <option value="COMPRA_ONLINE">Compra Online</option>
                         </select>
 
-                        <select
-                            value={filters.createdById}
-                            onChange={(e) => setFilters({ ...filters, createdById: e.target.value })}
-                            className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-xl py-2 px-4 outline-none focus:ring-2 focus:ring-primary-500 font-bold text-xs"
-                        >
-                            <option value="">Todos los Líderes</option>
-                            {users.map((u: any) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
-                        </select>
+                        {/* Leaders filter - hidden for USER role unless they are an area director */}
+                        {(userRole !== 'USER' || user?.isAreaDirector) && (
+                            <select
+                                value={filters.createdById}
+                                onChange={(e) => setFilters({ ...filters, createdById: e.target.value })}
+                                className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-xl py-2 px-4 outline-none focus:ring-2 focus:ring-primary-500 font-bold text-xs"
+                            >
+                                <option value="">Todos los Líderes</option>
+                                {users
+                                    .filter((u: any) => {
+                                        // Area directors only see users from their area
+                                        if (user?.isAreaDirector && userRole !== 'ADMIN' && userRole !== 'DEVELOPER') {
+                                            return u.areaId === user?.areaId;
+                                        }
+                                        return true; // Admins, Directors, Coordinators see all
+                                    })
+                                    .map((u: any) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)
+                                }
+                            </select>
+                        )}
 
                         <select
                             value={filters.projectId}
