@@ -73,6 +73,7 @@ interface StatusData {
     status: string;
     count: number;
     label: string;
+    [key: string]: string | number;
 }
 
 interface SupplierData {
