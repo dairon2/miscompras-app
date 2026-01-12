@@ -61,8 +61,8 @@ export default function RootLayout({
 
   const fetchPendingApprovals = useCallback(async () => {
     if (!isAuthenticated) return;
-    // Only fetch for relevant roles
-    if (!['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '')) return;
+    // Only fetch for DIRECTOR and COORDINATOR roles
+    if (!['DIRECTOR', 'COORDINATOR'].includes(user?.role || '')) return;
 
     try {
       const res = await api.get('/requirements/pending-count');
@@ -173,7 +173,7 @@ export default function RootLayout({
                   <NavItem icon={<FileText size={14} />} label="Requerimientos" href="/requirements" active={pathname === "/requirements" || pathname.startsWith("/requirements/")} />
                   <NavItem icon={<Building2 size={14} />} label="Presupuesto" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
                   <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers" || pathname.startsWith("/suppliers/")} />
-                  {['DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') && (
+                  {['DIRECTOR', 'COORDINATOR'].includes(user?.role || '') && (
                     <NavItem
                       icon={<CheckCircle size={14} />}
                       label="Aprobaciones"
@@ -448,8 +448,8 @@ function MobileNavbar({ pathname, userRole }: { pathname: string, userRole: stri
   const router = useRouter();
 
   // Fixed order: Inicio, Reqs, Presupuestos, Proveedores, Aprobaciones
-  // Aprobaciones only visible to roles with approval permissions
-  const canApprove = ['DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
+  // Aprobaciones only visible to DIRECTOR and COORDINATOR
+  const canApprove = ['DIRECTOR', 'COORDINATOR'].includes(userRole);
 
   const navItems = [
     { href: "/", icon: <LayoutDashboard size={20} />, label: "Inicio" },

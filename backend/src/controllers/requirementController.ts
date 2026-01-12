@@ -1499,8 +1499,8 @@ export const getPendingApprovalCount = async (req: AuthRequest, res: Response) =
     const userRole = req.user?.role;
 
     try {
-        // Only roles that can approve should see this count
-        if (!['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole || '')) {
+        // Only DIRECTOR and COORDINATOR can see this count
+        if (!['DIRECTOR', 'COORDINATOR'].includes(userRole || '')) {
             return res.json({ count: 0 });
         }
 
