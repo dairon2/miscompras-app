@@ -116,13 +116,13 @@ export default function HomePage() {
           trendColor="text-blue-500"
         />
         <StatCard
-          title="Entregados"
-          value={stats.entregado.toString()}
-          sub="Recibidos"
-          icon={<Package />}
-          color="bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-          trend={[40, 60, 55, 80, 75, stats.entregado]}
-          trendColor="text-green-500"
+          title="Total Solicitado"
+          value={`$${(stats.totalAmount / 1e6).toFixed(1)}M`}
+          sub="Presupuesto ejecutado"
+          icon={<DollarSign />}
+          color="bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400"
+          trend={[40, 60, 55, 80, 75, 90]}
+          trendColor="text-primary-500"
         />
         <StatCard
           title="Finalizados"
