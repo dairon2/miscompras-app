@@ -499,7 +499,7 @@ export default function RequirementsPage() {
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: -20 }}
-                                        className="hidden lg:block overflow-x-auto max-h-[calc(100vh-280px)] overflow-y-auto"
+                                        className="hidden lg:block overflow-x-auto max-h-[calc(100vh-180px)] overflow-y-auto"
                                     >
                                         <table className="w-full">
 
