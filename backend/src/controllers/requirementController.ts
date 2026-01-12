@@ -237,13 +237,14 @@ export const getMyRequirements = async (req: AuthRequest, res: Response) => {
                     budget: {
                         OR: [
                             { managerId: userId },
-                            { subLeaders: { some: { userId: userId } } }
+                            { subLeaders: { some: { userId: userId } } },
+                            { area: { directorId: userId } } // Allow Area Directors to see requirements/asientos of their area's budgets
                         ]
                     }
                 }
             ],
-            year: year,
-            isAsiento: includeAsientos ? undefined : false
+            year: year
+            // isAsiento filter removed to show everything by default
         };
 
         // Get total count for pagination
@@ -649,8 +650,8 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
 
     try {
         const where: any = {
-            year: year,
-            isAsiento: includeAsientos ? undefined : false
+            year: year
+            // isAsiento filter removed to show everything by default
         };
 
         // ADMIN, DIRECTOR (global), LEADER, COORDINATOR and AUDITOR see everything
