@@ -52,11 +52,12 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
             reqWhere.createdById = filterUserId;
         }
 
-        const [totalRequirements, pendingProcurement, inProgressProcurement, completedProcurement] = await Promise.all([
+        const [totalRequirements, pendienteProcurement, enTramiteProcurement, entregadoProcurement, finalizadoProcurement] = await Promise.all([
             prisma.requirement.count({ where: reqWhere }),
-            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'PENDING' } }),
-            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'IN_PROGRESS' } }),
-            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'COMPLETED' } })
+            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'PENDIENTE' } }),
+            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'EN_TRAMITE' } }),
+            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'ENTREGADO' } }),
+            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'FINALIZADO' } })
         ]);
 
         // Get invoices summary
@@ -81,9 +82,10 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
             },
             requirements: {
                 total: totalRequirements,
-                pending: pendingProcurement,
-                inProgress: inProgressProcurement,
-                completed: completedProcurement
+                pendiente: pendienteProcurement,
+                enTramite: enTramiteProcurement,
+                entregado: entregadoProcurement,
+                finalizado: finalizadoProcurement
             },
             invoices: {
                 total: invoices.length,

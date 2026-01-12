@@ -49,9 +49,10 @@ interface ExecutiveSummary {
     };
     requirements: {
         total: number;
-        pending: number;
-        inProgress: number;
-        completed: number;
+        pendiente: number;
+        enTramite: number;
+        entregado: number;
+        finalizado: number;
     };
     invoices: {
         total: number;
@@ -230,7 +231,7 @@ export default function ReportsPage() {
     }
 
     const completionRate = summary?.requirements.total
-        ? ((summary.requirements.completed / summary.requirements.total) * 100).toFixed(1)
+        ? ((summary.requirements.finalizado / summary.requirements.total) * 100).toFixed(1)
         : '0';
 
     return (
@@ -390,10 +391,10 @@ export default function ReportsPage() {
                 <KPICard
                     title="Requerimientos"
                     value={summary?.requirements.total.toString() || "0"}
-                    subValue={`${summary?.requirements.pending || 0} pendientes`}
+                    subValue={`${summary?.requirements.pendiente || 0} pendientes`}
                     icon={<FileText />}
                     color="warning"
-                    trendUp={(summary?.requirements.completed || 0) > (summary?.requirements.pending || 0)}
+                    trendUp={(summary?.requirements.finalizado || 0) > (summary?.requirements.pendiente || 0)}
                     gradient="from-amber-500 to-orange-500"
                 />
             </div>
@@ -804,15 +805,15 @@ export default function ReportsPage() {
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl text-center">
-                                <p className="text-3xl font-black text-green-600">{summary?.requirements.completed || 0}</p>
+                                <p className="text-3xl font-black text-green-600">{summary?.requirements.finalizado || 0}</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">Finalizados</p>
                             </div>
                             <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl text-center">
-                                <p className="text-3xl font-black text-blue-600">{summary?.requirements.inProgress || 0}</p>
+                                <p className="text-3xl font-black text-blue-600">{summary?.requirements.enTramite || 0}</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">En Trámite</p>
                             </div>
                             <div className="p-4 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-2xl text-center">
-                                <p className="text-3xl font-black text-yellow-600">{summary?.requirements.pending || 0}</p>
+                                <p className="text-3xl font-black text-yellow-600">{summary?.requirements.pendiente || 0}</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">Pendientes</p>
                             </div>
                             <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl text-center">
