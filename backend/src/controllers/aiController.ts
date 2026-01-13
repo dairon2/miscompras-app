@@ -88,7 +88,9 @@ export const chatWithAI = async (req: Request, res: Response) => {
             `;
         } else {
             // ADMIN, DIRECTOR, COORDINATOR: Global lists
+            // ... (keep existing code)
             const [projects, budgets, reqsPending, suppliers, invoices] = await Promise.all([
+                // ... (keep existing queries)
                 prisma.project.findMany({
                     take: 10,
                     orderBy: { updatedAt: 'desc' },
@@ -140,7 +142,37 @@ export const chatWithAI = async (req: Request, res: Response) => {
             `;
         }
 
-        // 1.5. DYNAMIC CONTEXT: Check if specific PROJECT is mentioned for "Executive Report"
+        // 1.5. DATA ANALYSIS & ACTION DETECTION (NEW)
+        const lowerMsg = message.toLowerCase();
+        if (lowerMsg.includes('excel') || lowerMsg.includes('reporte') || lowerMsg.includes('descargar')) {
+            // Heuristic trigger for Action Check
+            const actionPrompt = `
+             Analiza la intención del usuario.
+             Mensaje: "${message}"
+             
+             ¿El usuario quiere GENERAR un archivo (Excel, reporte) de sus requerimientos?
+             Responde JSON: { "action": "GENERATE_REPORT", "type": "USER_REQUIREMENTS" } o { "action": "NONE" }
+             `;
+
+            try {
+                const actionModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { responseMimeType: "application/json" } });
+                const actionResult = await retryOperation(() => actionModel.generateContent(actionPrompt));
+                const actionJson = JSON.parse(actionResult.response.text());
+
+                if (actionJson.action === 'GENERATE_REPORT' && actionJson.type === 'USER_REQUIREMENTS') {
+                    // Import dynamically to avoid circular issues or top-level import conflicts if any
+                    const { generateUserRequirementsExcel } = await import('../services/reportService');
+                    if (userId) {
+                        const fileUrl = await generateUserRequirementsExcel(userId);
+                        contextData += `\n\n[SISTEMA]: SE HA GENERADO UN REPORTE EXCEL PARA EL USUARIO. URL: ${fileUrl}\nINSTRUCCIÓN: Dile al usuario que su reporte está listo y dale el enlace exacto: [Descargar Reporte Excel](${fileUrl})`;
+                    }
+                }
+            } catch (e) {
+                console.error("Action Detection Failed", e);
+            }
+        }
+
+        // 1.6. DYNAMIC CONTEXT: Check if specific PROJECT is mentioned for "Executive Report"
         // Get all projects references (lightweight)
         const allProjectsRef = await prisma.project.findMany({ select: { id: true, name: true, code: true } });
         const mentionedProject = allProjectsRef.find(p =>
