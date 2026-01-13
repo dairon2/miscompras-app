@@ -243,8 +243,9 @@ export const chatWithAI = async (req: Request, res: Response) => {
                     if (userId) {
                         const fileUrl = await generateUserRequirementsExcel(userId, projectId);
                         // Construct absolute URL for frontend
-                        // In production, this should come from env. Locally 4000.
-                        const baseUrl = process.env.API_URL || 'http://localhost:4000';
+                        // Construct absolute URL
+                        const productionUrl = 'https://miscompras-api-prod.azurewebsites.net';
+                        const baseUrl = process.env.API_URL || (process.env.NODE_ENV === 'production' ? productionUrl : 'http://localhost:4000');
                         const fullUrl = `${baseUrl}${fileUrl}`;
 
                         const msgDetail = projectName ? `del proyecto "${projectName}"` : 'general';
