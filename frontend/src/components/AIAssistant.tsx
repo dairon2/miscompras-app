@@ -49,8 +49,12 @@ export default function AIAssistant() {
             setMessages(prev => [...prev, { role: 'model', content: data.reply }]);
         } catch (error: any) {
             console.error(error);
-            const errorMessage = error.response?.data?.details || error.response?.data?.error || 'Lo siento, tuve un problema conectando con mi cerebro. 🧠💥';
+            let errorMessage = error.response?.data?.details || error.response?.data?.error || 'Lo siento, tuve un problema conectando con mi cerebro. 🧠💥';
             const apiKeyStatus = error.response?.data?.keyPresent !== undefined ? `(Key Present: ${error.response.data.keyPresent})` : '';
+
+            if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+                errorMessage = "⚠️ Error de Conexión: No pude contactar al servidor. Verifica tu conexión o la configuración de URL.";
+            }
 
             setMessages(prev => [...prev, { role: 'model', content: `${errorMessage} ${apiKeyStatus} Por favor intenta de nuevo.` }]);
         } finally {

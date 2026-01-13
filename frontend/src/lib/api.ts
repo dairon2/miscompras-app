@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+console.log("[DEBUG] API Base URL:", baseURL);
+
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api',
+    baseURL,
     // Don't set Content-Type here - let it be set per-request or automatically for FormData
 });
 
