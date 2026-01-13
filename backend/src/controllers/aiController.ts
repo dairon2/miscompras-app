@@ -3,8 +3,77 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '../db';
 import { SYSTEM_FAQ } from '../utils/aiKnowledge';
 
-// Initialize Gemini
+// Initialize Gemini SDK
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+// Fallback Chain Strategy: If one fails (429), try the next.
+// We mix recent versions with stable ones to maximize quota pools.
+const FALLBACK_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-flash-latest" // Usually maps to 1.5 Flash or latest stable 2.0
+];
+
+/**
+ * Execute a generation task with model fallback strategy.
+ * This wraps the entire "Get Model -> Generate" process.
+ */
+async function generateWithFallback(
+    params: {
+        systemInstruction?: string,
+        prompt?: string,
+        history?: any[],     // For Chat
+        message?: string,    // For Chat
+        jsonMode?: boolean
+    }
+) {
+    let lastError: any = null;
+
+    for (const modelName of FALLBACK_MODELS) {
+        try {
+            // Configure Model
+            const config: any = {};
+            if (params.jsonMode) config.responseMimeType = "application/json";
+
+            const model = genAI.getGenerativeModel({
+                model: modelName,
+                systemInstruction: params.systemInstruction,
+                generationConfig: config
+            });
+
+            if (params.history && params.message) {
+                // CHAT MODE
+                const chat = model.startChat({
+                    history: params.history,
+                    generationConfig: { maxOutputTokens: 2500 }
+                });
+                // We use a simple retry for transient errors on the SAME model first
+                // But if it persists as 429, the loop continues to next model
+                const result = await chat.sendMessage(params.message);
+                return result.response.text();
+            } else if (params.prompt) {
+                // SINGLE PROMPT MODE
+                const result = await model.generateContent(params.prompt);
+                return result.response.text();
+            }
+
+        } catch (error: any) {
+            console.warn(`Model ${modelName} failed: ${error.message}`);
+            lastError = error;
+
+            // If error is NOT a quota/availability error, throw immediately (e.g. Invalid Argument)
+            const isQuotaError = error.message?.includes('429') || error.message?.includes('503') || error.message?.includes('overloaded');
+
+            if (!isQuotaError) throw error;
+
+            // If it IS a quota error, continue to next model in loop
+            continue;
+        }
+    }
+
+    // If we get here, all models failed
+    throw lastError || new Error("All fallback models failed.");
+}
 
 export const chatWithAI = async (req: Request, res: Response) => {
     try {
@@ -19,25 +88,6 @@ export const chatWithAI = async (req: Request, res: Response) => {
         // Helper for currency formatting
         const formatMoney = (amount: any) => {
             return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(Number(amount) || 0);
-        };
-
-        // Retry Helper for 503 and 429 Errors
-        const retryOperation = async <T>(operation: () => Promise<T>, retries = 7, delay = 1000): Promise<T> => {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    return await operation();
-                } catch (error: any) {
-                    const isTransient = error.message?.includes('503') || error.message?.includes('overloaded') || error.message?.includes('429');
-                    if (isTransient && i < retries - 1) {
-                        console.warn(`Gemini Busy (503/429). Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2; // Exponential backoff: 1, 2, 4, 8, 16 seconds
-                        continue;
-                    }
-                    throw error;
-                }
-            }
-            throw new Error('Max retries reached');
         };
 
         if (userRole === 'USER') {
@@ -157,9 +207,12 @@ export const chatWithAI = async (req: Request, res: Response) => {
              `;
 
             try {
-                const actionModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { responseMimeType: "application/json" } });
-                const actionResult = await retryOperation(() => actionModel.generateContent(actionPrompt));
-                const actionJson = JSON.parse(actionResult.response.text());
+                // Use Fallback for Action Detection too
+                const actionText = await generateWithFallback({
+                    prompt: actionPrompt,
+                    jsonMode: true
+                });
+                const actionJson = JSON.parse(actionText);
 
                 if (actionJson.action === 'GENERATE_REPORT' && actionJson.type === 'USER_REQUIREMENTS') {
                     // Import service dynamically
@@ -196,8 +249,7 @@ export const chatWithAI = async (req: Request, res: Response) => {
             }
         }
 
-        // 1.6. DYNAMIC CONTEXT: Check if specific PROJECT is mentioned for "Executive Report"
-        // Get all projects references (lightweight)
+        // 1.6. DYNAMIC CONTEXT: Check if specific PROJECT is mentioned
         const allProjectsRef = await prisma.project.findMany({ select: { id: true, name: true, code: true } });
         const mentionedProject = allProjectsRef.find(p =>
             message.toLowerCase().includes(p.name.toLowerCase()) ||
@@ -205,7 +257,6 @@ export const chatWithAI = async (req: Request, res: Response) => {
         );
 
         if (mentionedProject) {
-            // Fetch DEEP analytics for this project
             const fullProject = await prisma.project.findUnique({
                 where: { id: mentionedProject.id },
                 include: {
@@ -216,102 +267,72 @@ export const chatWithAI = async (req: Request, res: Response) => {
             });
 
             if (fullProject) {
-                // Calculate Financials
                 const totalBudget = fullProject.budgets.reduce((sum, b) => sum + Number(b.amount), 0);
                 const totalAvailable = fullProject.budgets.reduce((sum, b) => sum + Number(b.available), 0);
                 const totalExecuted = totalBudget - totalAvailable;
                 const executionPercentage = totalBudget > 0 ? ((totalExecuted / totalBudget) * 100).toFixed(1) : '0';
 
-                // Requirement Stats
                 const reqsPending = fullProject.requirements.filter(r => r.status === 'PENDING_APPROVAL').length;
                 const reqsApproved = fullProject.requirements.filter(r => r.status === 'APPROVED').length;
 
                 contextData += `
-                
                 ---------------------------------------------------------
                 📊 DATOS PROFUNDOS DE PROYECTO IDENTIFICADO: "${fullProject.name}" (${fullProject.code})
                 ---------------------------------------------------------
                 Líder: ${fullProject.leader?.name || 'N/A'}
-                
                 FINANZAS:
-                - Presupuesto Total Asignado: ${formatMoney(totalBudget)}
-                - Ejecutado (Gastado): ${formatMoney(totalExecuted)}
+                - Presupuesto Total: ${formatMoney(totalBudget)}
+                - Ejecutado: ${formatMoney(totalExecuted)}
                 - Disponible: ${formatMoney(totalAvailable)}
                 - % Ejecución: ${executionPercentage}%
-                
-                ACTIVIDAD OPERATIVA:
-                - Requerimientos Aprobados: ${reqsApproved}
-                - Requerimientos Pendientes: ${reqsPending}
-                
+                ACTIVIDAD:
+                - Aprobados: ${reqsApproved}, Pendientes: ${reqsPending}
                 PRESUPUESTOS INDIVIDUALES:
                 ${fullProject.budgets.map(b => `- ${b.title}: ${formatMoney(b.amount)} (Disp: ${formatMoney(b.available)})`).join('\n')}
-                
-                INSTRUCCIÓN CLAVE: El usuario está preguntando por este proyecto. USA ESTOS DATOS para generar el reporte ejecutivo o responder la duda.
+                INSTRUCCIÓN CLAVE: El usuario pregunta por este proyecto. USA ESTOS DATOS.
                 ---------------------------------------------------------
                 `;
             }
         }
 
-        // 2. Prepare System Prompt with Knowledge Base (imported from aiKnowledge.ts)
+        // 2. Prepare System Prompt
         const systemPrompt = `
-        Eres "MisCompras Bot", asistente experto del sistema de gestión de compras del Museo de Antioquia.
-        
+        Eres "MisCompras Bot", asistente experto del sistema de gestión de compras.
         ${SYSTEM_FAQ}
-
         ${contextData}
         
         TU MISIÓN:
-        1. Responder dudas sobre CÓMO usar el sistema basándote en el CENTRO DE AYUDA.
-        2. Responder preguntas sobre el estado actual del usuario (contexto provisto).
-        3. SI TE PIDEN EL REPORTE DE UN PROYECTO ("Dame un resumen...", "Cómo va el proyecto X"): Actúa como un Analista Financiero Senior. Genera un texto narrativo profesional que incluya:
-            - Estado financiero general (% ejecución).
-            - Alertas (si el presupuesto está bajo).
-            - Actividad reciente.
-            - Conclusión ejecutiva.
-            - Usa negritas para cifras clave.
+        1. Responder dudas usando el CENTRO DE AYUDA.
+        2. Contextualizar respuestas con los datos del usuario.
+        3. Para REPORTE DE PROYECTO: Actúa como Analista Financiero Senior. Texto narrativo, conciso, alerta financiera si aplica.
         
         REGLAS:
-        - Responde SIEMPRE en español, amable y profesional.
-        - Sé conciso. Máximo 4 párrafos para reportes.
-        - CUANDO TE PIDAN LISTAR PROYECTOS, PRESUPUESTOS O REQUERIMIENTOS: Usa la información EXACTA de la sección de DATOS (arriba). Copia y pega la lista usando viñetas. No omitas información visible en el contexto.
-        - Si la lista está vacía en el contexto, dilo claramente ("No veo items en este momento").
-        - Si no sabes algo o no está en el contexto, di que no tienes esa información y sugiere contactar a soporte.
+        - Español, profesional, conciso.
+        - Listas: Usa datos exactos del contexto.
         `;
 
-        // 3. Configure Model
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-            systemInstruction: systemPrompt
-        });
-
-        // 4. Start Chat
-        // Sanitize history: Gemini requires history to start with 'user' role.
-        // We filter out any initial 'model' messages (like the welcome message).
+        // 3. START CHAT WITH FALLBACK
+        // Sanitize history
         const sanitizedHistory = history?.filter((msg: any, index: number) => {
-            // If it's the very first message and it's from model, skip it.
             if (index === 0 && msg.role === 'model') return false;
             return true;
         }) || [];
 
-        const chat = model.startChat({
-            history: sanitizedHistory.map((msg: any) => ({
-                role: msg.role === 'user' ? 'user' : 'model',
-                parts: [{ text: msg.content }]
-            })),
-            generationConfig: {
-                maxOutputTokens: 2500,
-            },
+        const formattedHistory = sanitizedHistory.map((msg: any) => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.content }]
+        }));
+
+        const responseText = await generateWithFallback({
+            systemInstruction: systemPrompt,
+            history: formattedHistory,
+            message: message
         });
 
-        const result = await retryOperation(() => chat.sendMessage(message));
-        const response = result.response;
-        const text = response.text();
-
-        res.json({ reply: text });
+        res.json({ reply: responseText });
 
     } catch (error: any) {
         console.error("AI Controller Error:", error);
-        console.log("API Key present:", !!process.env.GEMINI_API_KEY);
         res.status(500).json({
             error: "Error interno del asistente.",
             details: error.message,
@@ -325,48 +346,17 @@ export const extractRequirement = async (req: Request, res: Response) => {
         const { text } = req.body;
 
         const extractionPrompt = `
-        Actúa como un asistente administrativo experto. Analiza el siguiente texto y extrae los datos para crear un Requerimiento de Compra.
-        
-        TEXTO DEL USUARIO: "${text}"
-        
-        Debes generar un JSON con esta estructura exacta:
-        {
-            "title": "Un título corto y profesional para el requerimiento (ej: 'Compra de Sillas' o 'Mantenimiento X')",
-            "description": "Una descripción detallada y técnica redactada profesionalmente. Incluye el propósito si se infiere. NO inventes datos, pero redacta bonito para rellenar el campo.",
-            "quantity": "La cantidad mencionada (ej: '5', '10 cajas'). Si no dice, pon '1'.",
-            "estimatedAmount": 0, // El valor numérico estimado en pesos (sin puntos ni signos). Si no se menciona, intenta estimar un valor de mercado realista en Colombia para ese item o pon 0.
-            "suggestedSupplier": "Nombre del proveedor si se menciona, o null"
-        }
-
-        IMPORTANTE: 'estimatedAmount' debe ser un NÚMERO (Number).
+        Actúa como un asistente experto. Extrae datos para Requerimiento de Compra.
+        TEXTO: "${text}"
+        JSON Output: { "title", "description", "quantity", "estimatedAmount" (number), "suggestedSupplier" }
         `;
 
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-            generationConfig: { responseMimeType: "application/json" }
+        const responseText = await generateWithFallback({
+            prompt: extractionPrompt,
+            jsonMode: true
         });
 
-        // Retry helper local for this function
-        const retryOperation = async <T>(operation: () => Promise<T>, retries = 7, delay = 1000): Promise<T> => {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    return await operation();
-                } catch (error: any) {
-                    const isTransient = error.message?.includes('503') || error.message?.includes('overloaded') || error.message?.includes('429');
-                    if (isTransient && i < retries - 1) {
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2;
-                        continue;
-                    }
-                    throw error;
-                }
-            }
-            throw new Error('Max retries reached');
-        };
-
-        const result = await retryOperation(() => model.generateContent(extractionPrompt));
-        const jsonResponse = JSON.parse(result.response.text());
-
+        const jsonResponse = JSON.parse(responseText);
         res.json(jsonResponse);
 
     } catch (error: any) {
