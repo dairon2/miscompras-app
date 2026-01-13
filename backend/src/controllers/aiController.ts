@@ -17,6 +17,11 @@ export const chatWithAI = async (req: Request, res: Response) => {
         // 1. Fetch Context Based on Role (Security & Business Rules)
         let contextData = "";
 
+        // Helper for currency formatting
+        const formatMoney = (amount: any) => {
+            return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(Number(amount) || 0);
+        };
+
         if (userRole === 'USER') {
             // USER: Fetch specific lists
             const [myReqs, myBudgets, myProjects] = await Promise.all([
@@ -44,10 +49,10 @@ export const chatWithAI = async (req: Request, res: Response) => {
             DATOS DEL USUARIO (${user.name}):
             
             MIS ÚLTIMOS REQUERIMIENTOS:
-            ${myReqs.map(r => `- ${r.title} (${r.status}): $${r.totalAmount || 0}`).join('\n')}
+            ${myReqs.map(r => `- ${r.title} (${r.status}): ${formatMoney(r.totalAmount)}`).join('\n')}
             
             MIS PRESUPUESTOS ASIGNADOS:
-            ${myBudgets.map(b => `- ${b.title} (Proyecto: ${b.project.name}): Disponible $${b.available}`).join('\n')}
+            ${myBudgets.map(b => `- ${b.title} (Proyecto: ${b.project.name}): Disponible ${formatMoney(b.available)}`).join('\n')}
             
             MIS PROYECTOS LIDERADOS:
             ${myProjects.map(p => `- ${p.name} (${p.code})`).join('\n')}
@@ -81,7 +86,7 @@ export const chatWithAI = async (req: Request, res: Response) => {
             ${projects.map(p => `- ${p.name} (${p.code})`).join('\n')}
             
             PRESUPUESTOS RECIENTES (Total: ${await prisma.budget.count()}):
-            ${budgets.map(b => `- ${b.title} (Proyecto: ${b.project.name}): Disp. $${b.available}`).join('\n')}
+            ${budgets.map(b => `- ${b.title} (Proyecto: ${b.project.name}): Disp. ${formatMoney(b.available)}`).join('\n')}
             
             REQUERIMIENTOS PENDIENTES DE APROBACIÓN (Total: ${await prisma.requirement.count({ where: { status: 'PENDING_APPROVAL' } })}):
             ${reqsPending.map(r => `- ${r.title} (Solicitado por: ${r.createdBy.email})`).join('\n')}
@@ -104,7 +109,9 @@ export const chatWithAI = async (req: Request, res: Response) => {
         
         REGLAS:
         - Responde SIEMPRE en español, amable y profesional.
-        - Sé conciso. Máximo 3 párrafos.
+        - Sé conciso. Máximo 3 párrafos para explicaciones.
+        - CUANDO TE PIDAN LISTAR PROYECTOS, PRESUPUESTOS O REQUERIMIENTOS: Usa la información EXACTA de la sección de DATOS (arriba). Copia y pega la lista usando viñetas. No omitas información visible en el contexto.
+        - Si la lista está vacía en el contexto, dilo claramente ("No veo items en este momento").
         - Si no sabes algo o no está en el contexto, di que no tienes esa información y sugiere contactar a soporte.
         `;
 
@@ -129,7 +136,7 @@ export const chatWithAI = async (req: Request, res: Response) => {
                 parts: [{ text: msg.content }]
             })),
             generationConfig: {
-                maxOutputTokens: 800,
+                maxOutputTokens: 2500,
             },
         });
 
