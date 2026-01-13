@@ -53,7 +53,7 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
                 amount: parseFloat(amount),
                 invoiceNumber,
                 purchaseOrder,
-                paymentDate: paymentDate ? new Date(paymentDate) : null,
+                paymentDate: paymentDate ? new Date(paymentDate + 'T12:00:00') : null,
                 observations,
                 requirementId
             }
@@ -149,7 +149,7 @@ export const updatePayment = async (req: AuthRequest, res: Response) => {
                 amount: amount !== undefined ? parseFloat(amount) : undefined,
                 invoiceNumber,
                 purchaseOrder,
-                paymentDate: paymentDate ? new Date(paymentDate) : undefined,
+                paymentDate: paymentDate ? new Date(paymentDate + 'T12:00:00') : undefined,
                 observations
             }
         });

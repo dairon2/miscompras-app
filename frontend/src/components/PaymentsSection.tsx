@@ -186,56 +186,77 @@ export default function PaymentsSection({
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {payments.map((payment) => (
-                        <motion.div
-                            key={payment.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-gray-700 flex items-center justify-between"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 font-black">
-                                    #{payment.paymentNumber}
-                                </div>
-                                <div>
-                                    <p className="font-black text-lg text-green-600">
-                                        ${parseFloat(payment.amount.toString()).toLocaleString()}
-                                    </p>
-                                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                                        {payment.invoiceNumber && (
-                                            <span className="flex items-center gap-1">
-                                                <FileText size={12} />
-                                                Factura: {payment.invoiceNumber}
-                                            </span>
-                                        )}
-                                        {payment.purchaseOrder && (
-                                            <span className="flex items-center gap-1">
-                                                <FileText size={12} />
-                                                OC: {payment.purchaseOrder}
-                                            </span>
-                                        )}
+                    {/* Scrollable container - max 4 items visible (approx 340px) */}
+                    <div className="max-h-[340px] overflow-y-auto space-y-3 pr-2">
+                        {payments.map((payment) => (
+                            <motion.div
+                                key={payment.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-gray-700"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    {/* Left: Number badge and amount */}
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 font-black text-sm flex-shrink-0">
+                                            #{payment.paymentNumber}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="font-black text-lg text-green-600">
+                                                ${parseFloat(payment.amount.toString()).toLocaleString()}
+                                            </p>
+                                            {/* Details grid */}
+                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mt-1">
+                                                {payment.invoiceNumber && (
+                                                    <span className="flex items-center gap-1">
+                                                        <FileText size={12} />
+                                                        Fact: {payment.invoiceNumber}
+                                                    </span>
+                                                )}
+                                                {payment.purchaseOrder && (
+                                                    <span className="flex items-center gap-1">
+                                                        <FileText size={12} />
+                                                        OC: {payment.purchaseOrder}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {payment.observations && (
+                                                <p className="text-xs text-gray-400 mt-1 truncate">{payment.observations}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Right: Date and delete */}
+                                    <div className="flex items-center gap-2 flex-shrink-0">
                                         {payment.paymentDate && (
-                                            <span className="flex items-center gap-1">
+                                            <span className="flex items-center gap-1 text-xs text-gray-500 whitespace-nowrap">
                                                 <Calendar size={12} />
-                                                {new Date(payment.paymentDate).toLocaleDateString('es-CO')}
+                                                {new Date(payment.paymentDate).toLocaleDateString('es-CO', {
+                                                    day: '2-digit',
+                                                    month: '2-digit',
+                                                    year: 'numeric'
+                                                })}
                                             </span>
+                                        )}
+                                        {canEdit && (
+                                            <button
+                                                onClick={() => handleDelete(payment.id)}
+                                                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors flex-shrink-0"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
                                         )}
                                     </div>
-                                    {payment.observations && (
-                                        <p className="text-xs text-gray-400 mt-1">{payment.observations}</p>
-                                    )}
                                 </div>
-                            </div>
-                            {canEdit && (
-                                <button
-                                    onClick={() => handleDelete(payment.id)}
-                                    className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            )}
-                        </motion.div>
-                    ))}
+                            </motion.div>
+                        ))}
+                    </div>
+
+                    {/* Scroll indicator if more than 4 payments */}
+                    {payments.length > 4 && (
+                        <p className="text-center text-xs text-gray-400">
+                            Desliza para ver más pagos ({payments.length} total)
+                        </p>
+                    )}
 
                     {/* Fully Paid Badge */}
                     {progress >= 100 && (
