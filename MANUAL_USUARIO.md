@@ -340,6 +340,36 @@ Verás 4 tarjetas principales:
 
 ---
 
+---
+
+## 12. Asistente Virtual Inteligente (IA)
+
+MIS COMPRAS integra un potente **Asistente Virtual** basado en Inteligencia Artificial (Google Gemini) que te ayuda a realizar tareas complejas usando lenguaje natural.
+
+### ¿Cómo acceder?
+Haz clic en el botón flotante ✨ (chispas mágicas) ubicado en la esquina inferior derecha de la pantalla.
+
+### Funcionalidades del Asistente
+El asistente conoce tu contexto (quién eres, qué proyectos lideras, qué aprobaciones tienes pendientes) y puede:
+
+1.  **Consultas de Estado**:
+    - *"¿Cuánto presupuesto me queda en el proyecto Colores de la Montaña?"*
+    - *"¿Tengo requerimientos pendientes de aprobación?"*
+    - *"¿Cuál es el proveedor con mejor calificación?"*
+
+2.  **Generación de Reportes**:
+    El asistente puede construir archivos Excel al instante.
+    - **Comando**: *"Descarga un reporte del proyecto [Nombre del Proyecto]"*
+    - **Resultado**: El bot generará un enlace directo para descargar un archivo Excel con TODOS los requerimientos de ese proyecto (título, estado, montos, proveedor), útil para auditorías.
+
+3.  **Análisis Financiero**:
+    - *"Analiza la ejecución de mis proyectos y dime si alguno está en riesgo"*
+    - *"Resume mis facturas del último mes"*
+
+> 🚀 **Nota:** El asistente está reforzado con una técnica de **"Respaldo Infinito"**, por lo que siempre estará disponible incluso si hay alta demanda en los servicios de Google.
+
+---
+
 ## Preguntas Frecuentes
 
 ### ¿Por qué no puedo crear requerimientos?

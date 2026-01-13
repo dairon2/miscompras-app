@@ -22,7 +22,8 @@ import {
     ClipboardList,
     Receipt,
     Settings,
-    ArrowLeft
+    ArrowLeft,
+    Sparkles
 } from "lucide-react";
 import Link from "next/link";
 
@@ -107,6 +108,17 @@ const faqData: FAQItem[] = [
         category: "General",
         question: "¿Qué hago si encuentro un error?",
         answer: "Contacta al equipo de soporte usando la información en la sección 'Contacto' de esta página. Incluye una descripción detallada del problema y capturas de pantalla si es posible."
+    },
+    // Asistente IA
+    {
+        category: "Asistente IA",
+        question: "¿Qué puede hacer el Asistente Virtual?",
+        answer: "El asistente (botón ✨) puede responder preguntas sobre el estado de tus proyectos, presupuestos disponibles y tareas pendientes. Además, puede GENERAR REPORTES EXCEL: solo pídele 'Descarga un reporte del proyecto X' y te dará un enlace directo."
+    },
+    {
+        category: "Asistente IA",
+        question: "¿Qué hago si el asistente no responde?",
+        answer: "El asistente cuenta con un sistema de 'Respaldo Infinito' que cambia automáticamente de servidor si hay congestión. Si aún así falla, verifica tu conexión a internet o intenta recargar la página."
     }
 ];
 
@@ -146,6 +158,12 @@ const moduleGuides = [
         title: "Configuración",
         description: "Ajusta las preferencias del sistema y gestiona usuarios (solo administradores).",
         steps: ["Accede a config", "Modifica parámetros", "Gestiona roles", "Guarda cambios"]
+    },
+    {
+        icon: Sparkles,
+        title: "Asistente IA",
+        description: "Usa el asistente virtual para consultar presupuestos y generar reportes Excel.",
+        steps: ["Haz clic en ✨", "Pregunta por un proyecto", "Pide un reporte", "Analiza datos"]
     }
 ];
 

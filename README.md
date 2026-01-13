@@ -43,6 +43,7 @@
 - ✅ Reportes con gráficos interactivos (Recharts)
 - ✅ Modo oscuro / claro
 - ✅ Diseño responsive
+- ✅ **Asistente Virtual IA (Gemini)**: Consultas contextuales, generación de reportes Excel y análisis financiero.
 
 ---
 
@@ -57,6 +58,7 @@
 - **Almacenamiento**: Azure Blob Storage
 - **Email**: Nodemailer (SMTP)
 - **PDF**: PDFKit
+- **IA**: Google Gemini (Flash 2.5 / Pro 1.5)
 
 ### Frontend
 - **Framework**: Next.js 14 (App Router)

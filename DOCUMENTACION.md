@@ -36,6 +36,9 @@ El sistema sigue una arquitectura de cliente-servidor desacoplada:
   - Emails: Azure Communication Services
   - Archivos: Sistema de archivos local (volúmenes de contenedor)
   - Reportes: ExcelJS, PDFKit
+  - **Inteligencia Artificial**: Google Gemini API (v1beta)
+    - Modelos: Gemini 2.5 Flash, 1.5 Pro, 1.5 Flash (Fallback Chain)
+    - SDK: `@google/generative-ai`
 
 ---
 
@@ -58,6 +61,11 @@ El sistema sigue una arquitectura de cliente-servidor desacoplada:
 ### 4.4 Sistema de Notificaciones
 - Notificaciones internas en la campana del dashboard.
 - Notificaciones vía email para cambios críticos de estado (Aprobaciones/Rechazos).
+
+### 4.5 Asistente Virtual Inteligente (Copilot)
+- **Chat Contextual**: El asistente inyecta dinámicamente datos del usuario (proyectos, presupuestos) en el prompt del sistema para dar respuestas personalizadas.
+- **Generación de Archivos**: Capacidad de interpretar intención ("Action Detection") para generar reportes Excel bajo demanda y servir enlaces de descarga públicos.
+- **Resiliencia (Fallback Strategy)**: Implementación de una cadena de responsabilidad para el manejo de cuotas de API (Error 429), rotando automáticamente entre modelos (Flash 2.5 -> Flash Lite -> Pro) para garantizar disponibilidad 24/7.
 
 ---
 
