@@ -1,7 +1,6 @@
-
 import { Request, Response } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { prisma } from '../db'; // Import prisma client
+import { prisma } from '../db';
 import { SYSTEM_FAQ } from '../utils/aiKnowledge';
 
 // Initialize Gemini
@@ -20,6 +19,25 @@ export const chatWithAI = async (req: Request, res: Response) => {
         // Helper for currency formatting
         const formatMoney = (amount: any) => {
             return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(Number(amount) || 0);
+        };
+
+        // Retry Helper for 503 Errors
+        const retryOperation = async <T>(operation: () => Promise<T>, retries = 3, delay = 1000): Promise<T> => {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    return await operation();
+                } catch (error: any) {
+                    const isOverloaded = error.message?.includes('503') || error.message?.includes('overloaded');
+                    if (isOverloaded && i < retries - 1) {
+                        console.warn(`Gemini 503 Overloaded. Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Exponential backoff
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+            throw new Error('Max retries reached');
         };
 
         if (userRole === 'USER') {
@@ -45,7 +63,7 @@ export const chatWithAI = async (req: Request, res: Response) => {
                 }),
                 prisma.invoice.findMany({
                     where: { createdById: userId },
-                    take: 5,
+                    take: 5, // Access to their invoices
                     orderBy: { issueDate: 'desc' },
                     select: { invoiceNumber: true, amount: true, status: true, supplier: { select: { name: true } } }
                 })
@@ -121,8 +139,6 @@ export const chatWithAI = async (req: Request, res: Response) => {
             ${invoices.map(i => `- Factura #${i.invoiceNumber} de ${i.supplier.name}: ${formatMoney(i.amount)} (${i.status})`).join('\n')}
             `;
         }
-
-        // ... existing context generation ...
 
         // 1.5. DYNAMIC CONTEXT: Check if specific PROJECT is mentioned for "Executive Report"
         // Get all projects references (lightweight)
@@ -231,7 +247,7 @@ export const chatWithAI = async (req: Request, res: Response) => {
             },
         });
 
-        const result = await chat.sendMessage(message);
+        const result = await retryOperation(() => chat.sendMessage(message));
         const response = result.response;
         const text = response.text();
 
@@ -274,7 +290,25 @@ export const extractRequirement = async (req: Request, res: Response) => {
             generationConfig: { responseMimeType: "application/json" }
         });
 
-        const result = await model.generateContent(extractionPrompt);
+        // Retry helper local for this function
+        const retryOperation = async <T>(operation: () => Promise<T>, retries = 3, delay = 1000): Promise<T> => {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    return await operation();
+                } catch (error: any) {
+                    const isOverloaded = error.message?.includes('503') || error.message?.includes('overloaded');
+                    if (isOverloaded && i < retries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+            throw new Error('Max retries reached');
+        };
+
+        const result = await retryOperation(() => model.generateContent(extractionPrompt));
         const jsonResponse = JSON.parse(result.response.text());
 
         res.json(jsonResponse);
