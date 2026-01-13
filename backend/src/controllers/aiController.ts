@@ -81,11 +81,19 @@ export const chatWithAI = async (req: Request, res: Response) => {
         });
 
         // 4. Start Chat
+        // Sanitize history: Gemini requires history to start with 'user' role.
+        // We filter out any initial 'model' messages (like the welcome message).
+        const sanitizedHistory = history?.filter((msg: any, index: number) => {
+            // If it's the very first message and it's from model, skip it.
+            if (index === 0 && msg.role === 'model') return false;
+            return true;
+        }) || [];
+
         const chat = model.startChat({
-            history: history?.map((msg: any) => ({
+            history: sanitizedHistory.map((msg: any) => ({
                 role: msg.role === 'user' ? 'user' : 'model',
                 parts: [{ text: msg.content }]
-            })) || [],
+            })),
             generationConfig: {
                 maxOutputTokens: 800,
             },
@@ -97,8 +105,13 @@ export const chatWithAI = async (req: Request, res: Response) => {
 
         res.json({ reply: text });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("AI Controller Error:", error);
-        res.status(500).json({ error: "Lo siento, tuve un problema procesando tu consulta. Intenta de nuevo." });
+        console.log("API Key present:", !!process.env.GEMINI_API_KEY);
+        res.status(500).json({
+            error: "Error interno del asistente.",
+            details: error.message,
+            keyPresent: !!process.env.GEMINI_API_KEY
+        });
     }
 };
