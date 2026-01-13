@@ -13,6 +13,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useThemeStore } from "@/store/themeStore";
 import ForcePasswordChangeModal from "@/components/ForcePasswordChangeModal";
+import AIAssistant from "@/components/AIAssistant";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -415,6 +416,7 @@ export default function RootLayout({
             </footer>
           )}
           {!isAuthPage && <MobileNavbar pathname={pathname} userRole={user?.role || ''} />}
+          {!isAuthPage && <AIAssistant />}
           <ForcePasswordChangeModal />
         </div>
         <ToastContainer />

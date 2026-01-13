@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { prisma } from './db';
 import { authMiddleware, roleCheck } from './middlewares/auth';
 
 import authRoutes from './routes/authRoutes';
@@ -17,6 +18,7 @@ import budgetRoutes from './routes/budgetRoutes';
 import adjustmentRoutes from './routes/adjustmentRoutes';
 import invoiceRoutes from './routes/invoiceRoutes';
 import submissionRulesRoutes from './routes/submissionRulesRoutes';
+import aiRoutes from './routes/aiRoutes';
 
 dotenv.config();
 
@@ -40,28 +42,7 @@ validateEnv();
 
 const app = express();
 
-// Import demo data from separate file (only used when DATABASE_URL is not configured)
-import { prismaMock } from './demoData';
-
-// Database Initialization
-let prisma: PrismaClient;
-
-if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("mock")) {
-    console.log('--- PRODUCTION MODE: Connecting to Database ---');
-    prisma = new PrismaClient({
-        log: ['error', 'warn'],
-    });
-    // Test connection
-    prisma.$connect()
-        .then(() => console.log('Successfully connected to Azure PostgreSQL'))
-        .catch((e) => {
-            console.error('DATABASE CONNECTION ERROR:', e.message);
-            console.error('Check your DATABASE_URL and Azure Firewall rules.');
-        });
-} else {
-    console.log('--- DEMO MODE: Database disabled (using prismaMock) ---');
-    prisma = prismaMock as any;
-}
+// Database Initialization moved to ./db.ts
 
 const PORT = process.env.PORT || 4000;
 
@@ -309,6 +290,7 @@ app.use('/api/budgets', budgetRoutes);
 app.use('/api/adjustments', adjustmentRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/submission-rules', submissionRulesRoutes);
+app.use('/api/ai', aiRoutes);
 
 
 // NOTE: Budget CRUD is handled by budgetRoutes mounted at /api/budgets
