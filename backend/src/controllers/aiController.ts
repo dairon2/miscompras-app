@@ -21,17 +21,17 @@ export const chatWithAI = async (req: Request, res: Response) => {
             return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(Number(amount) || 0);
         };
 
-        // Retry Helper for 503 Errors
-        const retryOperation = async <T>(operation: () => Promise<T>, retries = 3, delay = 1000): Promise<T> => {
+        // Retry Helper for 503 and 429 Errors
+        const retryOperation = async <T>(operation: () => Promise<T>, retries = 5, delay = 1000): Promise<T> => {
             for (let i = 0; i < retries; i++) {
                 try {
                     return await operation();
                 } catch (error: any) {
-                    const isOverloaded = error.message?.includes('503') || error.message?.includes('overloaded');
-                    if (isOverloaded && i < retries - 1) {
-                        console.warn(`Gemini 503 Overloaded. Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
+                    const isTransient = error.message?.includes('503') || error.message?.includes('overloaded') || error.message?.includes('429');
+                    if (isTransient && i < retries - 1) {
+                        console.warn(`Gemini Busy (503/429). Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
                         await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2; // Exponential backoff
+                        delay *= 2; // Exponential backoff: 1, 2, 4, 8, 16 seconds
                         continue;
                     }
                     throw error;
@@ -291,13 +291,13 @@ export const extractRequirement = async (req: Request, res: Response) => {
         });
 
         // Retry helper local for this function
-        const retryOperation = async <T>(operation: () => Promise<T>, retries = 3, delay = 1000): Promise<T> => {
+        const retryOperation = async <T>(operation: () => Promise<T>, retries = 5, delay = 1000): Promise<T> => {
             for (let i = 0; i < retries; i++) {
                 try {
                     return await operation();
                 } catch (error: any) {
-                    const isOverloaded = error.message?.includes('503') || error.message?.includes('overloaded');
-                    if (isOverloaded && i < retries - 1) {
+                    const isTransient = error.message?.includes('503') || error.message?.includes('overloaded') || error.message?.includes('429');
+                    if (isTransient && i < retries - 1) {
                         await new Promise(resolve => setTimeout(resolve, delay));
                         delay *= 2;
                         continue;
