@@ -3,12 +3,18 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, X, Send, Bot, User, Sparkles, Loader2 } from "lucide-react";
+import { MessageSquare, X, Send, Bot, User, Sparkles, Loader2, Paperclip, FileText, Image as ImageIcon, Trash2 } from "lucide-react";
 import api from "@/lib/api";
 
 interface Message {
     role: 'user' | 'model';
     content: string;
+}
+
+interface Attachment {
+    name: string;
+    type: string;
+    data: string; // Base64
 }
 
 export default function AIAssistant() {
@@ -18,7 +24,9 @@ export default function AIAssistant() {
     ]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [attachment, setAttachment] = useState<Attachment | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -26,24 +34,58 @@ export default function AIAssistant() {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages, isOpen]);
+    }, [messages, isOpen, attachment]);
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert("El archivo es muy grande. Máximo 5MB.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const base64 = ev.target?.result as string;
+            // Remove prefix data:image/png;base64,
+            const content = base64.split(',')[1];
+            setAttachment({
+                name: file.name,
+                type: file.type,
+                data: content
+            });
+        };
+        reader.readAsDataURL(file);
+    };
 
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault();
-        if (!input.trim() || isLoading) return;
+        if ((!input.trim() && !attachment) || isLoading) return;
 
         const userMessage = input.trim();
+        const currentAttachment = attachment; // Capture current state
+
+        // Optimistic update
+        let displayText = userMessage;
+        if (currentAttachment) {
+            displayText += `\n[Archivo adjunto: ${currentAttachment.name}]`;
+        }
+
         setInput("");
-        setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+        setAttachment(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+
+        setMessages(prev => [...prev, { role: 'user', content: displayText }]);
         setIsLoading(true);
 
         try {
-            // Prepare history for API (excluding the last user message which is sent as 'message')
-            // The API expects history in specific format if using chat session, 
-            // but for simple endpoint we can pass history array
             const { data } = await api.post('/ai/chat', {
-                message: userMessage,
-                history: messages.map(m => ({ role: m.role, content: m.content }))
+                message: userMessage || (currentAttachment ? "Analiza este archivo" : ""),
+                history: messages.map(m => ({ role: m.role, content: m.content })),
+                image: currentAttachment?.data,
+                mimeType: currentAttachment?.type
             });
 
             setMessages(prev => [...prev, { role: 'model', content: data.reply }]);
@@ -164,25 +206,63 @@ export default function AIAssistant() {
                         </div>
 
                         {/* Input Area */}
-                        <div className="p-4 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-gray-800 shrink-0">
-                            <form onSubmit={handleSubmit} className="flex gap-2">
+                        <div className="p-4 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-gray-800 shrink-0 flex flex-col gap-2">
+                            {/* Attachment Preview */}
+                            <AnimatePresence>
+                                {attachment && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-xl text-xs text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800"
+                                    >
+                                        <div className="p-1.5 bg-indigo-100 dark:bg-indigo-800 rounded-lg">
+                                            {attachment.type.startsWith('image/') ? <ImageIcon size={14} /> : <FileText size={14} />}
+                                        </div>
+                                        <span className="truncate max-w-[200px] font-medium">{attachment.name}</span>
+                                        <button
+                                            onClick={() => { setAttachment(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                                            className="ml-auto p-1 hover:bg-indigo-200 dark:hover:bg-indigo-700 rounded-full transition-colors"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <form onSubmit={handleSubmit} className="flex gap-2 items-center">
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/*,application/pdf"
+                                    onChange={handleFileSelect}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="p-3 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-colors"
+                                    title="Adjuntar archivo"
+                                >
+                                    <Paperclip size={20} />
+                                </button>
                                 <input
                                     type="text"
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder="Pregunta sobre tus presupuestos..."
+                                    placeholder={attachment ? "Describe el archivo..." : "Pregunta sobre tus presupuestos..."}
                                     className="flex-1 bg-gray-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                                     disabled={isLoading}
                                 />
                                 <button
                                     type="submit"
-                                    disabled={!input.trim() || isLoading}
+                                    disabled={(!input.trim() && !attachment) || isLoading}
                                     className="p-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-colors shadow-lg shadow-indigo-200 dark:shadow-none"
                                 >
                                     {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
                                 </button>
                             </form>
-                            <p className="text-[10px] text-center text-gray-400 mt-2">
+                            <p className="text-[10px] text-center text-gray-400 mt-1">
                                 Impulsado por Google Gemini AI
                             </p>
                         </div>
