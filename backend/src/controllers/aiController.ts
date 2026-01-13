@@ -122,8 +122,65 @@ export const chatWithAI = async (req: Request, res: Response) => {
             `;
         }
 
-        // 2. Prepare System Prompt with Knowledge Base (imported from aiKnowledge.ts)
+        // ... existing context generation ...
 
+        // 1.5. DYNAMIC CONTEXT: Check if specific PROJECT is mentioned for "Executive Report"
+        // Get all projects references (lightweight)
+        const allProjectsRef = await prisma.project.findMany({ select: { id: true, name: true, code: true } });
+        const mentionedProject = allProjectsRef.find(p =>
+            message.toLowerCase().includes(p.name.toLowerCase()) ||
+            message.toLowerCase().includes(p.code.toLowerCase())
+        );
+
+        if (mentionedProject) {
+            // Fetch DEEP analytics for this project
+            const fullProject = await prisma.project.findUnique({
+                where: { id: mentionedProject.id },
+                include: {
+                    leader: { select: { name: true, email: true } },
+                    budgets: true,
+                    requirements: { select: { status: true, totalAmount: true, title: true } }
+                }
+            });
+
+            if (fullProject) {
+                // Calculate Financials
+                const totalBudget = fullProject.budgets.reduce((sum, b) => sum + Number(b.amount), 0);
+                const totalAvailable = fullProject.budgets.reduce((sum, b) => sum + Number(b.available), 0);
+                const totalExecuted = totalBudget - totalAvailable;
+                const executionPercentage = totalBudget > 0 ? ((totalExecuted / totalBudget) * 100).toFixed(1) : '0';
+
+                // Requirement Stats
+                const reqsPending = fullProject.requirements.filter(r => r.status === 'PENDING_APPROVAL').length;
+                const reqsApproved = fullProject.requirements.filter(r => r.status === 'APPROVED').length;
+
+                contextData += `
+                
+                ---------------------------------------------------------
+                📊 DATOS PROFUNDOS DE PROYECTO IDENTIFICADO: "${fullProject.name}" (${fullProject.code})
+                ---------------------------------------------------------
+                Líder: ${fullProject.leader?.name || 'N/A'}
+                
+                FINANZAS:
+                - Presupuesto Total Asignado: ${formatMoney(totalBudget)}
+                - Ejecutado (Gastado): ${formatMoney(totalExecuted)}
+                - Disponible: ${formatMoney(totalAvailable)}
+                - % Ejecución: ${executionPercentage}%
+                
+                ACTIVIDAD OPERATIVA:
+                - Requerimientos Aprobados: ${reqsApproved}
+                - Requerimientos Pendientes: ${reqsPending}
+                
+                PRESUPUESTOS INDIVIDUALES:
+                ${fullProject.budgets.map(b => `- ${b.title}: ${formatMoney(b.amount)} (Disp: ${formatMoney(b.available)})`).join('\n')}
+                
+                INSTRUCCIÓN CLAVE: El usuario está preguntando por este proyecto. USA ESTOS DATOS para generar el reporte ejecutivo o responder la duda.
+                ---------------------------------------------------------
+                `;
+            }
+        }
+
+        // 2. Prepare System Prompt with Knowledge Base (imported from aiKnowledge.ts)
         const systemPrompt = `
         Eres "MisCompras Bot", asistente experto del sistema de gestión de compras del Museo de Antioquia.
         
@@ -134,11 +191,16 @@ export const chatWithAI = async (req: Request, res: Response) => {
         TU MISIÓN:
         1. Responder dudas sobre CÓMO usar el sistema basándote en el CENTRO DE AYUDA.
         2. Responder preguntas sobre el estado actual del usuario (contexto provisto).
-        3. Si te preguntan "qué puedo hacer", guíate por su rol y el apartado ROLES Y PERMISOS.
+        3. SI TE PIDEN EL REPORTE DE UN PROYECTO ("Dame un resumen...", "Cómo va el proyecto X"): Actúa como un Analista Financiero Senior. Genera un texto narrativo profesional que incluya:
+            - Estado financiero general (% ejecución).
+            - Alertas (si el presupuesto está bajo).
+            - Actividad reciente.
+            - Conclusión ejecutiva.
+            - Usa negritas para cifras clave.
         
         REGLAS:
         - Responde SIEMPRE en español, amable y profesional.
-        - Sé conciso. Máximo 3 párrafos para explicaciones.
+        - Sé conciso. Máximo 4 párrafos para reportes.
         - CUANDO TE PIDAN LISTAR PROYECTOS, PRESUPUESTOS O REQUERIMIENTOS: Usa la información EXACTA de la sección de DATOS (arriba). Copia y pega la lista usando viñetas. No omitas información visible en el contexto.
         - Si la lista está vacía en el contexto, dilo claramente ("No veo items en este momento").
         - Si no sabes algo o no está en el contexto, di que no tienes esa información y sugiere contactar a soporte.
