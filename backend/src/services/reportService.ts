@@ -3,10 +3,15 @@ import path from 'path';
 import fs from 'fs';
 import { prisma } from '../db';
 
-export const generateUserRequirementsExcel = async (userId: string): Promise<string> => {
+export const generateUserRequirementsExcel = async (userId: string, projectId?: string): Promise<string> => {
     // 1. Fetch Data
+    const whereClause: any = { createdById: userId };
+    if (projectId) {
+        whereClause.projectId = projectId;
+    }
+
     const requirements = await prisma.requirement.findMany({
-        where: { createdById: userId },
+        where: whereClause,
         orderBy: { createdAt: 'desc' },
         include: {
             project: { select: { name: true, code: true } },
@@ -56,7 +61,7 @@ export const generateUserRequirementsExcel = async (userId: string): Promise<str
         fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    const fileName = `reporte_reqs_${userId}_${Date.now()}.xlsx`;
+    const fileName = `reporte_reqs_${userId}_${projectId ? 'proj_' + projectId + '_' : ''}${Date.now()}.xlsx`;
     const filePath = path.join(uploadsDir, fileName);
 
     await workbook.xlsx.writeFile(filePath);

@@ -22,7 +22,7 @@ export const chatWithAI = async (req: Request, res: Response) => {
         };
 
         // Retry Helper for 503 and 429 Errors
-        const retryOperation = async <T>(operation: () => Promise<T>, retries = 5, delay = 1000): Promise<T> => {
+        const retryOperation = async <T>(operation: () => Promise<T>, retries = 7, delay = 1000): Promise<T> => {
             for (let i = 0; i < retries; i++) {
                 try {
                     return await operation();
@@ -323,7 +323,7 @@ export const extractRequirement = async (req: Request, res: Response) => {
         });
 
         // Retry helper local for this function
-        const retryOperation = async <T>(operation: () => Promise<T>, retries = 5, delay = 1000): Promise<T> => {
+        const retryOperation = async <T>(operation: () => Promise<T>, retries = 7, delay = 1000): Promise<T> => {
             for (let i = 0; i < retries; i++) {
                 try {
                     return await operation();
