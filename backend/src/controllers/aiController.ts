@@ -10,8 +10,10 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 // We mix recent versions with stable ones to maximize quota pools.
 const FALLBACK_MODELS = [
     "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-flash-latest" // Usually maps to 1.5 Flash or latest stable 2.0
+    "gemini-2.5-flash-lite", // Lite version (distinct quota?)
+    "gemini-2.0-flash-lite-preview-02-05",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro"
 ];
 
 /**
