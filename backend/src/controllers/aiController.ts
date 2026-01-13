@@ -18,39 +18,73 @@ export const chatWithAI = async (req: Request, res: Response) => {
         let contextData = "";
 
         if (userRole === 'USER') {
-            // USER: Only sees their own data
-            const [myReqsPending, myReqsApproved, myBudgets] = await Promise.all([
-                prisma.requirement.count({ where: { createdById: userId, status: 'PENDING_APPROVAL' } }),
-                prisma.requirement.count({ where: { createdById: userId, status: 'APPROVED' } }),
-                prisma.budget.count({
+            // USER: Fetch specific lists
+            const [myReqs, myBudgets, myProjects] = await Promise.all([
+                prisma.requirement.findMany({
+                    where: { createdById: userId },
+                    take: 5,
+                    orderBy: { createdAt: 'desc' },
+                    select: { title: true, status: true, totalAmount: true }
+                }),
+                prisma.budget.findMany({
                     where: {
-                        OR: [
-                            { managerId: userId },
-                            { subLeaders: { some: { userId } } }
-                        ]
-                    }
+                        OR: [{ managerId: userId }, { subLeaders: { some: { userId } } }]
+                    },
+                    take: 5,
+                    select: { title: true, available: true, project: { select: { name: true } } }
+                }),
+                prisma.project.findMany({
+                    where: { leaderId: userId },
+                    take: 5,
+                    select: { name: true, code: true }
                 })
             ]);
+
             contextData = `
             DATOS DEL USUARIO (${user.name}):
-            - Mis Requerimientos Pendientes: ${myReqsPending}
-            - Mis Requerimientos Aprobados: ${myReqsApproved}
-            - Mis Presupuestos Asignados: ${myBudgets}
             
-            NOTA: Este usuario tiene rol 'USER'. SOLO puede ver información sobre SUS requerimientos y presupuestos asignados. Si pregunta por datos generales o de otros, explica que no tiene permisos.
+            MIS ÚLTIMOS REQUERIMIENTOS:
+            ${myReqs.map(r => `- ${r.title} (${r.status}): $${r.totalAmount || 0}`).join('\n')}
+            
+            MIS PRESUPUESTOS ASIGNADOS:
+            ${myBudgets.map(b => `- ${b.title} (Proyecto: ${b.project.name}): Disponible $${b.available}`).join('\n')}
+            
+            MIS PROYECTOS LIDERADOS:
+            ${myProjects.map(p => `- ${p.name} (${p.code})`).join('\n')}
+            
+            NOTA: Este usuario tiene rol 'USER'. Solo ve su propia información.
             `;
         } else {
-            // ADMIN, DIRECTOR, COORDINATOR: See global stats
-            const [projectsCount, budgetsCount, reqsPending] = await Promise.all([
-                prisma.project.count(),
-                prisma.budget.count(),
-                prisma.requirement.count({ where: { status: 'PENDING_APPROVAL' } })
+            // ADMIN, DIRECTOR, COORDINATOR: Global lists
+            const [projects, budgets, reqsPending] = await Promise.all([
+                prisma.project.findMany({
+                    take: 10,
+                    orderBy: { updatedAt: 'desc' },
+                    select: { name: true, code: true }
+                }),
+                prisma.budget.findMany({
+                    take: 10,
+                    orderBy: { createdAt: 'desc' },
+                    select: { title: true, available: true, project: { select: { name: true } } }
+                }),
+                prisma.requirement.findMany({
+                    where: { status: 'PENDING_APPROVAL' },
+                    take: 10,
+                    select: { title: true, createdBy: { select: { email: true } }, estimatedAmount: true }
+                })
             ]);
+
             contextData = `
             DATOS GENERALES DEL SISTEMA (Rol: ${userRole}):
-            - Proyectos Activos: ${projectsCount}
-            - Presupuestos Totales: ${budgetsCount}
-            - Requerimientos Pendientes de Aprobación Globales: ${reqsPending}
+            
+            PROYECTOS RECIENTES (Total: ${await prisma.project.count()}):
+            ${projects.map(p => `- ${p.name} (${p.code})`).join('\n')}
+            
+            PRESUPUESTOS RECIENTES (Total: ${await prisma.budget.count()}):
+            ${budgets.map(b => `- ${b.title} (Proyecto: ${b.project.name}): Disp. $${b.available}`).join('\n')}
+            
+            REQUERIMIENTOS PENDIENTES DE APROBACIÓN (Total: ${await prisma.requirement.count({ where: { status: 'PENDING_APPROVAL' } })}):
+            ${reqsPending.map(r => `- ${r.title} (Solicitado por: ${r.createdBy.email})`).join('\n')}
             `;
         }
 
