@@ -196,61 +196,62 @@ export default function PaymentsSection({
                                 className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-gray-700 relative"
                             >
                                 <div className="flex items-start gap-4">
-                                    {/* Number Badge */}
-                                    <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 font-black text-lg flex-shrink-0">
+                                    {/* Column 1: Badge */}
+                                    <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 font-black text-sm flex-shrink-0">
                                         #{payment.paymentNumber}
                                     </div>
 
-                                    {/* Content */}
-                                    <div className="flex-1 min-w-0">
-                                        {/* Top Row: Amount and Date/Actions */}
-                                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
-                                            <p className="font-black text-2xl text-green-600 tracking-tight">
-                                                ${parseFloat(payment.amount.toString()).toLocaleString()}
-                                            </p>
+                                    {/* Column 2: Content Stack */}
+                                    <div className="flex-1 min-w-0 space-y-2">
 
-                                            <div className="flex items-center gap-2 flex-shrink-0 self-start sm:self-center">
-                                                {payment.paymentDate && (
-                                                    <span className="flex items-center gap-1 text-xs font-bold text-gray-500 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-lg whitespace-nowrap">
-                                                        <Calendar size={12} />
-                                                        {new Date(payment.paymentDate).toLocaleDateString('es-CO', {
-                                                            day: '2-digit',
-                                                            month: '2-digit',
-                                                            year: 'numeric'
-                                                        })}
-                                                    </span>
-                                                )}
-                                                {canEdit && (
-                                                    <button
-                                                        onClick={() => handleDelete(payment.id)}
-                                                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                )}
-                                            </div>
+                                        {/* Row 1: Amount */}
+                                        <p className="font-black text-lg text-green-600 tracking-tight leading-none">
+                                            ${parseFloat(payment.amount.toString()).toLocaleString()}
+                                        </p>
+
+                                        {/* Row 2: Date and Delete */}
+                                        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                                            {payment.paymentDate ? (
+                                                <span className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">
+                                                    <Calendar size={14} className="text-gray-400" />
+                                                    {new Date(payment.paymentDate).toLocaleDateString('es-CO', {
+                                                        day: '2-digit',
+                                                        month: '2-digit',
+                                                        year: 'numeric'
+                                                    })}
+                                                </span>
+                                            ) : <span></span>}
+
+                                            {canEdit && (
+                                                <button
+                                                    onClick={() => handleDelete(payment.id)}
+                                                    className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 transition-colors font-medium px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                                >
+                                                    <Trash2 size={14} />
+                                                    <span>Eliminar</span>
+                                                </button>
+                                            )}
                                         </div>
 
-                                        {/* Details */}
-                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
+                                        {/* Row 3: Details (Stacked) */}
+                                        <div className="space-y-1">
                                             {payment.invoiceNumber && (
-                                                <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-700/50 px-2 py-1 rounded-md">
-                                                    <FileText size={12} className="text-gray-400" />
-                                                    <span className="font-medium">Fac:</span>
-                                                    <span className="font-bold">{payment.invoiceNumber}</span>
-                                                </span>
+                                                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                                    <span className="font-medium min-w-[30px]">Fac:</span>
+                                                    <span className="font-bold text-gray-900 dark:text-white">{payment.invoiceNumber}</span>
+                                                </div>
                                             )}
                                             {payment.purchaseOrder && (
-                                                <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-700/50 px-2 py-1 rounded-md">
-                                                    <FileText size={12} className="text-gray-400" />
-                                                    <span className="font-medium">OC:</span>
-                                                    <span className="font-bold">{payment.purchaseOrder}</span>
-                                                </span>
+                                                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                                    <span className="font-medium min-w-[30px]">OC:</span>
+                                                    <span className="font-bold text-gray-900 dark:text-white">{payment.purchaseOrder}</span>
+                                                </div>
                                             )}
                                         </div>
 
+                                        {/* Row 4: Observations */}
                                         {payment.observations && (
-                                            <p className="text-xs text-gray-400 mt-2 italic border-t border-gray-100 dark:border-gray-700 pt-2">
+                                            <p className="text-xs text-gray-400 italic pt-1">
                                                 {payment.observations}
                                             </p>
                                         )}
