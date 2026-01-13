@@ -125,12 +125,12 @@ export default function PaymentsSection({
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl text-amber-600">
+                    <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl text-amber-600 flex-shrink-0">
                         <CreditCard size={24} />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                         <h3 className="text-lg font-black">Pagos en Cuotas</h3>
                         <p className="text-xs text-gray-500">
                             {payments.length} de máximo 24 pagos registrados
@@ -140,7 +140,7 @@ export default function PaymentsSection({
                 {canEdit && payments.length < 24 && (
                     <button
                         onClick={() => setShowModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-colors"
+                        className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-colors whitespace-nowrap"
                     >
                         <Plus size={16} />
                         Agregar Abono
