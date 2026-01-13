@@ -54,24 +54,7 @@ export const chatWithAI = async (req: Request, res: Response) => {
             `;
         }
 
-        // 2. Prepare System Prompt with Knowledge Base
-        const SYSTEM_FAQ = `
-        CENTRO DE AYUDA:
-        - ¿Cómo crear un requerimiento?: Ve a "Requerimientos" -> "Nuevo Requerimiento". Llena los campos obligatorios y adjunta documentos si es necesario.
-        - ¿Cómo aprobar un requerimiento?: Si eres aprobador, ve a "Requerimientos" -> "Pendientes de Aprobación". Revisa el detalle y usa los botones "Aprobar" o "Rechazar".
-        - ¿Cómo ver mis presupuestos?: Ve a "Presupuestos" -> "Mis Presupuestos".
-        - ¿Qué es un "sublíder" de presupuesto?: Es un usuario que puede gestionar y ver el detalle de un presupuesto específico, aunque no sea el gerente principal.
-        - ¿Cómo adjuntar un documento a un requerimiento?: En la pantalla de creación o edición de requerimiento, busca la sección "Documentos Adjuntos" y sube el archivo.
-        - ¿Cómo cambiar mi contraseña?: Ve a "Mi Perfil" -> "Configuración de Cuenta" -> "Cambiar Contraseña".
-        - ¿Dónde veo el estado de mis requerimientos?: En "Requerimientos" -> "Mis Requerimientos".
-        - ¿Cómo crear un proyecto?: Solo los administradores pueden crear proyectos. Contacta a tu administrador.
-
-        ROLES Y PERMISOS:
-        - USER: Crear requerimientos, ver estado de sus requerimientos, ver sus presupuestos asignados.
-        - COORDINATOR: Todo lo de USER, además de aprobar requerimientos, gestionar presupuestos de su área, ver reportes básicos.
-        - DIRECTOR: Todo lo de COORDINATOR, además de aprobar presupuestos mayores, ver reportes avanzados, gestionar usuarios.
-        - ADMIN: Acceso total al sistema, incluyendo configuración, gestión de usuarios, proyectos y presupuestos.
-        `;
+        // 2. Prepare System Prompt with Knowledge Base (imported from aiKnowledge.ts)
 
         const systemPrompt = `
         Eres "MisCompras Bot", asistente experto del sistema de gestión de compras del Museo de Antioquia.

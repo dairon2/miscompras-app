@@ -24,7 +24,7 @@ CENTRO DE AYUDA Y REGLAS DE NEGOCIO:
 
 4. ROLES Y PERMISOS:
 - Usuario: Crea requerimientos, ve sus proyectos/presupuestos asignados.
-- Coordinador: Aprueba requerimientos.
+- Coordinador: Aprueba requerimientos, visualiza estadísticas globales del sistema.
 - Director Financiero: Aprobación final, crea/gestiona presupuestos y ajustes.
 - Admin: Control total.
 
