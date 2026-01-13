@@ -24,7 +24,7 @@ export const chatWithAI = async (req: Request, res: Response) => {
 
         if (userRole === 'USER') {
             // USER: Fetch specific lists
-            const [myReqs, myBudgets, myProjects] = await Promise.all([
+            const [myReqs, myBudgets, myProjects, myInvoices] = await Promise.all([
                 prisma.requirement.findMany({
                     where: { createdById: userId },
                     take: 5,
@@ -42,6 +42,12 @@ export const chatWithAI = async (req: Request, res: Response) => {
                     where: { leaderId: userId },
                     take: 5,
                     select: { name: true, code: true }
+                }),
+                prisma.invoice.findMany({
+                    where: { createdById: userId },
+                    take: 5,
+                    orderBy: { issueDate: 'desc' },
+                    select: { invoiceNumber: true, amount: true, status: true, supplier: { select: { name: true } } }
                 })
             ]);
 
@@ -56,12 +62,15 @@ export const chatWithAI = async (req: Request, res: Response) => {
             
             MIS PROYECTOS LIDERADOS:
             ${myProjects.map(p => `- ${p.name} (${p.code})`).join('\n')}
+
+            MIS FACTURAS REGISTRADAS RECIENTES:
+            ${myInvoices.map(i => `- #${i.invoiceNumber} (${i.supplier.name}): ${formatMoney(i.amount)} [State: ${i.status}]`).join('\n')}
             
             NOTA: Este usuario tiene rol 'USER'. Solo ve su propia información.
             `;
         } else {
             // ADMIN, DIRECTOR, COORDINATOR: Global lists
-            const [projects, budgets, reqsPending] = await Promise.all([
+            const [projects, budgets, reqsPending, suppliers, invoices] = await Promise.all([
                 prisma.project.findMany({
                     take: 10,
                     orderBy: { updatedAt: 'desc' },
@@ -76,8 +85,21 @@ export const chatWithAI = async (req: Request, res: Response) => {
                     where: { status: 'PENDING_APPROVAL' },
                     take: 10,
                     select: { title: true, createdBy: { select: { email: true } }, estimatedAmount: true }
+                }),
+                prisma.supplier.findMany({
+                    take: 10,
+                    orderBy: { createdAt: 'desc' },
+                    select: { name: true, supplierType: true, criticality: true }
+                }),
+                prisma.invoice.findMany({
+                    take: 5,
+                    orderBy: { issueDate: 'desc' },
+                    select: { invoiceNumber: true, amount: true, supplier: { select: { name: true } }, status: true }
                 })
             ]);
+
+            const supplierCount = await prisma.supplier.count();
+            const invoiceCount = await prisma.invoice.count();
 
             contextData = `
             DATOS GENERALES DEL SISTEMA (Rol: ${userRole}):
@@ -90,6 +112,13 @@ export const chatWithAI = async (req: Request, res: Response) => {
             
             REQUERIMIENTOS PENDIENTES DE APROBACIÓN (Total: ${await prisma.requirement.count({ where: { status: 'PENDING_APPROVAL' } })}):
             ${reqsPending.map(r => `- ${r.title} (Solicitado por: ${r.createdBy.email})`).join('\n')}
+
+            PROVEEDORES REGISTRADOS (Total: ${supplierCount}):
+            ${suppliers.map(s => `- ${s.name} (${s.supplierType}, Criticality: ${s.criticality})`).join('\n')}
+            ${supplierCount > 10 ? `... y ${supplierCount - 10} más.` : ''}
+
+            FACTURAS RECIENTES (Total: ${invoiceCount}):
+            ${invoices.map(i => `- Factura #${i.invoiceNumber} de ${i.supplier.name}: ${formatMoney(i.amount)} (${i.status})`).join('\n')}
             `;
         }
 
