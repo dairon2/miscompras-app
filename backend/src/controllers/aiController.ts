@@ -242,8 +242,13 @@ export const chatWithAI = async (req: Request, res: Response) => {
 
                     if (userId) {
                         const fileUrl = await generateUserRequirementsExcel(userId, projectId);
+                        // Construct absolute URL for frontend
+                        // In production, this should come from env. Locally 4000.
+                        const baseUrl = process.env.API_URL || 'http://localhost:4000';
+                        const fullUrl = `${baseUrl}${fileUrl}`;
+
                         const msgDetail = projectName ? `del proyecto "${projectName}"` : 'general';
-                        contextData += `\n\n[SISTEMA]: REPORTE EXCEL GENERADO (${msgDetail}). URL: ${fileUrl}\nINSTRUCCIÓN: Dile al usuario que su reporte ${msgDetail} está listo: [Descargar Reporte Excel](${fileUrl}). Si no se encontraron datos, dilo.`;
+                        contextData += `\n\n[SISTEMA]: REPORTE EXCEL GENERADO (${msgDetail}). URL: ${fullUrl}\nINSTRUCCIÓN: Dile al usuario que su reporte ${msgDetail} está listo: [Descargar Reporte Excel](${fullUrl}). Si no se encontraron datos, dilo.`;
                     }
                 }
             } catch (e) {

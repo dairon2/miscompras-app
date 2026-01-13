@@ -119,7 +119,23 @@ export default function AIAssistant() {
                                             : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 rounded-bl-none border border-gray-100 dark:border-gray-700'
                                             }`}
                                     >
-                                        {msg.content}
+                                        {msg.content.split(/(\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
+                                            const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+                                            if (match) {
+                                                return (
+                                                    <a
+                                                        key={i}
+                                                        href={match[2]}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="underline font-bold text-inherit hover:opacity-80"
+                                                    >
+                                                        {match[1]}
+                                                    </a>
+                                                );
+                                            }
+                                            return part;
+                                        })}
                                     </div>
                                     {msg.role === 'user' && (
                                         <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-slate-800 flex items-center justify-center text-gray-500 shrink-0 mb-1">
