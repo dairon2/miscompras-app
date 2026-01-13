@@ -151,7 +151,9 @@ export const chatWithAI = async (req: Request, res: Response) => {
              Mensaje: "${message}"
              
              ¿El usuario quiere GENERAR un archivo (Excel, reporte) de sus requerimientos?
-             Responde JSON: { "action": "GENERATE_REPORT", "type": "USER_REQUIREMENTS" } o { "action": "NONE" }
+             Si menciona un proyecto específico (ej: "del proyecto X"), extrae el nombre/código en el campo "project".
+             
+             Responde JSON: { "action": "GENERATE_REPORT", "type": "USER_REQUIREMENTS", "project": "Nombre o null" } o { "action": "NONE" }
              `;
 
             try {
@@ -160,11 +162,33 @@ export const chatWithAI = async (req: Request, res: Response) => {
                 const actionJson = JSON.parse(actionResult.response.text());
 
                 if (actionJson.action === 'GENERATE_REPORT' && actionJson.type === 'USER_REQUIREMENTS') {
-                    // Import dynamically to avoid circular issues or top-level import conflicts if any
+                    // Import service dynamically
                     const { generateUserRequirementsExcel } = await import('../services/reportService');
+
+                    let projectId: string | undefined = undefined;
+                    let projectName: string | undefined = undefined;
+
+                    // Resolve Project ID if mentioned
+                    if (actionJson.project) {
+                        const p = await prisma.project.findFirst({
+                            where: {
+                                OR: [
+                                    { name: { contains: actionJson.project, mode: 'insensitive' } },
+                                    { code: { contains: actionJson.project, mode: 'insensitive' } }
+                                ]
+                            },
+                            select: { id: true, name: true }
+                        });
+                        if (p) {
+                            projectId = p.id;
+                            projectName = p.name;
+                        }
+                    }
+
                     if (userId) {
-                        const fileUrl = await generateUserRequirementsExcel(userId);
-                        contextData += `\n\n[SISTEMA]: SE HA GENERADO UN REPORTE EXCEL PARA EL USUARIO. URL: ${fileUrl}\nINSTRUCCIÓN: Dile al usuario que su reporte está listo y dale el enlace exacto: [Descargar Reporte Excel](${fileUrl})`;
+                        const fileUrl = await generateUserRequirementsExcel(userId, projectId);
+                        const msgDetail = projectName ? `del proyecto "${projectName}"` : 'general';
+                        contextData += `\n\n[SISTEMA]: REPORTE EXCEL GENERADO (${msgDetail}). URL: ${fileUrl}\nINSTRUCCIÓN: Dile al usuario que su reporte ${msgDetail} está listo: [Descargar Reporte Excel](${fileUrl}). Si no se encontraron datos, dilo.`;
                     }
                 }
             } catch (e) {
