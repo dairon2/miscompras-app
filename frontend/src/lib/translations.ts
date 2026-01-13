@@ -57,6 +57,8 @@ export const translateAction = (action: string): string => {
         'BUDGET_ASSIGNED': 'Presupuesto asignado',
         'AMOUNT_UPDATED': 'Monto actualizado',
         'SUPPLIER_RATED': 'Proveedor Evaluado',
+        'PAYMENT_REGISTERED': 'Pago Registrado',
+        'PAYMENT_DELETED': 'Pago Eliminado',
         // Asiento-related actions
         'CREATED_ASIENTO': 'Asiento creado',
         'UPDATED_ASIENTO': 'Asiento actualizado',
