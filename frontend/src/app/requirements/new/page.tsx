@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Save, X, Info, Package, DollarSign, Building, Truck, Paperclip, FileText, AlertTriangle, PieChart, Plus, Trash2, List } from "lucide-react";
+import { Save, X, Info, Package, DollarSign, Building, Truck, Paperclip, FileText, AlertTriangle, PieChart, Plus, Trash2, List, Sparkles, Wand2 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
@@ -73,6 +73,11 @@ function NewRequirementContent() {
         budgets: [] as Budget[]
     });
     const [budgetError, setBudgetError] = useState<string | null>(null);
+
+    // AI Copilot State
+    const [showAIModal, setShowAIModal] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [aiLoading, setAiLoading] = useState(false);
 
     // Role-based permissions - Users with role USER only see their assigned area
     const userRole = user?.role || 'USER';
@@ -198,6 +203,33 @@ function NewRequirementContent() {
         setItems(prev => prev.filter(item => item.id !== id));
     };
 
+    const handleAIParse = async () => {
+        if (!aiPrompt.trim()) return;
+        setAiLoading(true);
+        try {
+            const res = await api.post('/ai/extract', { text: aiPrompt });
+            const data = res.data;
+
+            setFormData(prev => ({
+                ...prev,
+                title: data.title || prev.title,
+                description: data.description || prev.description,
+                quantity: data.quantity || prev.quantity,
+                suggestedSupplier: data.suggestedSupplier || prev.suggestedSupplier,
+                // We keep project/budget selected manually for safety, or user can change them
+            }));
+
+            addToast('¡Formulario autocompletado mágicamente! ✨', 'success');
+            setShowAIModal(false);
+            setAiPrompt('');
+        } catch (err) {
+            console.error(err);
+            addToast('No pude entender la solicitud. Intenta ser más descriptivo.', 'error');
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (items.length === 0) {
@@ -294,6 +326,13 @@ function NewRequirementContent() {
                                 <Plus size={20} />
                             </div>
                             <h3 className="text-xl font-black tracking-tight">Agregar Ítem</h3>
+                            <button
+                                onClick={() => setShowAIModal(true)}
+                                className="ml-auto flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] uppercase font-black tracking-widest hover:shadow-lg hover:scale-105 transition-all"
+                            >
+                                <Sparkles size={14} />
+                                Autocompletar con IA
+                            </button>
                         </div>
 
                         <div className="space-y-6">
@@ -490,6 +529,63 @@ function NewRequirementContent() {
                     </div>
                 </div>
             </div>
+
+            {/* AI Copilot Modal */}
+            <AnimatePresence>
+                {showAIModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-3xl p-8 shadow-2xl border border-gray-100 dark:border-gray-700"
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-purple-600">
+                                        <Wand2 size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-black tracking-tight text-gray-800 dark:text-gray-100">Copiloto IA</h3>
+                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Describe tu necesidad</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowAIModal(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="mb-6">
+                                <textarea
+                                    value={aiPrompt}
+                                    onChange={(e) => setAiPrompt(e.target.value)}
+                                    placeholder="Ej: 'Necesito 5 escritorios para el área comercial, presupuesto estimado 2 millones. Proveedor Muebles Antioquia.'"
+                                    className="w-full bg-gray-50 dark:bg-slate-900 border-2 border-transparent focus:border-purple-500 rounded-2xl p-4 text-lg font-medium outline-none min-h-[150px] resize-none"
+                                    autoFocus
+                                />
+                                <p className="mt-2 text-xs text-gray-400 px-2 font-medium">
+                                    La IA detectará: Título, Cantidad, Descripción, Precio Estimado y Proveedor.
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={handleAIParse}
+                                disabled={aiLoading || !aiPrompt.trim()}
+                                className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:shadow-xl hover:shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-all"
+                            >
+                                {aiLoading ? (
+                                    <>Procesando...</>
+                                ) : (
+                                    <>
+                                        <Sparkles size={16} />
+                                        ¡Haz tu Magia!
+                                    </>
+                                )}
+                            </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

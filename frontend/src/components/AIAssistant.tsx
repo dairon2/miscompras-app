@@ -47,9 +47,12 @@ export default function AIAssistant() {
             });
 
             setMessages(prev => [...prev, { role: 'model', content: data.reply }]);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            setMessages(prev => [...prev, { role: 'model', content: 'Lo siento, tuve un problema conectando con mi cerebro. 🧠💥 Por favor intenta de nuevo.' }]);
+            const errorMessage = error.response?.data?.details || error.response?.data?.error || 'Lo siento, tuve un problema conectando con mi cerebro. 🧠💥';
+            const apiKeyStatus = error.response?.data?.keyPresent !== undefined ? `(Key Present: ${error.response.data.keyPresent})` : '';
+
+            setMessages(prev => [...prev, { role: 'model', content: `${errorMessage} ${apiKeyStatus} Por favor intenta de nuevo.` }]);
         } finally {
             setIsLoading(false);
         }
@@ -112,8 +115,8 @@ export default function AIAssistant() {
                                     )}
                                     <div
                                         className={`max-w-[80%] p-3.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap shadow-sm ${msg.role === 'user'
-                                                ? 'bg-indigo-600 text-white rounded-br-none'
-                                                : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 rounded-bl-none border border-gray-100 dark:border-gray-700'
+                                            ? 'bg-indigo-600 text-white rounded-br-none'
+                                            : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 rounded-bl-none border border-gray-100 dark:border-gray-700'
                                             }`}
                                     >
                                         {msg.content}

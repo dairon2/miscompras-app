@@ -129,7 +129,13 @@ const getBudgetById = async (req, res) => {
         if (userRole === 'USER') {
             const isManager = budget.managerId === userId;
             const isSubLeader = budget.subLeaders.some(sl => sl.userId === userId);
-            if (!isManager && !isSubLeader) {
+            // Check if user is director of the budget's area
+            const userAreasDirected = await index_1.prisma.area.findMany({
+                where: { directorId: userId },
+                select: { id: true }
+            });
+            const isAreaDirector = userAreasDirected.some(area => area.id === budget.areaId);
+            if (!isManager && !isSubLeader && !isAreaDirector) {
                 return res.status(403).json({ error: 'No tiene acceso a este presupuesto' });
             }
         }

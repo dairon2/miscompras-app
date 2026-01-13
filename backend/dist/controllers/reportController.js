@@ -24,7 +24,7 @@ const exportRequirements = async (req, res) => {
             { header: 'FECHA DE SOLICITUD', key: 'createdAt', width: 20 },
         ];
         const rows = requirements.map((r) => ({
-            id: r.id.substring(0, 8).toUpperCase(),
+            id: r.groupId ? r.groupId.toString() : r.id.substring(0, 8).toUpperCase(),
             title: r.title,
             totalAmount: r.totalAmount ? parseFloat(r.totalAmount.toString()) : 0,
             procurementStatus: r.procurementStatus || 'PENDIENTE',

@@ -44,7 +44,7 @@ const createPayment = async (req, res) => {
                 amount: parseFloat(amount),
                 invoiceNumber,
                 purchaseOrder,
-                paymentDate: paymentDate ? new Date(paymentDate) : null,
+                paymentDate: paymentDate ? new Date(paymentDate + 'T12:00:00') : null,
                 observations,
                 requirementId
             }
@@ -130,7 +130,7 @@ const updatePayment = async (req, res) => {
                 amount: amount !== undefined ? parseFloat(amount) : undefined,
                 invoiceNumber,
                 purchaseOrder,
-                paymentDate: paymentDate ? new Date(paymentDate) : undefined,
+                paymentDate: paymentDate ? new Date(paymentDate + 'T12:00:00') : undefined,
                 observations
             }
         });

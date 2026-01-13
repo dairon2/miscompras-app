@@ -9,7 +9,8 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const client_1 = require("@prisma/client");
+const db_1 = require("./db");
+Object.defineProperty(exports, "prisma", { enumerable: true, get: function () { return db_1.prisma; } });
 const auth_1 = require("./middlewares/auth");
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const requirementRoutes_1 = __importDefault(require("./routes/requirementRoutes"));
@@ -22,6 +23,7 @@ const budgetRoutes_1 = __importDefault(require("./routes/budgetRoutes"));
 const adjustmentRoutes_1 = __importDefault(require("./routes/adjustmentRoutes"));
 const invoiceRoutes_1 = __importDefault(require("./routes/invoiceRoutes"));
 const submissionRulesRoutes_1 = __importDefault(require("./routes/submissionRulesRoutes"));
+const aiRoutes_1 = __importDefault(require("./routes/aiRoutes"));
 dotenv_1.default.config();
 // Validate critical environment variables
 const validateEnv = () => {
@@ -38,27 +40,7 @@ const validateEnv = () => {
 };
 validateEnv();
 const app = (0, express_1.default)();
-// Import demo data from separate file (only used when DATABASE_URL is not configured)
-const demoData_1 = require("./demoData");
-// Database Initialization
-let prisma;
-if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("mock")) {
-    console.log('--- PRODUCTION MODE: Connecting to Database ---');
-    exports.prisma = prisma = new client_1.PrismaClient({
-        log: ['error', 'warn'],
-    });
-    // Test connection
-    prisma.$connect()
-        .then(() => console.log('Successfully connected to Azure PostgreSQL'))
-        .catch((e) => {
-        console.error('DATABASE CONNECTION ERROR:', e.message);
-        console.error('Check your DATABASE_URL and Azure Firewall rules.');
-    });
-}
-else {
-    console.log('--- DEMO MODE: Database disabled (using prismaMock) ---');
-    exports.prisma = prisma = demoData_1.prismaMock;
-}
+// Database Initialization moved to ./db.ts
 const PORT = process.env.PORT || 4000;
 // Middlewares
 const allowedOrigins = [
@@ -83,7 +65,7 @@ app.use('/api/auth', authRoutes_1.default);
 // Catalog Routes (Public for registration) - Real DB queries
 app.get('/api/areas', async (req, res) => {
     try {
-        const areas = await prisma.area.findMany({ orderBy: { name: 'asc' } });
+        const areas = await db_1.prisma.area.findMany({ orderBy: { name: 'asc' } });
         res.json(areas);
     }
     catch (e) {
@@ -112,7 +94,7 @@ app.get('/api/projects', auth_1.authMiddleware, async (req, res) => {
                 }
             };
         }
-        const projects = await prisma.project.findMany({
+        const projects = await db_1.prisma.project.findMany({
             where,
             orderBy: { name: 'asc' },
             include: {
@@ -135,7 +117,7 @@ app.get('/api/projects', auth_1.authMiddleware, async (req, res) => {
 });
 app.get('/api/categories', auth_1.authMiddleware, async (req, res) => {
     try {
-        const categories = await prisma.category.findMany({ orderBy: { code: 'asc' } });
+        const categories = await db_1.prisma.category.findMany({ orderBy: { code: 'asc' } });
         res.json(categories);
     }
     catch (e) {
@@ -169,7 +151,7 @@ app.get('/api/suppliers', auth_1.authMiddleware, async (req, res) => {
                 }
             };
         }
-        const suppliers = await prisma.supplier.findMany({
+        const suppliers = await db_1.prisma.supplier.findMany({
             where: whereClause,
             orderBy: { name: 'asc' },
             include: {
@@ -205,7 +187,7 @@ app.get('/api/suppliers', auth_1.authMiddleware, async (req, res) => {
 app.get('/api/suppliers/:id', auth_1.authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
-        const supplier = await prisma.supplier.findUnique({
+        const supplier = await db_1.prisma.supplier.findUnique({
             where: { id },
             include: {
                 requirements: {
@@ -286,6 +268,7 @@ app.use('/api/budgets', budgetRoutes_1.default);
 app.use('/api/adjustments', adjustmentRoutes_1.default);
 app.use('/api/invoices', invoiceRoutes_1.default);
 app.use('/api/submission-rules', submissionRulesRoutes_1.default);
+app.use('/api/ai', aiRoutes_1.default);
 // NOTE: Budget CRUD is handled by budgetRoutes mounted at /api/budgets
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'API Miscompras en ejecución' });

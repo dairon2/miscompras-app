@@ -76,7 +76,7 @@ const createRequirement = async (req, res) => {
         // Notify Admins/Leaders
         const admins = await index_1.prisma.user.findMany({
             where: {
-                role: { in: ['ADMIN', 'LEADER', 'DIRECTOR'] }
+                role: { in: ['COORDINATOR', 'DIRECTOR'] }
             }
         });
         const adminEmails = admins.map((admin) => admin.email).join(',');
@@ -94,7 +94,7 @@ const createRequirement = async (req, res) => {
             await index_1.prisma.notification.create({
                 data: {
                     userId: admin.id,
-                    title: 'Nueva Solicitud Pendiente',
+                    title: 'Nuevo Requerimiento Creado',
                     message: `Se ha creado el requerimiento: ${title}`,
                     type: 'INFO',
                     requirementId: requirement.id
@@ -159,7 +159,7 @@ const createMassRequirements = async (req, res) => {
             try {
                 const approvers = await index_1.prisma.user.findMany({
                     where: {
-                        role: { in: ['LEADER', 'COORDINATOR', 'DIRECTOR', 'ADMIN'] }
+                        role: { in: ['COORDINATOR', 'DIRECTOR'] }
                     }
                 });
                 const totalAmt = result.requirements.reduce((acc, r) => acc + Number(r.estimatedAmount || 0), 0);
@@ -167,7 +167,7 @@ const createMassRequirements = async (req, res) => {
                 await index_1.prisma.notification.createMany({
                     data: approvers.map(approver => ({
                         userId: approver.id,
-                        title: 'Nueva Solicitud Múltiple',
+                        title: 'Nuevo Requerimiento Creado',
                         message: `Se ha creado una solicitud agrupada (ID: ${result.group.id}) con ${requirements.length} items.`,
                         type: 'INFO'
                     }))
@@ -178,7 +178,7 @@ const createMassRequirements = async (req, res) => {
                     type: 'REQUIREMENT_CREATED',
                     requirementId: result.group.id.toString(),
                     groupId: result.group.id,
-                    requirementTitle: `Solicitud Agrupada de ${req.user?.name || req.user?.email}`,
+                    requirementTitle: `Nuevo Requerimiento Creado de ${req.user?.name || req.user?.email}`,
                     requesterName: req.user?.name || req.user?.email || 'Desconocido',
                     amount: totalAmt
                 }).catch(err => console.error(`Failed to send email to ${approver.email}`, err))));
@@ -210,13 +210,14 @@ const getMyRequirements = async (req, res) => {
                     budget: {
                         OR: [
                             { managerId: userId },
-                            { subLeaders: { some: { userId: userId } } }
+                            { subLeaders: { some: { userId: userId } } },
+                            { area: { directorId: userId } } // Allow Area Directors to see requirements/asientos of their area's budgets
                         ]
                     }
                 }
             ],
-            year: year,
-            isAsiento: includeAsientos ? undefined : false
+            year: year
+            // isAsiento filter removed to show everything by default
         };
         // Get total count for pagination
         const total = await index_1.prisma.requirement.count({ where });
@@ -557,6 +558,38 @@ const updateRequirement = async (req, res) => {
                 }
             });
         }
+        // Special handling for Problem Reports (receivedAtSatisfaction = false with remarks)
+        const isProblemReport = receivedAtSatisfaction === false || receivedAtSatisfaction === 'false';
+        const hasRemarks = req.body.remarks && String(req.body.remarks).includes('PROBLEMA REPORTADO');
+        if (isProblemReport && hasRemarks) {
+            const problemDetails = String(req.body.remarks);
+            // Log the problem in history
+            await index_1.prisma.historyLog.create({
+                data: {
+                    action: 'PROBLEM_REPORTED',
+                    requirementId: id,
+                    details: `${problemDetails} - Reportado por ${req.user?.email}`
+                }
+            });
+            // Notify DIRECTOR, COORDINATOR and ADMIN
+            const recipientUsers = await index_1.prisma.user.findMany({
+                where: {
+                    role: { in: ['DIRECTOR', 'COORDINATOR', 'ADMIN'] },
+                    isActive: true
+                },
+                select: { id: true }
+            });
+            const notificationData = recipientUsers.map((u) => ({
+                userId: u.id,
+                title: `⚠️ Problema Reportado en Requerimiento`,
+                message: `${req.user?.email} reportó un problema en "${updatedRequirement.title}": ${problemDetails}`,
+                type: 'ERROR',
+                requirementId: id
+            }));
+            if (notificationData.length > 0) {
+                await index_1.prisma.notification.createMany({ data: notificationData });
+            }
+        }
         res.json(updatedRequirement);
     }
     catch (error) {
@@ -577,8 +610,8 @@ const getAllRequirements = async (req, res) => {
     const userRole = req.user?.role;
     try {
         const where = {
-            year: year,
-            isAsiento: includeAsientos ? undefined : false
+            year: year
+            // isAsiento filter removed to show everything by default
         };
         // ADMIN, DIRECTOR (global), LEADER, COORDINATOR and AUDITOR see everything
         const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'].includes(userRole || '');
@@ -1185,33 +1218,43 @@ const getDashboardStats = async (req, res) => {
             console.log("[Dashboard] Non-admin user, filtering by createdById:", userId);
         }
         console.log("[Dashboard] Fetching counts with where:", JSON.stringify(where));
-        let pending = 0, approved = 0, rejected = 0;
+        // Count by procurementStatus instead of approval status
+        let pendiente = 0, enTramite = 0, entregado = 0, finalizado = 0;
         try {
-            // Count pending - only PENDING_APPROVAL is a valid Status enum value
-            pending = await index_1.prisma.requirement.count({
-                where: {
-                    ...where,
-                    status: 'PENDING_APPROVAL'
-                }
+            pendiente = await index_1.prisma.requirement.count({
+                where: { ...where, procurementStatus: 'PENDIENTE' }
             });
-            console.log("[Dashboard] Pending count:", pending);
+            console.log("[Dashboard] Pendiente count:", pendiente);
         }
-        catch (pendingErr) {
-            console.error("[Dashboard] Error counting pending:", pendingErr.message);
-        }
-        try {
-            approved = await index_1.prisma.requirement.count({ where: { ...where, status: 'APPROVED' } });
-            console.log("[Dashboard] Approved count:", approved);
-        }
-        catch (approvedErr) {
-            console.error("[Dashboard] Error counting approved:", approvedErr.message);
+        catch (err) {
+            console.error("[Dashboard] Error counting pendiente:", err.message);
         }
         try {
-            rejected = await index_1.prisma.requirement.count({ where: { ...where, status: 'REJECTED' } });
-            console.log("[Dashboard] Rejected count:", rejected);
+            enTramite = await index_1.prisma.requirement.count({
+                where: { ...where, procurementStatus: 'EN_TRAMITE' }
+            });
+            console.log("[Dashboard] En Trámite count:", enTramite);
         }
-        catch (rejectedErr) {
-            console.error("[Dashboard] Error counting rejected:", rejectedErr.message);
+        catch (err) {
+            console.error("[Dashboard] Error counting enTramite:", err.message);
+        }
+        try {
+            entregado = await index_1.prisma.requirement.count({
+                where: { ...where, procurementStatus: 'ENTREGADO' }
+            });
+            console.log("[Dashboard] Entregado count:", entregado);
+        }
+        catch (err) {
+            console.error("[Dashboard] Error counting entregado:", err.message);
+        }
+        try {
+            finalizado = await index_1.prisma.requirement.count({
+                where: { ...where, procurementStatus: 'FINALIZADO' }
+            });
+            console.log("[Dashboard] Finalizado count:", finalizado);
+        }
+        catch (err) {
+            console.error("[Dashboard] Error counting finalizado:", err.message);
         }
         // Recent Activity Filters
         const recentWhere = {};
@@ -1327,9 +1370,10 @@ const getDashboardStats = async (req, res) => {
             console.error("[Dashboard] Error fetching total amount:", totalErr.message);
         }
         res.json({
-            pending,
-            approved,
-            rejected,
+            pendiente,
+            enTramite,
+            entregado,
+            finalizado,
             totalAmount,
             recent
         });
@@ -1346,8 +1390,8 @@ const getPendingApprovalCount = async (req, res) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
     try {
-        // Only roles that can approve should see this count
-        if (!['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole || '')) {
+        // Only DIRECTOR and COORDINATOR can see this count
+        if (!['DIRECTOR', 'COORDINATOR'].includes(userRole || '')) {
             return res.json({ count: 0 });
         }
         const where = {
@@ -1397,64 +1441,84 @@ exports.getPendingApprovalCount = getPendingApprovalCount;
 const createAsiento = async (req, res) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
-    // Only ADMIN, DIRECTOR, LEADER can create asientos
-    if (!['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole || '')) {
+    // Only ADMIN, DIRECTOR, COORDINATOR, DEVELOPER can create asientos
+    if (!['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole || '')) {
         return res.status(403).json({ error: 'No tienes permiso para crear asientos' });
     }
     const { title, description, quantity, totalAmount, actualAmount, projectId, areaId, supplierId, manualSupplierName, budgetId, reqCategory, purchaseOrderNumber, invoiceNumber, hasMultiplePayments, groupId } = req.body;
+    // ========== VALIDATIONS FIRST (before any DB operations) ==========
+    // Validate groupId - REQUIRED for asientos
+    if (!groupId || groupId === 'null' || groupId === '' || isNaN(parseInt(groupId))) {
+        return res.status(400).json({
+            error: 'El asiento debe estar vinculado a un número de Requerimiento existente'
+        });
+    }
+    const existingGroup = await index_1.prisma.requirementGroup.findUnique({
+        where: { id: parseInt(groupId) }
+    });
+    if (!existingGroup) {
+        return res.status(400).json({
+            error: `El Requerimiento #${groupId} no existe. Por favor ingresa un número de requerimiento válido.`
+        });
+    }
+    const validGroupId = parseInt(groupId);
     try {
-        // Budget deduction for asientos (immediate)
-        if (budgetId && totalAmount) {
-            await index_1.prisma.budget.update({
-                where: { id: budgetId },
+        // Use transaction to ensure atomicity - budget only decremented if asiento created successfully
+        const result = await index_1.prisma.$transaction(async (tx) => {
+            // Create the asiento first
+            const asiento = await tx.requirement.create({
                 data: {
-                    available: { decrement: parseFloat(totalAmount) }
+                    title,
+                    description,
+                    quantity,
+                    totalAmount: (totalAmount && totalAmount !== 'null' && !isNaN(parseFloat(totalAmount))) ? parseFloat(totalAmount) : null,
+                    actualAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : null,
+                    projectId: (projectId && projectId !== 'null') ? projectId : undefined,
+                    areaId: (areaId && areaId !== 'null') ? areaId : undefined,
+                    supplierId: (supplierId && supplierId !== 'null') ? supplierId : null,
+                    manualSupplierName: manualSupplierName === 'null' ? null : manualSupplierName,
+                    budgetId: (budgetId && budgetId !== 'null') ? budgetId : null,
+                    reqCategory: reqCategory || 'COMPRA',
+                    purchaseOrderNumber: purchaseOrderNumber === 'null' ? null : purchaseOrderNumber,
+                    invoiceNumber: invoiceNumber === 'null' ? null : invoiceNumber,
+                    createdById: userId,
+                    year: new Date().getFullYear(),
+                    isAsiento: true,
+                    hasMultiplePayments: hasMultiplePayments === 'true' || hasMultiplePayments === true,
+                    status: 'APPROVED', // Auto-approved for asientos
+                    procurementStatus: 'EN_TRAMITE',
+                    groupId: validGroupId,
+                    attachments: {
+                        create: await (0, blobStorageService_1.processFileUploads)(req.files || [], 'asientos')
+                    }
+                },
+                include: {
+                    project: true,
+                    area: true,
+                    supplier: true,
+                    attachments: true
                 }
             });
-        }
-        const asiento = await index_1.prisma.requirement.create({
-            data: {
-                title,
-                description,
-                quantity,
-                totalAmount: (totalAmount && totalAmount !== 'null' && !isNaN(parseFloat(totalAmount))) ? parseFloat(totalAmount) : null,
-                actualAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : null,
-                projectId: (projectId && projectId !== 'null') ? projectId : undefined,
-                areaId: (areaId && areaId !== 'null') ? areaId : undefined,
-                supplierId: (supplierId && supplierId !== 'null') ? supplierId : null,
-                manualSupplierName: manualSupplierName === 'null' ? null : manualSupplierName,
-                budgetId: (budgetId && budgetId !== 'null') ? budgetId : null,
-                reqCategory: reqCategory || 'COMPRA',
-                purchaseOrderNumber: purchaseOrderNumber === 'null' ? null : purchaseOrderNumber,
-                invoiceNumber: invoiceNumber === 'null' ? null : invoiceNumber,
-                createdById: userId,
-                year: new Date().getFullYear(),
-                isAsiento: true,
-                hasMultiplePayments: hasMultiplePayments === 'true' || hasMultiplePayments === true,
-                status: 'APPROVED', // Auto-approved for asientos
-                procurementStatus: 'EN_TRAMITE',
-                groupId: (groupId && groupId !== 'null' && !isNaN(parseInt(groupId))) ? parseInt(groupId) : undefined,
-                attachments: {
-                    create: await (0, blobStorageService_1.processFileUploads)(req.files || [], 'asientos')
+            // Only decrement budget AFTER asiento is created successfully (within transaction)
+            if (budgetId && budgetId !== 'null' && totalAmount && !isNaN(parseFloat(totalAmount))) {
+                await tx.budget.update({
+                    where: { id: budgetId },
+                    data: {
+                        available: { decrement: parseFloat(totalAmount) }
+                    }
+                });
+            }
+            // Log creation (within transaction)
+            await tx.historyLog.create({
+                data: {
+                    action: 'CREATED_ASIENTO',
+                    requirementId: asiento.id,
+                    details: `Asiento contable creado por ${req.user?.email}`
                 }
-            },
-            include: {
-                project: true,
-                area: true,
-                supplier: true,
-                attachments: true
-            }
+            });
+            return asiento;
         });
-        // Log creation
-        // Log creation
-        await index_1.prisma.historyLog.create({
-            data: {
-                action: 'CREATED_ASIENTO',
-                requirementId: asiento.id,
-                details: `Asiento contable creado por ${req.user?.email}`
-            }
-        });
-        res.status(201).json(asiento);
+        res.status(201).json(result);
     }
     catch (error) {
         console.error("Error creating asiento:", error);

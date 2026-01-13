@@ -27,9 +27,10 @@ router.put('/categories/:id', (0, auth_1.roleCheck)(['DIRECTOR', 'DEVELOPER']), 
 router.delete('/categories/:id', (0, auth_1.roleCheck)(['DIRECTOR', 'DEVELOPER']), adminController_1.deleteCategory);
 // Suppliers CRUD - LEADER can manage suppliers as requested
 router.get('/suppliers', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), adminController_1.getSuppliers);
+router.get('/suppliers/:id', auth_1.authMiddleware, adminController_1.getSupplierById); // Open to all authenticated users
 router.post('/suppliers', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), adminController_1.createSupplier);
 router.put('/suppliers/:id', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), adminController_1.updateSupplier);
-router.delete('/suppliers/:id', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'DEVELOPER']), adminController_1.deleteSupplier);
+router.delete('/suppliers/:id', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), adminController_1.deleteSupplier);
 router.post('/suppliers/bulk-import', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), adminController_1.bulkImportSuppliers);
 // Users Management
 router.get('/users', (0, auth_1.roleCheck)(['DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), userController_1.getUsers); // Leader sees list? Maybe needed

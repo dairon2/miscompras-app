@@ -24,7 +24,7 @@ router.get('/years', requirementController_1.getAvailableYears);
 router.get('/asientos', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), requirementController_1.getAsientos);
 router.post('/asientos', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), requirementController_1.createAsiento);
 // Requirements Routes
-router.get('/pending-count', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), requirementController_1.getPendingApprovalCount);
+router.get('/pending-count', (0, auth_1.roleCheck)(['DIRECTOR', 'COORDINATOR']), requirementController_1.getPendingApprovalCount);
 router.put('/mass-update', (0, auth_1.roleCheck)(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), requirementController_1.updateMassRequirements);
 router.post('/', (0, auth_1.roleCheck)(['USER', 'ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), requirementController_1.createRequirement);
 router.post('/mass-create', (0, auth_1.roleCheck)(['USER', 'ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), upload.any(), requirementController_1.createMassRequirements);

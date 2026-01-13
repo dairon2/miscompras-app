@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAdminStats = exports.updateSystemConfig = exports.getSystemConfig = exports.updateUser = exports.deleteUser = exports.toggleUserStatus = exports.getUsers = exports.bulkImportSuppliers = exports.deleteSupplier = exports.updateSupplier = exports.createSupplier = exports.getSuppliers = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getCategories = exports.deleteProject = exports.updateProject = exports.createProject = exports.getProjects = exports.deleteArea = exports.updateArea = exports.createArea = exports.getAreas = void 0;
+exports.getAdminStats = exports.updateSystemConfig = exports.getSystemConfig = exports.updateUser = exports.deleteUser = exports.toggleUserStatus = exports.getUsers = exports.bulkImportSuppliers = exports.deleteSupplier = exports.updateSupplier = exports.createSupplier = exports.getSupplierById = exports.getSuppliers = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getCategories = exports.deleteProject = exports.updateProject = exports.createProject = exports.getProjects = exports.deleteArea = exports.updateArea = exports.createArea = exports.getAreas = void 0;
 const index_1 = require("../index");
 // ==================== AREAS ====================
 const getAreas = async (req, res) => {
@@ -319,6 +319,74 @@ const getSuppliers = async (req, res) => {
     }
 };
 exports.getSuppliers = getSuppliers;
+const getSupplierById = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const supplier = await index_1.prisma.supplier.findUnique({
+            where: { id },
+            include: {
+                requirements: {
+                    take: 50,
+                    orderBy: { createdAt: 'desc' },
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        totalAmount: true,
+                        actualAmount: true,
+                        createdAt: true,
+                        area: { select: { name: true } },
+                        project: { select: { name: true } }
+                    }
+                },
+                ratings: {
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        requirement: { select: { id: true, title: true } }
+                    }
+                }
+            }
+        });
+        if (!supplier) {
+            return res.status(404).json({ error: 'Proveedor no encontrado' });
+        }
+        // Calculate stats
+        const totalRequirements = supplier.requirements.length;
+        const approvedRequirements = supplier.requirements.filter(r => r.status === 'APPROVED').length;
+        const pendingRequirements = supplier.requirements.filter(r => r.status === 'PENDING_APPROVAL').length;
+        const totalAmount = supplier.requirements.reduce((sum, r) => sum + (Number(r.actualAmount) || Number(r.totalAmount) || 0), 0);
+        // Calculate rating stats
+        const ratingStats = supplier.ratings.length > 0 ? {
+            count: supplier.ratings.length,
+            avgOverall: supplier.ratings.reduce((sum, r) => sum + r.overallRating, 0) / supplier.ratings.length,
+            avgDelivery: supplier.ratings.reduce((sum, r) => sum + r.deliveryRating, 0) / supplier.ratings.length,
+            avgQuality: supplier.ratings.reduce((sum, r) => sum + r.qualityRating, 0) / supplier.ratings.length,
+            avgPrice: supplier.ratings.reduce((sum, r) => sum + r.priceRating, 0) / supplier.ratings.length
+        } : null;
+        // Get invoice count
+        const invoiceCount = await index_1.prisma.invoice.count({
+            where: {
+                requirement: { supplierId: id }
+            }
+        });
+        res.json({
+            ...supplier,
+            stats: {
+                totalRequirements,
+                totalInvoices: invoiceCount,
+                totalAmount,
+                approvedRequirements,
+                pendingRequirements
+            },
+            ratingStats
+        });
+    }
+    catch (error) {
+        console.error('Error fetching supplier:', error);
+        res.status(500).json({ error: 'Error al obtener proveedor' });
+    }
+};
+exports.getSupplierById = getSupplierById;
 const createSupplier = async (req, res) => {
     const { name, nit, contactName, email, phone, address } = req.body;
     if (!name || !name.trim()) {

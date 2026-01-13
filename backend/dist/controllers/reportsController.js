@@ -7,6 +7,10 @@ const getExecutiveSummary = async (req, res) => {
     const year = parseInt(req.query.year) || new Date().getFullYear();
     const projectId = req.query.projectId;
     const areaId = req.query.areaId;
+    // Data scope from middleware
+    const dataScope = req.dataScope;
+    const directedAreaIds = req.directedAreaIds;
+    const filterUserId = req.filterUserId;
     try {
         // Build filter
         const budgetWhere = { year };
@@ -14,6 +18,13 @@ const getExecutiveSummary = async (req, res) => {
             budgetWhere.projectId = projectId;
         if (areaId)
             budgetWhere.areaId = areaId;
+        // Apply scope-based filtering
+        if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
+            budgetWhere.areaId = { in: directedAreaIds };
+        }
+        else if (dataScope === 'USER' && filterUserId) {
+            budgetWhere.managerId = filterUserId;
+        }
         // Get all budgets
         const budgets = await index_1.prisma.budget.findMany({
             where: budgetWhere,
@@ -32,11 +43,19 @@ const getExecutiveSummary = async (req, res) => {
             reqWhere.projectId = projectId;
         if (areaId)
             reqWhere.areaId = areaId;
-        const [totalRequirements, pendingRequirements, approvedRequirements, rejectedRequirements] = await Promise.all([
+        // Apply scope-based filtering for requirements
+        if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
+            reqWhere.areaId = { in: directedAreaIds };
+        }
+        else if (dataScope === 'USER' && filterUserId) {
+            reqWhere.createdById = filterUserId;
+        }
+        const [totalRequirements, pendienteProcurement, enTramiteProcurement, entregadoProcurement, finalizadoProcurement] = await Promise.all([
             index_1.prisma.requirement.count({ where: reqWhere }),
-            index_1.prisma.requirement.count({ where: { ...reqWhere, status: 'PENDING_APPROVAL' } }),
-            index_1.prisma.requirement.count({ where: { ...reqWhere, status: 'APPROVED' } }),
-            index_1.prisma.requirement.count({ where: { ...reqWhere, status: 'REJECTED' } })
+            index_1.prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'PENDIENTE' } }),
+            index_1.prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'EN_TRAMITE' } }),
+            index_1.prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'ENTREGADO' } }),
+            index_1.prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'FINALIZADO' } })
         ]);
         // Get invoices summary
         const invoiceWhere = {};
@@ -58,9 +77,10 @@ const getExecutiveSummary = async (req, res) => {
             },
             requirements: {
                 total: totalRequirements,
-                pending: pendingRequirements,
-                approved: approvedRequirements,
-                rejected: rejectedRequirements
+                pendiente: pendienteProcurement,
+                enTramite: enTramiteProcurement,
+                entregado: entregadoProcurement,
+                finalizado: finalizadoProcurement
             },
             invoices: {
                 total: invoices.length,
@@ -115,20 +135,30 @@ exports.getBudgetExecutionByProject = getBudgetExecutionByProject;
 const getRequirementsByStatus = async (req, res) => {
     const year = parseInt(req.query.year) || new Date().getFullYear();
     const projectId = req.query.projectId;
+    // For area directors (USER role), filter by their directed areas
+    const directedAreaIds = req.directedAreaIds;
     try {
         const where = { year };
         if (projectId)
             where.projectId = projectId;
+        // Apply area filter for area directors
+        if (directedAreaIds && directedAreaIds.length > 0) {
+            where.areaId = { in: directedAreaIds };
+        }
         const statuses = await index_1.prisma.requirement.groupBy({
-            by: ['status'],
+            by: ['procurementStatus'],
             where,
-            _count: { status: true }
+            _count: { procurementStatus: true }
         });
-        const data = statuses.map(s => ({
-            status: s.status,
-            count: s._count.status,
-            label: getStatusLabel(s.status)
-        }));
+        const data = statuses.map(s => {
+            // Handle null procurementStatus as 'PENDIENTE'
+            const status = s.procurementStatus || 'PENDIENTE';
+            return {
+                status: status,
+                count: s._count.procurementStatus,
+                label: getStatusLabel(status)
+            };
+        });
         res.json(data);
     }
     catch (error) {
@@ -139,7 +169,14 @@ const getRequirementsByStatus = async (req, res) => {
 exports.getRequirementsByStatus = getRequirementsByStatus;
 const getStatusLabel = (status) => {
     const labels = {
-        'PENDING_APPROVAL': 'Pendiente',
+        'PENDIENTE': 'Pendiente',
+        'EN_TRAMITE': 'En Trámite',
+        'FINALIZADO': 'Finalizado',
+        'ENTREGADO': 'Entregado',
+        'ANULADO': 'Anulado',
+        'POSTERGADO': 'Postergado',
+        // Fallbacks for approval status in case they exist mixed in DB or logic changes
+        'PENDING_APPROVAL': 'Por Aprobar',
         'APPROVED': 'Aprobado',
         'REJECTED': 'Rechazado'
     };
@@ -188,6 +225,8 @@ exports.getTopSuppliers = getTopSuppliers;
 const getMonthlyTrend = async (req, res) => {
     const year = parseInt(req.query.year) || new Date().getFullYear();
     const projectId = req.query.projectId;
+    // For area directors (USER role), filter by their directed areas
+    const directedAreaIds = req.directedAreaIds;
     try {
         const where = {
             year,
@@ -195,6 +234,10 @@ const getMonthlyTrend = async (req, res) => {
         };
         if (projectId)
             where.projectId = projectId;
+        // Apply area filter for area directors
+        if (directedAreaIds && directedAreaIds.length > 0) {
+            where.areaId = { in: directedAreaIds };
+        }
         const requirements = await index_1.prisma.requirement.findMany({
             where,
             select: {

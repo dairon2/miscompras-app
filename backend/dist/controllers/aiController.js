@@ -1,56 +1,51 @@
-
-import { Request, Response } from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { prisma } from '../db'; // Import prisma client
-import { SYSTEM_FAQ } from '../utils/aiKnowledge';
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.extractRequirement = exports.chatWithAI = void 0;
+const generative_ai_1 = require("@google/generative-ai");
+const db_1 = require("../db"); // Import prisma client
+const aiKnowledge_1 = require("../utils/aiKnowledge");
 // Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-export const chatWithAI = async (req: Request, res: Response) => {
+const genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const chatWithAI = async (req, res) => {
     try {
         const { message, history } = req.body;
-        const user = (req as any).user;
+        const user = req.user;
         const userId = user?.id;
         const userRole = user?.role || 'USER';
-
         // 1. Fetch Context Based on Role (Security & Business Rules)
         let contextData = "";
-
         // Helper for currency formatting
-        const formatMoney = (amount: any) => {
+        const formatMoney = (amount) => {
             return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(Number(amount) || 0);
         };
-
         if (userRole === 'USER') {
             // USER: Fetch specific lists
             const [myReqs, myBudgets, myProjects, myInvoices] = await Promise.all([
-                prisma.requirement.findMany({
+                db_1.prisma.requirement.findMany({
                     where: { createdById: userId },
                     take: 5,
                     orderBy: { createdAt: 'desc' },
                     select: { title: true, status: true, totalAmount: true }
                 }),
-                prisma.budget.findMany({
+                db_1.prisma.budget.findMany({
                     where: {
                         OR: [{ managerId: userId }, { subLeaders: { some: { userId } } }]
                     },
                     take: 5,
                     select: { title: true, available: true, project: { select: { name: true } } }
                 }),
-                prisma.project.findMany({
+                db_1.prisma.project.findMany({
                     where: { leaderId: userId },
                     take: 5,
                     select: { name: true, code: true }
                 }),
-                prisma.invoice.findMany({
+                db_1.prisma.invoice.findMany({
                     where: { createdById: userId },
                     take: 5,
                     orderBy: { issueDate: 'desc' },
                     select: { invoiceNumber: true, amount: true, status: true, supplier: { select: { name: true } } }
                 })
             ]);
-
             contextData = `
             DATOS DEL USUARIO (${user.name}):
             
@@ -68,49 +63,48 @@ export const chatWithAI = async (req: Request, res: Response) => {
             
             NOTA: Este usuario tiene rol 'USER'. Solo ve su propia información.
             `;
-        } else {
+        }
+        else {
             // ADMIN, DIRECTOR, COORDINATOR: Global lists
             const [projects, budgets, reqsPending, suppliers, invoices] = await Promise.all([
-                prisma.project.findMany({
+                db_1.prisma.project.findMany({
                     take: 10,
                     orderBy: { updatedAt: 'desc' },
                     select: { name: true, code: true }
                 }),
-                prisma.budget.findMany({
+                db_1.prisma.budget.findMany({
                     take: 10,
                     orderBy: { createdAt: 'desc' },
                     select: { title: true, available: true, project: { select: { name: true } } }
                 }),
-                prisma.requirement.findMany({
+                db_1.prisma.requirement.findMany({
                     where: { status: 'PENDING_APPROVAL' },
                     take: 10,
                     select: { title: true, createdBy: { select: { email: true } }, estimatedAmount: true }
                 }),
-                prisma.supplier.findMany({
+                db_1.prisma.supplier.findMany({
                     take: 10,
                     orderBy: { createdAt: 'desc' },
                     select: { name: true, supplierType: true, criticality: true }
                 }),
-                prisma.invoice.findMany({
+                db_1.prisma.invoice.findMany({
                     take: 5,
                     orderBy: { issueDate: 'desc' },
                     select: { invoiceNumber: true, amount: true, supplier: { select: { name: true } }, status: true }
                 })
             ]);
-
-            const supplierCount = await prisma.supplier.count();
-            const invoiceCount = await prisma.invoice.count();
-
+            const supplierCount = await db_1.prisma.supplier.count();
+            const invoiceCount = await db_1.prisma.invoice.count();
             contextData = `
             DATOS GENERALES DEL SISTEMA (Rol: ${userRole}):
             
-            PROYECTOS RECIENTES (Total: ${await prisma.project.count()}):
+            PROYECTOS RECIENTES (Total: ${await db_1.prisma.project.count()}):
             ${projects.map(p => `- ${p.name} (${p.code})`).join('\n')}
             
-            PRESUPUESTOS RECIENTES (Total: ${await prisma.budget.count()}):
+            PRESUPUESTOS RECIENTES (Total: ${await db_1.prisma.budget.count()}):
             ${budgets.map(b => `- ${b.title} (Proyecto: ${b.project.name}): Disp. ${formatMoney(b.available)}`).join('\n')}
             
-            REQUERIMIENTOS PENDIENTES DE APROBACIÓN (Total: ${await prisma.requirement.count({ where: { status: 'PENDING_APPROVAL' } })}):
+            REQUERIMIENTOS PENDIENTES DE APROBACIÓN (Total: ${await db_1.prisma.requirement.count({ where: { status: 'PENDING_APPROVAL' } })}):
             ${reqsPending.map(r => `- ${r.title} (Solicitado por: ${r.createdBy.email})`).join('\n')}
 
             PROVEEDORES REGISTRADOS (Total: ${supplierCount}):
@@ -121,13 +115,11 @@ export const chatWithAI = async (req: Request, res: Response) => {
             ${invoices.map(i => `- Factura #${i.invoiceNumber} de ${i.supplier.name}: ${formatMoney(i.amount)} (${i.status})`).join('\n')}
             `;
         }
-
         // 2. Prepare System Prompt with Knowledge Base (imported from aiKnowledge.ts)
-
         const systemPrompt = `
         Eres "MisCompras Bot", asistente experto del sistema de gestión de compras del Museo de Antioquia.
         
-        ${SYSTEM_FAQ}
+        ${aiKnowledge_1.SYSTEM_FAQ}
 
         ${contextData}
         
@@ -143,24 +135,22 @@ export const chatWithAI = async (req: Request, res: Response) => {
         - Si la lista está vacía en el contexto, dilo claramente ("No veo items en este momento").
         - Si no sabes algo o no está en el contexto, di que no tienes esa información y sugiere contactar a soporte.
         `;
-
         // 3. Configure Model
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             systemInstruction: systemPrompt
         });
-
         // 4. Start Chat
         // Sanitize history: Gemini requires history to start with 'user' role.
         // We filter out any initial 'model' messages (like the welcome message).
-        const sanitizedHistory = history?.filter((msg: any, index: number) => {
+        const sanitizedHistory = history?.filter((msg, index) => {
             // If it's the very first message and it's from model, skip it.
-            if (index === 0 && msg.role === 'model') return false;
+            if (index === 0 && msg.role === 'model')
+                return false;
             return true;
         }) || [];
-
         const chat = model.startChat({
-            history: sanitizedHistory.map((msg: any) => ({
+            history: sanitizedHistory.map((msg) => ({
                 role: msg.role === 'user' ? 'user' : 'model',
                 parts: [{ text: msg.content }]
             })),
@@ -168,14 +158,12 @@ export const chatWithAI = async (req: Request, res: Response) => {
                 maxOutputTokens: 2500,
             },
         });
-
         const result = await chat.sendMessage(message);
         const response = result.response;
         const text = response.text();
-
         res.json({ reply: text });
-
-    } catch (error: any) {
+    }
+    catch (error) {
         console.error("AI Controller Error:", error);
         console.log("API Key present:", !!process.env.GEMINI_API_KEY);
         res.status(500).json({
@@ -185,11 +173,10 @@ export const chatWithAI = async (req: Request, res: Response) => {
         });
     }
 };
-
-export const extractRequirement = async (req: Request, res: Response) => {
+exports.chatWithAI = chatWithAI;
+const extractRequirement = async (req, res) => {
     try {
         const { text } = req.body;
-
         const extractionPrompt = `
         Actúa como un asistente administrativo experto. Analiza el siguiente texto y extrae los datos para crear un Requerimiento de Compra.
         
@@ -206,18 +193,15 @@ export const extractRequirement = async (req: Request, res: Response) => {
 
         IMPORTANTE: 'estimatedAmount' debe ser un NÚMERO (Number).
         `;
-
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             generationConfig: { responseMimeType: "application/json" }
         });
-
         const result = await model.generateContent(extractionPrompt);
         const jsonResponse = JSON.parse(result.response.text());
-
         res.json(jsonResponse);
-
-    } catch (error: any) {
+    }
+    catch (error) {
         console.error("AI Extraction Error:", error);
         res.status(500).json({
             error: "Error procesando el texto.",
@@ -225,3 +209,4 @@ export const extractRequirement = async (req: Request, res: Response) => {
         });
     }
 };
+exports.extractRequirement = extractRequirement;
