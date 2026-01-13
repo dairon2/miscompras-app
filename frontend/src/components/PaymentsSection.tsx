@@ -193,57 +193,66 @@ export default function PaymentsSection({
                                 key={payment.id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-gray-700"
+                                className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-gray-700 relative"
                             >
-                                <div className="flex items-start justify-between gap-3">
-                                    {/* Left: Number badge and amount */}
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 font-black text-sm flex-shrink-0">
-                                            #{payment.paymentNumber}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="font-black text-lg text-green-600">
+                                <div className="flex items-start gap-4">
+                                    {/* Number Badge */}
+                                    <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 font-black text-lg flex-shrink-0">
+                                        #{payment.paymentNumber}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0">
+                                        {/* Top Row: Amount and Date/Actions */}
+                                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
+                                            <p className="font-black text-2xl text-green-600 tracking-tight">
                                                 ${parseFloat(payment.amount.toString()).toLocaleString()}
                                             </p>
-                                            {/* Details grid */}
-                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mt-1">
-                                                {payment.invoiceNumber && (
-                                                    <span className="flex items-center gap-1">
-                                                        <FileText size={12} />
-                                                        Fact: {payment.invoiceNumber}
+
+                                            <div className="flex items-center gap-2 flex-shrink-0 self-start sm:self-center">
+                                                {payment.paymentDate && (
+                                                    <span className="flex items-center gap-1 text-xs font-bold text-gray-500 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-lg whitespace-nowrap">
+                                                        <Calendar size={12} />
+                                                        {new Date(payment.paymentDate).toLocaleDateString('es-CO', {
+                                                            day: '2-digit',
+                                                            month: '2-digit',
+                                                            year: 'numeric'
+                                                        })}
                                                     </span>
                                                 )}
-                                                {payment.purchaseOrder && (
-                                                    <span className="flex items-center gap-1">
-                                                        <FileText size={12} />
-                                                        OC: {payment.purchaseOrder}
-                                                    </span>
+                                                {canEdit && (
+                                                    <button
+                                                        onClick={() => handleDelete(payment.id)}
+                                                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 )}
                                             </div>
-                                            {payment.observations && (
-                                                <p className="text-xs text-gray-400 mt-1 truncate">{payment.observations}</p>
+                                        </div>
+
+                                        {/* Details */}
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
+                                            {payment.invoiceNumber && (
+                                                <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-700/50 px-2 py-1 rounded-md">
+                                                    <FileText size={12} className="text-gray-400" />
+                                                    <span className="font-medium">Fac:</span>
+                                                    <span className="font-bold">{payment.invoiceNumber}</span>
+                                                </span>
+                                            )}
+                                            {payment.purchaseOrder && (
+                                                <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-700/50 px-2 py-1 rounded-md">
+                                                    <FileText size={12} className="text-gray-400" />
+                                                    <span className="font-medium">OC:</span>
+                                                    <span className="font-bold">{payment.purchaseOrder}</span>
+                                                </span>
                                             )}
                                         </div>
-                                    </div>
-                                    {/* Right: Date and delete */}
-                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                        {payment.paymentDate && (
-                                            <span className="flex items-center gap-1 text-xs text-gray-500 whitespace-nowrap">
-                                                <Calendar size={12} />
-                                                {new Date(payment.paymentDate).toLocaleDateString('es-CO', {
-                                                    day: '2-digit',
-                                                    month: '2-digit',
-                                                    year: 'numeric'
-                                                })}
-                                            </span>
-                                        )}
-                                        {canEdit && (
-                                            <button
-                                                onClick={() => handleDelete(payment.id)}
-                                                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors flex-shrink-0"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
+
+                                        {payment.observations && (
+                                            <p className="text-xs text-gray-400 mt-2 italic border-t border-gray-100 dark:border-gray-700 pt-2">
+                                                {payment.observations}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
