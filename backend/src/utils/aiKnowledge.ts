@@ -17,6 +17,7 @@ CENTRO DE AYUDA Y REGLAS DE NEGOCIO:
 - Funcionamiento: Monto asignado vs Saldo disponible. Al aprobar req, se descuenta.
 - Ajustes: INCREMENTO (agregar) o TRANSFERENCIA (mover entre presupuestos). Requieren aprobación Financiera.
 - Visibilidad: Líderes y Sublíderes ven sus presupuestos. Admin ve todos.
+- Aprobación de Asignación (USER): Los usuarios deben "Aceptar" la responsabilidad de los presupuestos asignados por el Director. Esto se hace en 'Presupuestos' -> 'Pendientes por Aprobar' (/budget/pending).
 
 3. PAGOS Y FACTURAS:
 - Registro: En detalle requerimiento -> 'Pagos Múltiples' -> 'Agregar Abono'.
