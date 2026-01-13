@@ -5,9 +5,15 @@ import { prisma } from '../db';
 
 export const generateUserRequirementsExcel = async (userId: string, projectId?: string): Promise<string> => {
     // 1. Fetch Data
-    const whereClause: any = { createdById: userId };
+    // 1. Fetch Data
+    const whereClause: any = {};
+
+    // If Project is specified, fetch ALL requirements for that project
+    // Otherwise, fetch user's personal requirements
     if (projectId) {
         whereClause.projectId = projectId;
+    } else {
+        whereClause.createdById = userId;
     }
 
     const requirements = await prisma.requirement.findMany({
