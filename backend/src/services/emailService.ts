@@ -26,7 +26,7 @@ const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(amount);
 
 // Base email template
-const getEmailTemplate = (title: string, content: string, actionButton?: { text: string; url: string }) => `
+export const getEmailTemplate = (title: string, content: string, actionButton?: { text: string; url: string }) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -77,7 +77,7 @@ const getEmailTemplate = (title: string, content: string, actionButton?: { text:
 `;
 
 // Send email using Azure Communication Services
-const sendEmail = async (to: string, subject: string, htmlContent: string) => {
+export const sendEmail = async (to: string, subject: string, htmlContent: string) => {
     console.log(`[Email] Attempting to send email to: ${to}, subject: "${subject}"`);
 
     // Check if emails are disabled (for development/testing)

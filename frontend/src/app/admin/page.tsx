@@ -999,6 +999,16 @@ export default function AdminPage() {
                                                 />
                                             </div>
                                         </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-gray-600">Actividad Económica</label>
+                                            <input
+                                                type="text"
+                                                value={formData.activity || ''}
+                                                onChange={(e) => setFormData({ ...formData, activity: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                placeholder="Ej: Suministro de papelería, Servicios de mantenimiento..."
+                                            />
+                                        </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-gray-600">Contacto</label>
