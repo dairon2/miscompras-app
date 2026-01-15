@@ -39,6 +39,7 @@ model User {
   requirementsCreated  Requirement[]      @relation("CreatedBy")
   requirementsOwned    Requirement[]      @relation("OwnedBy")
   groupsCreated        RequirementGroup[] @relation("GroupCreator")
+  projectsSubLed       Project[]          @relation("ProjectSubLeader")
   area                 Area?              @relation("AreaUsers", fields: [areaId], references: [id])
 }
 
@@ -50,9 +51,11 @@ model Project {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   leaderId     String?
+  subLeaderId  String?
   funder       String?
   budgets      Budget[]
   leader       User?         @relation("ProjectLeader", fields: [leaderId], references: [id])
+  subLeader    User?         @relation("ProjectSubLeader", fields: [subLeaderId], references: [id])
   requirements Requirement[]
 }
 

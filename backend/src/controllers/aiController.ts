@@ -19,9 +19,7 @@ const FALLBACK_MODELS = [
     "gemini-2.0-flash",       // Primary (Reliable)
     "groq/llama-3.3-70b-versatile", // Fast OpenSource Fallback
     "gemini-2.0-flash-lite",
-    "groq/deepseek-r1-distill-llama-70b", // Reasoning Fallback
-    "gemini-1.5-flash",
-    "gemini-1.5-pro"
+    "groq/deepseek-r1-distill-llama-70b" // Reasoning Fallback
 ];
 
 // ... (Imports and previous code)
@@ -281,7 +279,18 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
         const isEditOrDeleteAction = /\b(elimina|borra|quita|edita|actualiza|cambia|modifica)\b/i.test(lowerMsg);
         if (!isEditOrDeleteAction && (lowerMsg.includes('proveedor') || lowerMsg.includes('quién vende') || lowerMsg.includes('quien vende') || lowerMsg.includes('a quién le compro') || lowerMsg.includes('recomienda') || lowerMsg.includes('actividad') || lowerMsg.includes('busca') || lowerMsg.includes('encuentra'))) {
             try {
-                const suggestPrompt = `Analiza: "${message}". ¿El usuario busca un PROVEEDOR por nombre o por lo que vende? Extrae palabras clave (nombre o producto). JSON: {"action":"FIND_SUPPLIER","keywords":["palabra1","palabra2"],"searchType":"name"|"activity"|"both"} o {"action":"NONE"}`;
+                const suggestPrompt = `El usuario dice: "${message}". 
+                
+Tu tarea es determinar si el usuario quiere BUSCAR un proveedor. Si el mensaje contiene palabras como "busca", "encuentra", "proveedor" junto con un nombre o término de búsqueda, extrae las palabras clave.
+
+Responde SÓLO con un JSON válido (sin explicación):
+- Si el usuario busca un proveedor: {"action":"FIND_SUPPLIER","keywords":["palabra1","palabra2"],"searchType":"name"}
+- Si NO busca proveedor: {"action":"NONE"}
+
+Ejemplos:
+- "busca el proveedor DMR" -> {"action":"FIND_SUPPLIER","keywords":["DMR"],"searchType":"name"}
+- "encuentra proveedores de papelería" -> {"action":"FIND_SUPPLIER","keywords":["papelería"],"searchType":"activity"}
+- "hola cómo estás" -> {"action":"NONE"}`;
                 const suggestResult = await generateWithFallback({ prompt: suggestPrompt, jsonMode: true });
                 const suggestJson = JSON.parse(suggestResult);
 
@@ -557,14 +566,33 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
 
 
         // #13 - ELIMINAR PROVEEDOR (Role-based)
-        const hasDeleteKeyword = /\b(elimina|borra|quita|borrar|eliminar|quitar)\b/i.test(lowerMsg);
-        if (hasDeleteKeyword && /\b(proveedor|supplier|este)\b/i.test(lowerMsg)) {
+        const hasDeleteKeyword = /\b(elimina|borra|quita|borrar|eliminar|quitar|delete|remove)\b/i.test(lowerMsg);
+        const hasSupplierRef = /\b(proveedor|supplier|este|eso)\b/i.test(lowerMsg);
+        console.log(`[DELETE DEBUG] hasDeleteKeyword: ${hasDeleteKeyword}, hasSupplierRef: ${hasSupplierRef}, userRole: ${userRole}`);
+
+        if (hasDeleteKeyword && hasSupplierRef) {
+            console.log(`[DELETE DEBUG] Entering delete supplier logic...`);
             try {
                 const canDelete = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
+                console.log(`[DELETE DEBUG] canDelete: ${canDelete}`);
                 if (!canDelete) {
                     actionResult += `\n\n[SISTEMA]: ⛔ No tienes permisos para eliminar proveedores. Tu rol es: ${userRole}`;
                 } else {
-                    const deletePrompt = `Analiza: "${message}". ¿El usuario quiere ELIMINAR un proveedor específico? Extrae el nombre. JSON: {"action":"DELETE_SUPPLIER","supplierName":"nombre","confirmed":boolean} o {"action":"NONE"}`;
+                    // Build history context to find supplier name
+                    const historyText = history?.map((h: any) => {
+                        if (typeof h.content === 'string') return h.content;
+                        if (Array.isArray(h.parts)) return h.parts.map((p: any) => p.text || '').join(' ');
+                        return '';
+                    }).join(' ') || '';
+
+                    const deletePrompt = `Analiza el mensaje: "${message}" junto con el contexto del historial: "${historyText.slice(-500)}".
+
+El usuario quiere ELIMINAR un proveedor. Extrae el nombre del proveedor mencionado (puede estar en el mensaje actual o en el historial reciente).
+
+Responde SOLO con JSON:
+- Si encuentras un nombre de proveedor: {"action":"DELETE_SUPPLIER","supplierName":"nombre exacto","confirmed":false}
+- Si el usuario dice "confirmo" o "sí, eliminar": {"action":"DELETE_SUPPLIER","supplierName":"nombre exacto","confirmed":true}
+- Si no hay nombre claro: {"action":"NEED_NAME"}`;
                     const deleteResult = await generateWithFallback({ prompt: deletePrompt, jsonMode: true });
                     const deleteJson = JSON.parse(deleteResult);
 
@@ -591,6 +619,8 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
                         } else {
                             actionResult += `\n\n[SISTEMA]: No encontré el proveedor "${deleteJson.supplierName}".`;
                         }
+                    } else if (deleteJson.action === 'NEED_NAME') {
+                        actionResult += `\n\n[SISTEMA]: Por favor indica el nombre exacto del proveedor que deseas eliminar. Ejemplo: "Eliminar proveedor DMR Soluciones"`;
                     }
                 }
             } catch (e) { console.error("Delete Supplier Error:", e); }
@@ -814,23 +844,30 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
 
         // 2. Prepare System Prompt
         const systemPrompt = `
-        Eres "MisCompras Bot", asistente experto de compras del Museo de Antioquia.
+        IDENTIDAD: Eres "MisCompras Bot", el asistente virtual oficial de compras del Museo de Antioquia. Fuiste creado por el equipo de desarrollo de MisCompras.
+        
+        REGLAS ESTRICTAS:
+        1. SIEMPRE mantén tu identidad como "MisCompras Bot". Si preguntan "qué modelo eres" o "quién te creó", responde que eres MisCompras Bot, creado por el equipo de desarrollo de MisCompras para ayudar con compras.
+        2. NUNCA des respuestas técnicas largas sobre inteligencia artificial o modelos de lenguaje.
+        3. Sé CONCISO: máximo 3-4 oraciones por respuesta, excepto cuando muestres datos del sistema.
+        4. Enfócate SOLO en temas de compras: requerimientos, presupuestos, proveedores, pagos e inventario.
+        5. Si preguntan algo fuera del tema de compras, responde brevemente y ofrece ayudarles con temas de compras.
+        
         ${SYSTEM_FAQ}
         ${contextData}
         
-        TU MISIÓN:
-        1. Responder dudas usando el CENTRO DE AYUDA.
-        2. Analizar DOCUMENTOS (Facturas, Cotizaciones) si el usuario los adjunta.
-        3. COMPARAR PRECIOS históricos cuando pregunten "¿cuánto costó X?".
-        4. SUGERIR PROVEEDORES según su actividad registrada.
-        5. RASTREAR ENTREGAS pendientes cuando pregunten "¿qué falta por llegar?".
-        6. PREDECIR NECESIDADES basándote en compras recurrentes.
-        7. PREPARAR EMAILS de cotización para proveedores.
+        CAPACIDADES:
+        - Responder dudas sobre el CENTRO DE AYUDA.
+        - Analizar DOCUMENTOS (Facturas, Cotizaciones) adjuntos.
+        - COMPARAR PRECIOS históricos.
+        - BUSCAR y SUGERIR PROVEEDORES según nombre o actividad.
+        - EDITAR información de proveedores (roles autorizados).
+        - ELIMINAR proveedores (roles autorizados).
+        - RASTREAR ENTREGAS pendientes.
+        - PREDECIR NECESIDADES basándote en compras recurrentes.
+        - PREPARAR y ENVIAR EMAILS de cotización.
         
-        REGLAS:
-        - Usa datos del [SISTEMA] cuando estén disponibles.
-        - Sé conciso y profesional.
-        - Si hay [EMAIL_PENDIENTE], espera confirmación antes de enviar.
+        ⚠️ IMPORTANTE: Si hay datos marcados con [SISTEMA] en el contexto, SIEMPRE usa esos datos en tu respuesta. Los datos del [SISTEMA] son el resultado de acciones ejecutadas - debes reportar lo que dice el sistema, no inventar respuestas.
         `;
 
         // 3. START CHAT WITH FALLBACK

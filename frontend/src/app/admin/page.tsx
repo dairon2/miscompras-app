@@ -151,10 +151,24 @@ export default function AdminPage() {
                 api.get('/admin/users').then(res => setUsersList(res.data)).catch(console.error);
             }
         } else if (activeTab === 'projects') {
-            setFormData({ ...item, funder: item.funder || '', leaderId: item.leader?.id || '' });
+            setFormData({ ...item, funder: item.funder || '', leaderId: item.leader?.id || '', subLeaderId: item.subLeader?.id || '' });
             if (usersList.length === 0) {
                 api.get('/admin/users').then(res => setUsersList(res.data)).catch(console.error);
             }
+        } else if (activeTab === 'suppliers') {
+            // Map supplier fields correctly - backend uses contactEmail/contactPhone but form uses email/phone
+            setFormData({
+                ...item,
+                name: item.name || '',
+                nit: item.nit || item.taxId || '',
+                contactName: item.contactName || '',
+                email: item.email || item.contactEmail || '',
+                phone: item.phone || item.contactPhone || '',
+                address: item.address || '',
+                activity: item.activity || '',
+                supplierType: item.supplierType || 'SUPPLIER',
+                criticality: item.criticality || 'LOW'
+            });
         } else {
             setFormData({ ...item });
         }
@@ -164,7 +178,7 @@ export default function AdminPage() {
     const getEmptyForm = () => {
         switch (activeTab) {
             case 'areas': return { name: '', directorId: '' };
-            case 'projects': return { name: '', code: '', description: '', funder: '', leaderId: '' };
+            case 'projects': return { name: '', code: '', description: '', funder: '', leaderId: '', subLeaderId: '' };
             case 'categories': return { name: '', code: '', description: '' };
             case 'suppliers': return { name: '', nit: '', contactName: '', email: '', phone: '', address: '', activity: '', supplierType: 'SUPPLIER', criticality: 'LOW' };
             default: return {};
@@ -617,6 +631,7 @@ export default function AdminPage() {
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre</th>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Financiador</th>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Líder</th>
+                                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Sublíder</th>
                                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Presupuesto</th>
                                                 </>
                                             )}
@@ -723,6 +738,13 @@ export default function AdminPage() {
                                                                     <span className="text-sm font-bold text-gray-600 dark:text-gray-300">{item.leader.name}</span>
                                                                 ) : (
                                                                     <span className="text-xs text-gray-400 italic">Sin asignar</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                {item.subLeader ? (
+                                                                    <span className="text-sm font-bold text-gray-600 dark:text-gray-300">{item.subLeader.name}</span>
+                                                                ) : (
+                                                                    <span className="text-xs text-gray-400 italic">-</span>
                                                                 )}
                                                             </td>
                                                             <td className="px-6 py-4">
@@ -928,6 +950,20 @@ export default function AdminPage() {
                                                     ))}
                                                 </select>
                                                 <p className="text-xs text-gray-400">Usuario que lidera el proyecto</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-gray-600">Sublíder del Proyecto</label>
+                                                <select
+                                                    value={formData.subLeaderId || ''}
+                                                    onChange={(e) => setFormData({ ...formData, subLeaderId: e.target.value })}
+                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                >
+                                                    <option value="">Sin sublíder asignado</option>
+                                                    {usersList.map((u: any) => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                                                    ))}
+                                                </select>
+                                                <p className="text-xs text-gray-400">Usuario que apoya el proyecto</p>
                                             </div>
                                         </div>
                                     </>

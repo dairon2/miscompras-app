@@ -120,6 +120,13 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
                         email: true
                     }
                 },
+                subLeader: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                },
                 _count: {
                     select: { requirements: true, budgets: true }
                 },
@@ -142,7 +149,7 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
 };
 
 export const createProject = async (req: AuthRequest, res: Response) => {
-    const { name, code, description, funder, leaderId } = req.body;
+    const { name, code, description, funder, leaderId, subLeaderId } = req.body;
 
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
@@ -167,10 +174,12 @@ export const createProject = async (req: AuthRequest, res: Response) => {
                 code: code?.trim() || null,
                 description: description?.trim() || null,
                 funder: funder?.trim() || null,
-                leaderId: leaderId || null
+                leaderId: leaderId || null,
+                subLeaderId: subLeaderId || null
             },
             include: {
-                leader: { select: { id: true, name: true, email: true } }
+                leader: { select: { id: true, name: true, email: true } },
+                subLeader: { select: { id: true, name: true, email: true } }
             }
         });
         res.status(201).json(project);
@@ -182,7 +191,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
 
 export const updateProject = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { name, code, description, funder, leaderId } = req.body;
+    const { name, code, description, funder, leaderId, subLeaderId } = req.body;
 
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
@@ -196,10 +205,12 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
                 code: code?.trim() || null,
                 description: description?.trim() || null,
                 funder: funder?.trim() || null,
-                leaderId: leaderId || null
+                leaderId: leaderId || null,
+                subLeaderId: subLeaderId || null
             },
             include: {
-                leader: { select: { id: true, name: true, email: true } }
+                leader: { select: { id: true, name: true, email: true } },
+                subLeader: { select: { id: true, name: true, email: true } }
             }
         });
         res.json(project);
@@ -319,7 +330,35 @@ export const deleteCategory = async (req: AuthRequest, res: Response) => {
 
 export const getSuppliers = async (req: AuthRequest, res: Response) => {
     try {
+        const userId = req.user?.id;
+        const userRole = req.user?.role;
+
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
+
+        const where: any = {};
+
+        if (!isGlobalViewer) {
+            where.requirements = {
+                some: {
+                    OR: [
+                        { createdById: userId },
+                        { project: { OR: [{ leaderId: userId }, { subLeaderId: userId }] } },
+                        {
+                            budget: {
+                                OR: [
+                                    { managerId: userId },
+                                    { subLeaders: { some: { userId } } },
+                                    { area: { directorId: userId } }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            };
+        }
+
         const suppliers = await prisma.supplier.findMany({
+            where,
             orderBy: { name: 'asc' },
             include: {
                 _count: {
@@ -336,12 +375,34 @@ export const getSuppliers = async (req: AuthRequest, res: Response) => {
 
 export const getSupplierById = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
 
     try {
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
+
+        // Restriction condition for requirements
+        const reqAccessWhere: any = isGlobalViewer ? {} : {
+            OR: [
+                { createdById: userId },
+                { project: { OR: [{ leaderId: userId }, { subLeaderId: userId }] } },
+                {
+                    budget: {
+                        OR: [
+                            { managerId: userId },
+                            { subLeaders: { some: { userId } } },
+                            { area: { directorId: userId } }
+                        ]
+                    }
+                }
+            ]
+        };
+
         const supplier = await prisma.supplier.findUnique({
             where: { id },
             include: {
                 requirements: {
+                    where: reqAccessWhere,
                     take: 50,
                     orderBy: { createdAt: 'desc' },
                     select: {
@@ -356,6 +417,9 @@ export const getSupplierById = async (req: AuthRequest, res: Response) => {
                     }
                 },
                 ratings: {
+                    where: {
+                        requirement: reqAccessWhere
+                    },
                     orderBy: { createdAt: 'desc' },
                     include: {
                         requirement: { select: { id: true, title: true } }
@@ -366,6 +430,19 @@ export const getSupplierById = async (req: AuthRequest, res: Response) => {
 
         if (!supplier) {
             return res.status(404).json({ error: 'Proveedor no encontrado' });
+        }
+
+        // If not global viewer and no requirements were found (meaning no access to this supplier)
+        if (!isGlobalViewer) {
+            const hasAnyReq = await prisma.requirement.count({
+                where: {
+                    supplierId: id,
+                    ...reqAccessWhere
+                }
+            });
+            if (hasAnyReq === 0) {
+                return res.status(403).json({ error: 'No tiene acceso a este proveedor' });
+            }
         }
 
         // Calculate stats
@@ -386,7 +463,10 @@ export const getSupplierById = async (req: AuthRequest, res: Response) => {
         // Get invoice count
         const invoiceCount = await prisma.invoice.count({
             where: {
-                requirement: { supplierId: id }
+                requirement: {
+                    supplierId: id,
+                    ...reqAccessWhere
+                }
             }
         });
 

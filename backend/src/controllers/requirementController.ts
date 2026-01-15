@@ -241,6 +241,14 @@ export const getMyRequirements = async (req: AuthRequest, res: Response) => {
                             { area: { directorId: userId } } // Allow Area Directors to see requirements/asientos of their area's budgets
                         ]
                     }
+                },
+                {
+                    project: {
+                        OR: [
+                            { leaderId: userId },
+                            { subLeaderId: userId }
+                        ]
+                    }
                 }
             ],
             year: year
@@ -722,6 +730,16 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
             if (managedBudgetIds.length > 0) {
                 orConditions.push({ budgetId: { in: managedBudgetIds } });
             }
+
+            // Add projects where user is leader or subleader
+            orConditions.push({
+                project: {
+                    OR: [
+                        { leaderId: userId },
+                        { subLeaderId: userId }
+                    ]
+                }
+            });
 
             where.OR = orConditions;
         }

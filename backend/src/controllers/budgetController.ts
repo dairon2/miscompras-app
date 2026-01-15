@@ -39,13 +39,15 @@ export const getBudgets = async (req: AuthRequest, res: Response) => {
                 where.OR = [
                     { areaId: { in: directedAreaIds } },
                     { managerId: userId },
-                    { subLeaders: { some: { userId } } }
+                    { subLeaders: { some: { userId } } },
+                    { project: { OR: [{ leaderId: userId }, { subLeaderId: userId }] } }
                 ];
             } else {
                 // Regular USER logic
                 where.OR = [
                     { managerId: userId },
-                    { subLeaders: { some: { userId } } }
+                    { subLeaders: { some: { userId } } },
+                    { project: { OR: [{ leaderId: userId }, { subLeaderId: userId }] } }
                 ];
                 // Regular users only see approved budgets
                 where.status = 'APPROVED';
@@ -144,7 +146,10 @@ export const getBudgetById = async (req: AuthRequest, res: Response) => {
             });
             const isAreaDirector = userAreasDirected.some(area => area.id === budget.areaId);
 
-            if (!isManager && !isSubLeader && !isAreaDirector) {
+            const isProjectLeader = budget.project?.leaderId === userId;
+            const isProjectSubLeader = budget.project?.subLeaderId === userId;
+
+            if (!isManager && !isSubLeader && !isAreaDirector && !isProjectLeader && !isProjectSubLeader) {
                 return res.status(403).json({ error: 'No tiene acceso a este presupuesto' });
             }
         }
