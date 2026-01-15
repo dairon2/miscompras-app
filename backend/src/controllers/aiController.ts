@@ -6,14 +6,14 @@ import { SYSTEM_FAQ } from '../utils/aiKnowledge';
 // Initialize Gemini SDK
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-// Fallback Chain Strategy: If one fails (429), try the next.
-// We mix recent versions with stable ones to maximize quota pools.
+// Fallback Chain Strategy: If one fails (429/404), try the next.
+// Each model has separate quota, so more models = more daily requests
 const FALLBACK_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite", // Lite version (distinct quota?)
-    "gemini-2.0-flash-lite-preview-02-05",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro"
+    "gemini-2.5-flash",       // Primary (20/day free)
+    "gemini-2.5-flash-lite",  // Fallback 1 (20/day free)
+    "gemini-2.0-flash",       // Fallback 2 (20/day free)
+    "gemini-1.5-flash",       // Fallback 3 (20/day free)
+    "gemini-1.5-pro"          // Fallback 4 (20/day free)
 ];
 
 // ... (Imports and previous code)
@@ -137,17 +137,26 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
         let actionResult = "";
 
         // #0 - CONFIRMAR ENVÍO DE EMAIL
-        if (lowerMsg.includes('sí') && (lowerMsg.includes('enviar') || lowerMsg.includes('confirmo') || lowerMsg.includes('envía'))) {
+        if (lowerMsg.includes('sí') && (lowerMsg.includes('enviar') || lowerMsg.includes('confirmo') || lowerMsg.includes('envía') || lowerMsg.includes('envíalo'))) {
             try {
-                // Check if there's a pending email in history context
-                const historyContext = history?.map((h: any) => h.content).join(' ') || '';
-                const emailMatch = historyContext.match(/\[EMAIL_PENDIENTE\]: Proveedor=([^,]+), Email=([^,]+), Producto=([^,\]]+)/);
+                // Build history context from messages
+                const historyText = history?.map((h: any) => {
+                    if (typeof h.content === 'string') return h.content;
+                    if (Array.isArray(h.parts)) return h.parts.map((p: any) => p.text || '').join(' ');
+                    return '';
+                }).join(' ') || '';
 
-                if (emailMatch) {
-                    const [, supplierName, supplierEmail, product] = emailMatch;
+                // Use AI to extract the pending email details from context
+                const extractPrompt = `Analiza este historial de chat: "${historyText}". 
+                Busca si hay un email PREPARADO para enviar a un proveedor. Extrae el nombre del proveedor, su email, y el producto.
+                JSON: {"found":true,"supplierName":"nombre","supplierEmail":"email@example.com","product":"descripción"} o {"found":false}`;
 
-                    // Get requirement details if mentioned
-                    const groupIdMatch = historyContext.match(/GroupId=(\d+)/);
+                const extractResult = await generateWithFallback({ prompt: extractPrompt, jsonMode: true });
+                const extractJson = JSON.parse(extractResult);
+
+                if (extractJson.found && extractJson.supplierEmail) {
+                    // Get requirement details if mentioned in history
+                    const groupIdMatch = historyText.match(/[Rr]eq(?:uerimiento)?\s*#?(\d+)/);
                     let reqDetails = '';
                     if (groupIdMatch) {
                         const req = await prisma.requirement.findFirst({
@@ -162,10 +171,10 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
                     // Build and send email
                     const { sendEmail, getEmailTemplate } = await import('../services/emailService');
                     const emailContent = `
-                        <p>Estimado/a proveedor <strong>${supplierName}</strong>,</p>
+                        <p>Estimado/a proveedor <strong>${extractJson.supplierName}</strong>,</p>
                         <p>Desde el Museo de Antioquia, solicitamos cotización para:</p>
                         <div style="background:#f5f5f5; padding:15px; border-radius:8px; margin:15px 0;">
-                            <strong>${product || 'Productos/Servicios'}</strong>
+                            <strong>${extractJson.product || 'Productos/Servicios'}</strong>
                             ${reqDetails}
                         </div>
                         <p>Por favor responda a este correo con su mejor oferta, incluyendo:</p>
@@ -178,16 +187,15 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
                         <p>Atentamente,<br><strong>Departamento de Compras</strong><br>Museo de Antioquia</p>
                     `;
 
-                    const subject = `Solicitud de Cotización - ${product || 'Varios'}${groupIdMatch ? ` (Req #${groupIdMatch[1]})` : ''}`;
+                    const subject = `Solicitud de Cotización - ${extractJson.product || 'Varios'}`;
                     const htmlContent = getEmailTemplate(subject, emailContent);
 
-                    await sendEmail(supplierEmail.trim(), subject, htmlContent);
+                    await sendEmail(extractJson.supplierEmail.trim(), subject, htmlContent);
 
                     actionResult += `\n\n[SISTEMA - EMAIL ENVIADO ✅]:\n`;
-                    actionResult += `📧 Enviado a: ${supplierEmail}\n`;
+                    actionResult += `📧 Enviado a: ${extractJson.supplierEmail}\n`;
                     actionResult += `📝 Asunto: ${subject}\n`;
-                    actionResult += `✅ El correo fue enviado exitosamente desde: DoNotReply@azurecomm.net\n`;
-                    actionResult += `📌 Nota: El proveedor recibirá el email en unos minutos.\n`;
+                    actionResult += `✅ El correo fue enviado exitosamente.\n`;
                 } else {
                     actionResult += `\n\n[SISTEMA]: No encontré un email pendiente para enviar. Primero prepara un correo diciendo "Envía cotización a [proveedor] para [producto]".`;
                 }
@@ -226,8 +234,9 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
             } catch (e) { console.error("Price Check Error:", e); }
         }
 
-        // #4 - SUGERENCIA DE PROVEEDOR (Busca por NOMBRE y ACTIVIDAD)
-        if (lowerMsg.includes('proveedor') || lowerMsg.includes('quién vende') || lowerMsg.includes('quien vende') || lowerMsg.includes('a quién le compro') || lowerMsg.includes('recomienda') || lowerMsg.includes('actividad') || lowerMsg.includes('busca') || lowerMsg.includes('encuentra')) {
+        // #4 - SUGERENCIA DE PROVEEDOR (Busca por NOMBRE y ACTIVIDAD) - Skip if edit/delete action
+        const isEditOrDeleteAction = /\b(elimina|borra|quita|edita|actualiza|cambia|modifica)\b/i.test(lowerMsg);
+        if (!isEditOrDeleteAction && (lowerMsg.includes('proveedor') || lowerMsg.includes('quién vende') || lowerMsg.includes('quien vende') || lowerMsg.includes('a quién le compro') || lowerMsg.includes('recomienda') || lowerMsg.includes('actividad') || lowerMsg.includes('busca') || lowerMsg.includes('encuentra'))) {
             try {
                 const suggestPrompt = `Analiza: "${message}". ¿El usuario busca un PROVEEDOR por nombre o por lo que vende? Extrae palabras clave (nombre o producto). JSON: {"action":"FIND_SUPPLIER","keywords":["palabra1","palabra2"],"searchType":"name"|"activity"|"both"} o {"action":"NONE"}`;
                 const suggestResult = await generateWithFallback({ prompt: suggestPrompt, jsonMode: true });
@@ -503,8 +512,10 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
             } catch (e) { console.error("Edit Supplier Error:", e); }
         }
 
+
         // #13 - ELIMINAR PROVEEDOR (Role-based)
-        if ((lowerMsg.includes('eliminar') || lowerMsg.includes('borrar') || lowerMsg.includes('quitar')) && lowerMsg.includes('proveedor')) {
+        const hasDeleteKeyword = /\b(elimina|borra|quita|borrar|eliminar|quitar)\b/i.test(lowerMsg);
+        if (hasDeleteKeyword && /\b(proveedor|supplier|este)\b/i.test(lowerMsg)) {
             try {
                 const canDelete = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
                 if (!canDelete) {
@@ -632,7 +643,7 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
         }
 
         // #16 - APROBAR REQUERIMIENTO
-        const canApprove = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
+        const canApprove = ['DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
         if (/\b(aprueba|aprobar|aprobado|autoriza|autorizar)\b/i.test(lowerMsg) && /\b(req|requerimiento|solicitud|#\d+)\b/i.test(lowerMsg)) {
             try {
                 if (!canApprove) {
@@ -710,7 +721,7 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
         // #18 - REASIGNAR RESPONSABLE DE PRESUPUESTO
         if (/\b(asigna|reasigna|cambia|pon)\b/i.test(lowerMsg) && /\b(líder|lider|responsable|manager|encargado)\b/i.test(lowerMsg) && /\b(presupuesto|budget)\b/i.test(lowerMsg)) {
             try {
-                const canReassign = ['ADMIN', 'DIRECTOR', 'DEVELOPER'].includes(userRole);
+                const canReassign = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
                 if (!canReassign) {
                     actionResult += `\n\n[SISTEMA]: ⛔ No tienes permisos para reasignar responsables. Tu rol es: ${userRole}`;
                 } else {
