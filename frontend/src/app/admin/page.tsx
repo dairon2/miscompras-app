@@ -166,7 +166,7 @@ export default function AdminPage() {
             case 'areas': return { name: '', directorId: '' };
             case 'projects': return { name: '', code: '', description: '', funder: '', leaderId: '' };
             case 'categories': return { name: '', code: '', description: '' };
-            case 'suppliers': return { name: '', nit: '', contactName: '', email: '', phone: '', address: '' };
+            case 'suppliers': return { name: '', nit: '', contactName: '', email: '', phone: '', address: '', activity: '', supplierType: 'SUPPLIER', criticality: 'LOW' };
             default: return {};
         }
     };

@@ -408,7 +408,7 @@ export const getSupplierById = async (req: AuthRequest, res: Response) => {
 };
 
 export const createSupplier = async (req: AuthRequest, res: Response) => {
-    const { name, nit, contactName, email, phone, address } = req.body;
+    const { name, nit, contactName, email, phone, address, activity, supplierType, criticality } = req.body;
 
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
@@ -429,7 +429,10 @@ export const createSupplier = async (req: AuthRequest, res: Response) => {
                 contactName: contactName?.trim() || null,
                 email: email?.trim() || null,
                 phone: phone?.trim() || null,
-                address: address?.trim() || null
+                address: address?.trim() || null,
+                activity: activity?.trim() || null,
+                supplierType: supplierType || 'SUPPLIER',
+                criticality: criticality || 'LOW'
             }
         });
         res.status(201).json(supplier);
@@ -441,7 +444,7 @@ export const createSupplier = async (req: AuthRequest, res: Response) => {
 
 export const updateSupplier = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { name, nit, contactName, email, phone, address } = req.body;
+    const { name, nit, contactName, email, phone, address, activity, supplierType, criticality } = req.body;
 
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
@@ -456,7 +459,10 @@ export const updateSupplier = async (req: AuthRequest, res: Response) => {
                 contactName: contactName?.trim() || null,
                 email: email?.trim() || null,
                 phone: phone?.trim() || null,
-                address: address?.trim() || null
+                address: address?.trim() || null,
+                activity: activity?.trim() || null,
+                supplierType: supplierType || undefined,
+                criticality: criticality || undefined
             }
         });
         res.json(supplier);

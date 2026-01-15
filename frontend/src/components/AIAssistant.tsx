@@ -263,7 +263,7 @@ export default function AIAssistant() {
                                 </button>
                             </form>
                             <p className="text-[10px] text-center text-gray-400 mt-1">
-                                Impulsado por Google Gemini AI
+                                Impulsado por Google Gemini AI · <span className="text-amber-500">⚠️ La IA puede cometer errores. Verifica las respuestas.</span>
                             </p>
                         </div>
                     </motion.div>
