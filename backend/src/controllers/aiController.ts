@@ -2,18 +2,26 @@ import { Request, Response } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '../db';
 import { SYSTEM_FAQ } from '../utils/aiKnowledge';
+import OpenAI from 'openai';
 
 // Initialize Gemini SDK
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
+// Initialize OpenSource Provider (Groq example)
+const groq = new OpenAI({
+    apiKey: process.env.GROQ_API_KEY || '',
+    baseURL: 'https://api.groq.com/openai/v1'
+});
+
 // Fallback Chain Strategy: If one fails (429/404), try the next.
-// Each model has separate quota, so more models = more daily requests
+// Each model has separate quota, so more models = more daily requests.
 const FALLBACK_MODELS = [
-    "gemini-2.5-flash",       // Primary (20/day free)
-    "gemini-2.5-flash-lite",  // Fallback 1 (20/day free)
-    "gemini-2.0-flash",       // Fallback 2 (20/day free)
-    "gemini-1.5-flash",       // Fallback 3 (20/day free)
-    "gemini-1.5-pro"          // Fallback 4 (20/day free)
+    "gemini-2.0-flash",       // Primary (Reliable)
+    "groq/llama-3.3-70b-versatile", // Fast OpenSource Fallback
+    "gemini-2.0-flash-lite",
+    "groq/deepseek-r1-distill-llama-70b", // Reasoning Fallback
+    "gemini-1.5-flash",
+    "gemini-1.5-pro"
 ];
 
 // ... (Imports and previous code)
@@ -35,7 +43,41 @@ async function generateWithFallback(
 
     for (const modelName of FALLBACK_MODELS) {
         try {
-            // Configure Model
+            // OPTION A: OpenSource Fallback (Groq)
+            if (modelName.startsWith('groq/')) {
+                const actualModel = modelName.replace('groq/', '');
+                const messages: any[] = [];
+
+                if (params.systemInstruction) {
+                    messages.push({ role: 'system', content: params.systemInstruction });
+                }
+
+                if (params.history) {
+                    params.history.forEach((h: any) => {
+                        const role = h.role === 'user' ? 'user' : 'assistant';
+                        let content = '';
+                        if (typeof h.content === 'string') content = h.content;
+                        else if (Array.isArray(h.parts)) content = h.parts.map((p: any) => p.text || '').join(' ');
+                        messages.push({ role, content });
+                    });
+                }
+
+                const userContent = typeof params.message === 'string' ? params.message : params.prompt || '';
+                if (userContent) {
+                    messages.push({ role: 'user', content: userContent });
+                }
+
+                const completion = await groq.chat.completions.create({
+                    model: actualModel,
+                    messages: messages,
+                    response_format: params.jsonMode ? { type: 'json_object' } : undefined,
+                    max_tokens: 2000
+                });
+
+                return completion.choices[0].message.content || '';
+            }
+
+            // OPTION B: Gemini (Native)
             const config: any = {};
             if (params.jsonMode) config.responseMimeType = "application/json";
 
@@ -46,7 +88,6 @@ async function generateWithFallback(
             });
 
             if (params.history && params.message) {
-                // CHAT MODE
                 const chat = model.startChat({
                     history: params.history,
                     generationConfig: { maxOutputTokens: 2500 }
@@ -55,16 +96,18 @@ async function generateWithFallback(
                 const result = await chat.sendMessage(params.message);
                 return result.response.text();
             } else if (params.prompt) {
-                // SINGLE PROMPT MODE
                 const result = await model.generateContent(params.prompt);
                 return result.response.text();
             }
 
         } catch (error: any) {
-            // ... (Keep existing error handling)
             console.warn(`Model ${modelName} failed: ${error.message}`);
             lastError = error;
-            const isQuotaError = error.message?.includes('429') || error.message?.includes('503') || error.message?.includes('overloaded');
+            const isQuotaError = error.message?.includes('429') ||
+                error.message?.includes('503') ||
+                error.message?.includes('overloaded') ||
+                error.message?.includes('404'); // Handle model-not-found too
+
             if (!isQuotaError) throw error;
             continue;
         }
