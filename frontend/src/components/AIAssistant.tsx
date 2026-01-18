@@ -81,9 +81,11 @@ export default function AIAssistant() {
         setIsLoading(true);
 
         try {
+            // Skip the first message (greeting) when sending history to avoid AI repeating it
+            const historyToSend = messages.slice(1).map(m => ({ role: m.role, content: m.content }));
             const { data } = await api.post('/ai/chat', {
                 message: userMessage || (currentAttachment ? "Analiza este archivo" : ""),
-                history: messages.map(m => ({ role: m.role, content: m.content })),
+                history: historyToSend,
                 image: currentAttachment?.data,
                 mimeType: currentAttachment?.type
             });

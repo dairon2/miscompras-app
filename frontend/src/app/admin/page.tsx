@@ -1098,6 +1098,31 @@ export default function AdminPage() {
                                                 </div>
                                             </div>
                                         </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-gray-600">Tipo de Proveedor</label>
+                                                <select
+                                                    value={formData.supplierType || 'SUPPLIER'}
+                                                    onChange={(e) => setFormData({ ...formData, supplierType: e.target.value })}
+                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                >
+                                                    <option value="SUPPLIER">Proveedor</option>
+                                                    <option value="SERVICE_PROVIDER">Prestador de Servicio</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-gray-600">Criticidad</label>
+                                                <select
+                                                    value={formData.criticality || 'LOW'}
+                                                    onChange={(e) => setFormData({ ...formData, criticality: e.target.value })}
+                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                >
+                                                    <option value="LOW">Baja</option>
+                                                    <option value="MEDIUM">Media</option>
+                                                    <option value="HIGH">Alta</option>
+                                                </select>
+                                            </div>
+                                        </div>
                                     </>
                                 )}
                             </div>

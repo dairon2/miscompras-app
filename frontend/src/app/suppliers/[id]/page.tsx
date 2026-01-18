@@ -49,6 +49,8 @@ interface SupplierDetail {
     address?: string;
     contactName?: string;
     createdAt: string;
+    criticality?: 'LOW' | 'MEDIUM' | 'HIGH';
+    supplierType?: 'SUPPLIER' | 'SERVICE_PROVIDER';
     requirements: Array<{
         id: string;
         title: string;
@@ -173,15 +175,23 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                                     <Truck size={32} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-600 mb-1">Proveedor</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-600 mb-1">
+                                        {supplier.supplierType === 'SERVICE_PROVIDER' ? 'Prestador de Servicio' : 'Proveedor'}
+                                    </p>
                                     <h1 className="text-3xl font-black tracking-tight">{supplier.name}</h1>
                                     {(supplier.taxId || supplier.nit) && (
                                         <p className="text-gray-400 font-bold text-xs mt-1">NIT: {supplier.taxId || supplier.nit}</p>
                                     )}
                                 </div>
                             </div>
-                            <span className="px-4 py-2 rounded-full text-xs font-black uppercase bg-green-50 text-green-700 border border-green-200 flex items-center gap-1">
-                                <CheckCircle size={14} /> Activo
+                            <span className={`px-4 py-2 rounded-full text-xs font-black uppercase flex items-center gap-1 ${supplier.criticality === 'HIGH'
+                                ? 'bg-red-50 text-red-700 border border-red-200'
+                                : supplier.criticality === 'MEDIUM'
+                                    ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                                    : 'bg-green-50 text-green-700 border border-green-200'
+                                }`}>
+                                <AlertTriangle size={14} />
+                                {supplier.criticality === 'HIGH' ? 'Alta' : supplier.criticality === 'MEDIUM' ? 'Media' : 'Baja'}
                             </span>
                         </div>
 

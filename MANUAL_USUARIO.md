@@ -350,68 +350,48 @@ MIS COMPRAS integra un potente **Asistente Virtual** basado en Inteligencia Arti
 Haz clic en el botón flotante ✨ (chispas mágicas) ubicado en la esquina inferior derecha de la pantalla.
 
 ### Funcionalidades del Asistente
-El asistente conoce tu contexto (quién eres, qué proyectos lideras, qué aprobaciones tienes pendientes) y puede:
+El asistente conoce tu contexto y puede realizar las siguientes acciones:
 
-1.  **Consultas de Estado**:
-    - *"¿Cuánto presupuesto me queda en el proyecto Colores de la Montaña?"*
-    - *"¿Tengo requerimientos pendientes de aprobación?"*
-    - *"¿Cuál es el proveedor con mejor calificación?"*
+#### 1. 📧 Envío de Correos a Proveedores
+Puedes pedirle al bot que contacte a un proveedor directamente.
+- **Ejemplo**: *"Envía un correo a Papelería S.A.S solicitando cotización de resmas de papel"*
+- **Confirmación**: El bot te mostrará un borrador del asunto y mensaje antes de enviar nada.
+- **Contexto**: Si dices *"envía un correo a este proveedor"* mientras ves un requerimiento, ¡el bot sabrá a quién te refieres!
 
-2.  **Generación de Reportes**:
-    El asistente puede construir archivos Excel al instante.
-    - **Comando**: *"Descarga un reporte del proyecto [Nombre del Proyecto]"*
-    - **Resultado**: El bot generará un enlace directo para descargar un archivo Excel con TODOS los requerimientos de ese proyecto (título, estado, montos, proveedor), útil para auditorías.
+#### 2. 🔍 Búsqueda de Proveedores
+Encuentra rápidamente proveedores por nombre o actividad económica.
+- **Por Nombre**: *"Busca el proveedor DistriHogar"*
+- **Por Actividad**: *"Necesito proveedores de tecnología"*
+- **Resultado**: El bot te mostrará una lista con nombre, NIT, email y criticidad.
 
-3.  **Análisis Financiero**:
-    - *"Analiza la ejecución de mis proyectos y dime si alguno está en riesgo"*
-    - *"Resume mis facturas del último mes"*
+#### 3. 🚚 Verificación de Entregas
+Consulta qué pedidos están pendientes de llegar.
+- **Ejemplo**: *"¿Qué entregas tengo pendientes?"* o *"¿Falta algo por recibir?"*
+- **Resultado**: Lista de requerimientos aprobados que aún no tienen fecha de recepción registrada.
 
-> 🚀 **Nota:** El asistente está reforzado con una técnica de **"Respaldo Infinito"**, por lo que siempre estará disponible incluso si hay alta demanda en los servicios de Google.
+#### 4. 📊 Consultas y Reportes
+- *"¿Cuánto presupuesto me queda en el proyecto Colores de la Montaña?"*
+- *"Descarga un reporte del proyecto [Nombre]"* (Genera Excel automático)
 
----
-
-## Preguntas Frecuentes
-
-### ¿Por qué no puedo crear requerimientos?
-
-Puede ser que:
-- Estés fuera del horario permitido (consulta con tu coordinador)
-- Tu usuario no esté activo
-- No tengas los permisos necesarios
-
-### ¿Por qué mi solicitud fue rechazada?
-
-1. Abre el detalle del requerimiento
-2. Revisa la sección **"Historial"**
-3. Verás el comentario del aprobador explicando el motivo
-
-### ¿Cómo sé si mi solicitud fue aprobada?
-
-Recibirás:
-- Una **notificación en la aplicación** (campana 🔔)
-- Un **email** a tu correo institucional
-
-### ¿Puedo modificar una solicitud después de enviarla?
-
-No directamente. Opciones:
-1. Esperar que sea rechazada y editarla
-2. Contactar al aprobador para que la devuelva
-
-### ¿Cómo adjunto más archivos a una solicitud existente?
-
-1. Abre el detalle
-2. Si puedes editar, verás **"Agregar Archivos"**
-3. Si no puedes editar, contacta al administrador
+> 🚀 **Nota:** El asistente está reforzado para funcionar 24/7. Siempre verifica la información crítica antes de tomar decisiones financieras.
 
 ---
 
-## 📞 Soporte Técnico
+## 13. Soporte Técnico
 
-Si tienes problemas con el sistema:
+Si tienes problemas con el sistema, cuentas con un plan de soporte dedicado:
 
+### Horario de Atención Prioritaria
+**Lunes a Viernes, 7:30 a.m. - 9:50 a.m.**
+
+### Canales de Contacto
 - **Email**: soporte@museodeantioquia.co
-- **Teléfono**: Ext. 123
-- **Horario**: Lunes a Viernes, 8:00 AM - 5:00 PM
+- **WhatsApp Institucional**: [Número de contacto]
+- **Soporte Remoto**: Vía AnyDesk o Microsoft Teams
+
+### Tiempos de Respuesta (SLA)
+- **Críticos (Bloqueantes)**: Respuesta inmediata, solución < 2 horas.
+- **Medios/Menores**: Respuesta < 2 horas, solución < 24 horas.
 
 ---
 

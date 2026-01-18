@@ -1,25 +1,39 @@
-import { EmailClient, EmailMessage } from '@azure/communication-email';
+import nodemailer from 'nodemailer';
 
-// Email configuration - uses Azure Communication Services
-const getEmailClient = () => {
-    const connectionString = process.env.AZURE_COMMUNICATION_CONNECTION_STRING;
-    if (!connectionString) {
-        console.log('[Email] Azure Email not configured, skipping email send');
+// Email configuration - uses SMTP (Hostinger)
+const createTransporter = () => {
+    const host = process.env.SMTP_HOST;
+    const port = parseInt(process.env.SMTP_PORT || '465');
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+
+    if (!host || !user || !pass) {
+        console.log('[Email] SMTP not configured, skipping email send');
         return null;
     }
-    // Log the endpoint to diagnose production issues
-    const endpointMatch = connectionString.match(/endpoint=([^;]+)/i);
-    console.log(`[Email] ACS Endpoint: ${endpointMatch ? endpointMatch[1] : 'unknown'}`);
-    return new EmailClient(connectionString);
+
+    console.log(`[Email] SMTP Host: ${host}, Port: ${port}, User: ${user}`);
+
+    return nodemailer.createTransport({
+        host,
+        port,
+        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+        auth: {
+            user,
+            pass
+        }
+    });
 };
 
-// Get sender email at runtime (not at module load time)
+// Get sender email at runtime
 const getSenderEmail = () => {
-    const sender = process.env.AZURE_EMAIL_SENDER || 'DoNotReply@64ee9d58-18ec-428c-9d01-ff68c1303bc6.azurecomm.net';
-    console.log(`[Email] Using sender: ${sender}`);
-    return sender;
+    const email = process.env.EMAIL_FROM || process.env.SMTP_USER || 'contacto@dmrtech.cloud';
+    const name = process.env.EMAIL_FROM_NAME || 'MisCompras';
+    console.log(`[Email] Using sender: ${name} <${email}>`);
+    return { email, name };
 };
-const APP_NAME = 'MisCompras - Museo de Antioquia';
+
+const APP_NAME = process.env.EMAIL_FROM_NAME || 'MisCompras - DMR Tech';
 
 // Format currency for emails
 const formatCurrency = (amount: number) =>
@@ -76,7 +90,7 @@ export const getEmailTemplate = (title: string, content: string, actionButton?: 
 </html>
 `;
 
-// Send email using Azure Communication Services
+// Send email using SMTP (Hostinger)
 export const sendEmail = async (to: string, subject: string, htmlContent: string) => {
     console.log(`[Email] Attempting to send email to: ${to}, subject: "${subject}"`);
 
@@ -88,28 +102,22 @@ export const sendEmail = async (to: string, subject: string, htmlContent: string
         return;
     }
 
-    const client = getEmailClient();
-    if (!client) {
-        console.warn('[Email] ⚠️ Email client not configured - AZURE_COMMUNICATION_CONNECTION_STRING is missing');
+    const transporter = createTransporter();
+    if (!transporter) {
+        console.warn('[Email] ⚠️ Email not configured - SMTP credentials are missing');
         return;
     }
 
-    const message: EmailMessage = {
-        senderAddress: getSenderEmail(),
-        content: {
-            subject,
-            html: htmlContent
-        },
-        recipients: {
-            to: [{ address: to }]
-        }
-    };
+    const sender = getSenderEmail();
 
     try {
-        console.log(`[Email] Sending from: ${getSenderEmail()}`);
-        const poller = await client.beginSend(message);
-        const result: any = await poller.pollUntilDone();
-        console.log(`[Email] ✅ Email sent successfully to ${to}, Status: ${result.status}, ID: ${result.id || 'N/A'}`);
+        const info = await transporter.sendMail({
+            from: `"${sender.name}" <${sender.email}>`,
+            to,
+            subject,
+            html: htmlContent
+        });
+        console.log(`[Email] ✅ Email sent successfully to ${to}, Message ID: ${info.messageId}`);
     } catch (error: any) {
         console.error(`[Email] ❌ Error sending email to ${to}:`, error.message);
         if (error.code) console.error(`[Email] Error code: ${error.code}`);

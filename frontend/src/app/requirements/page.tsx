@@ -953,7 +953,6 @@ function RequirementCard({ req, onClick, onDuplicate }: { req: Requirement, onCl
                             </div>
                         )}
                         Ver más <ArrowRight size={12} />
-                        Ver más <ArrowRight size={12} />
                     </div>
                 </div>
                 <div className="flex items-center justify-between pt-2">

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - MisCompras</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            900: '#364fc7', // Corporate Blue
+                            800: '#4263eb',
+                            100: '#dbe4ff',
+                        },
+                        accent: {
+                            500: '#d4af37', // Gold
+                            100: '#fff3bf',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .scroll-smooth {
+            scroll-behavior: smooth;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        /* Image presentation */
+        .screenshot-container {
+            position: relative;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.3s ease;
+        }
+
+        .screenshot-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 25px 30px -5px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-700 font-sans antialiased scroll-smooth">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-white border-r border-slate-200 fixed h-full z-20 hidden md:block">
+            <div class="p-6 h-full flex flex-col">
+                <div class="mb-8 pl-2 border-l-4 border-primary-900">
+                    <h1 class="text-2xl font-bold text-primary-900 tracking-tight">MisCompras</h1>
+                    <p class="text-xs text-accent-500 font-semibold tracking-widest uppercase">Museo de Antioquia</p>
+                </div>
+
+                <nav class="flex-1 overflow-y-auto space-y-1">
+                    <a href="#intro"
+                        class="block px-4 py-2 text-sm font-medium rounded-md text-primary-900 bg-primary-100/50 hover:bg-primary-100">1.
+                        Introducción</a>
+                    <a href="#dashboard"
+                        class="block px-4 py-2 text-sm font-medium rounded-md text-slate-600 hover:bg-slate-100 hover:text-primary-900 transition-colors">2.
+                        Panel Principal</a>
+                    <a href="#requerimientos"
+                        class="block px-4 py-2 text-sm font-medium rounded-md text-slate-600 hover:bg-slate-100 hover:text-primary-900 transition-colors">3.
+                        Requerimientos</a>
+                    <a href="#presupuestos"
+                        class="block px-4 py-2 text-sm font-medium rounded-md text-slate-600 hover:bg-slate-100 hover:text-primary-900 transition-colors">4.
+                        Presupuestos</a>
+                    <a href="#proveedores"
+                        class="block px-4 py-2 text-sm font-medium rounded-md text-slate-600 hover:bg-slate-100 hover:text-primary-900 transition-colors">5.
+                        Proveedores</a>
+                    <a href="#ai"
+                        class="block px-4 py-2 text-sm font-medium rounded-md text-purple-600 hover:bg-purple-50 transition-colors font-bold">✨
+                        6. Asistente IA</a>
+                    <a href="#soporte"
+                        class="block px-4 py-2 text-sm font-medium rounded-md text-slate-600 hover:bg-slate-100 hover:text-primary-900 transition-colors">7.
+                        Soporte</a>
+                </nav>
+
+                <div class="mt-auto pt-6 border-t border-slate-100 text-xs text-slate-400 text-center">
+                    <p>© 2026 Sistema de Gestión</p>
+                    <p>v1.0.4 Release</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 md:ml-64 p-8 lg:p-12 max-w-7xl mx-auto">
+
+            <!-- Header Mobile -->
+            <div class="md:hidden mb-8 border-l-4 border-primary-900 pl-4">
+                <h1 class="text-2xl font-bold text-primary-900">MisCompras</h1>
+                <p class="text-sm text-accent-500 font-bold uppercase">Manual de Usuario</p>
+            </div>
+
+            <!-- 1. Intro -->
+            <section id="intro" class="mb-16 scroll-mt-24">
+                <div class="space-y-4">
+                    <span
+                        class="px-3 py-1 rounded-full bg-primary-100 text-primary-900 text-xs font-bold uppercase tracking-wider">Bienvenido</span>
+                    <h2 class="text-4xl font-bold text-slate-900">Manual de Operación</h2>
+                    <p class="text-lg text-slate-600 leading-relaxed max-w-3xl">
+                        Esta guía te permitirá dominar todas las funcionalidades de la plataforma
+                        <strong>MisCompras</strong>, diseñada exclusivamente para optimizar la gestión de adquisiciones
+                        del Museo de Antioquia.
+                    </p>
+                </div>
+            </section>
+
+            <!-- 2. Dashboard -->
+            <section id="dashboard" class="mb-20 scroll-mt-24 border-t border-slate-200 pt-10">
+                <div class="flex flex-col xl:flex-row gap-10 items-start">
+                    <div class="flex-1 space-y-6">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary-900 text-white flex items-center justify-center font-bold">
+                                2</div>
+                            <h3 class="text-2xl font-bold text-slate-900">Panel Principal (Dashboard)</h3>
+                        </div>
+                        <p class="text-slate-600 leading-relaxed">
+                            Es tu centro de comando. Aquí tienes una visión panorámica de tus actividades.
+                        </p>
+                        <ul class="space-y-3 text-slate-600">
+                            <li class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-green-500 mt-1" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span><strong>Estadísticas Rápidas:</strong> Tarjetas superiores con contadores de
+                                    pendientes y ejecutado.</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-green-500 mt-1" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span><strong>Actividad Reciente:</strong> Lista cronológica de tus últimos
+                                    movimientos.</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-green-500 mt-1" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span><strong>Acciones Rápidas:</strong> Botones azules a la derecha para crear
+                                    requerimientos en un solo clic.</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="w-full xl:w-7/12">
+                        <div class="screenshot-container group">
+                            <img src="./manual_assets/dashboard.png" alt="Dashboard Interfaz" class="w-full h-auto">
+                            <!-- Overlay effect suggestive of data privacy -->
+                            <div
+                                class="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent pointer-events-none">
+                            </div>
+                        </div>
+                        <p class="mt-2 text-center text-xs text-slate-400">Figura 1: Vista general del Dashboard</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Requerimientos -->
+            <section id="requerimientos" class="mb-20 scroll-mt-24 border-t border-slate-200 pt-10">
+                <div class="flex flex-col xl:flex-row-reverse gap-10 items-start">
+                    <div class="flex-1 space-y-6">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary-900 text-white flex items-center justify-center font-bold">
+                                3</div>
+                            <h3 class="text-2xl font-bold text-slate-900">Gestión de Requerimientos</h3>
+                        </div>
+                        <p class="text-slate-600 leading-relaxed">
+                            El módulo central donde solicitas bienes o servicios.
+                        </p>
+                        <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500 prose-sm text-blue-800">
+                            <strong>Tip:</strong> Puedes usar los filtros superiores para buscar por fecha, estado o
+                            proyecto específico.
+                        </div>
+                        <ul class="space-y-3 text-slate-600">
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary-900 font-bold">•</span>
+                                <div><strong>Crear:</strong> Pulsa el botón azul "Nuevo" y completa el formulario.
+                                    Recuerda que el título y proyecto son obligatorios.</div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary-900 font-bold">•</span>
+                                <div><strong>Estados:</strong> Identifica fácilmente si tu solicitud está <span
+                                        class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-bold">PENDIENTE</span>
+                                    o <span
+                                        class="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-bold">APROBADO</span>.
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="w-full xl:w-7/12">
+                        <div class="screenshot-container">
+                            <img src="./manual_assets/requerimientos.png" alt="Requerimientos Interfaz"
+                                class="w-full h-auto">
+                        </div>
+                        <p class="mt-2 text-center text-xs text-slate-400">Figura 2: Listado de Requerimientos</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Presupuestos -->
+            <section id="presupuestos" class="mb-20 scroll-mt-24 border-t border-slate-200 pt-10">
+                <div class="flex flex-col xl:flex-row gap-10 items-start">
+                    <div class="flex-1 space-y-6">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary-900 text-white flex items-center justify-center font-bold">
+                                4</div>
+                            <h3 class="text-2xl font-bold text-slate-900">Control Presupuestal</h3>
+                        </div>
+                        <p class="text-slate-600 leading-relaxed">
+                            Monitoreo en tiempo real de la ejecución financiera.
+                        </p>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
+                                <div class="text-xs text-slate-500 uppercase tracking-wide">Disponible</div>
+                                <div class="text-xl font-bold text-green-600">$115M</div>
+                            </div>
+                            <div class="p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
+                                <div class="text-xs text-slate-500 uppercase tracking-wide">Ejecutado</div>
+                                <div class="text-xl font-bold text-slate-900">$0</div>
+                            </div>
+                        </div>
+
+                        <p class="text-sm text-slate-500 italic">
+                            Los gráficos se actualizan automáticamente con cada aprobación. Si una barra llega al 80%,
+                            cambiará a color rojo como alerta visual.
+                        </p>
+                    </div>
+                    <div class="w-full xl:w-7/12">
+                        <div class="screenshot-container">
+                            <img src="./manual_assets/presupuestos.png" alt="Presupuestos Interfaz"
+                                class="w-full h-auto">
+                        </div>
+                        <p class="mt-2 text-center text-xs text-slate-400">Figura 3: Dashboard Financiero</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. Proveedores -->
+            <section id="proveedores" class="mb-20 scroll-mt-24 border-t border-slate-200 pt-10">
+                <div class="flex flex-col xl:flex-row-reverse gap-10 items-start">
+                    <div class="flex-1 space-y-6">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary-900 text-white flex items-center justify-center font-bold">
+                                5</div>
+                            <h3 class="text-2xl font-bold text-slate-900">Directorio de Proveedores</h3>
+                        </div>
+                        <p class="text-slate-600 leading-relaxed">
+                            Gestiona tu base de datos de aliados estratégicos. Cada tarjeta contiene información vital
+                            como contacto, RUT y promedio de evaluación.
+                        </p>
+                        <ul class="space-y-3 text-slate-600">
+                            <li class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-primary-900 mt-1" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                <span><strong>Registrar:</strong> Usa el botón "Registrar Proveedor" para agregar nuevos
+                                    aliados. El sistema valida duplicados por NIT.</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-primary-900 mt-1" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                    </path>
+                                </svg>
+                                <span><strong>Historial:</strong> Haz clic en "Ver Historial" para consultar todas las
+                                    compras realizadas a ese proveedor.</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="w-full xl:w-7/12">
+                        <div class="screenshot-container">
+                            <img src="./manual_assets/proveedores.png" alt="Proveedores Interfaz" class="w-full h-auto">
+                        </div>
+                        <p class="mt-2 text-center text-xs text-slate-400">Figura 4: Tarjetas de Proveedores</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. AI -->
+            <section id="ai" class="mb-20 scroll-mt-24 border-t border-slate-200 pt-10">
+                <div
+                    class="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-2xl p-8 xl:p-12 text-white relative overflow-hidden shadow-2xl">
+                    <!-- Decoración fondo -->
+                    <div
+                        class="absolute top-0 right-0 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse">
+                    </div>
+                    <div
+                        class="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse">
+                    </div>
+
+                    <div class="relative z-10">
+                        <div
+                            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-bold uppercase tracking-wider mb-6">
+                            <span>✨ Nueva Funcionalidad</span>
+                        </div>
+                        <h2 class="text-3xl font-bold mb-4">Asistente Virtual Inteligente</h2>
+                        <p class="text-purple-100 text-lg mb-8 max-w-2xl">
+                            Interactúa con el sistema usando lenguaje natural. El asistente Gemini está entrenado para
+                            entender el contexto de compras del Museo.
+                        </p>
+
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div
+                                class="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/10 hover:bg-white/20 transition-colors">
+                                <h4 class="font-bold text-white mb-2 flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                    Correos Automáticos
+                                </h4>
+                                <p class="text-sm text-purple-200 italic">"Envía un correo a Papelería SAS pidiendo
+                                    cotización de 10 resmas"</p>
+                            </div>
+                            <div
+                                class="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/10 hover:bg-white/20 transition-colors">
+                                <h4 class="font-bold text-white mb-2 flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                    Búsquedas Inteligentes
+                                </h4>
+                                <p class="text-sm text-purple-200 italic">"Busca proveedores de tecnología en Medellín"
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. Support -->
+            <section id="soporte" class="mb-10 text-center pt-10 border-t border-slate-200">
+                <h3 class="text-2xl font-bold text-slate-900 mb-6">¿Necesitas Ayuda?</h3>
+                <p class="text-slate-600 mb-8">Nuestro equipo de soporte está disponible en horario prioritario.</p>
+
+                <div class="flex justify-center gap-6 flex-wrap">
+                    <a href="mailto:soporte@museodeantioquia.co"
+                        class="flex items-center gap-3 px-6 py-4 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-primary-900 group transition-all">
+                        <div
+                            class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-primary-900 group-hover:text-white transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                                </path>
+                            </svg>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-xs text-slate-500 font-semibold uppercase">Email</div>
+                            <div class="font-bold text-slate-800">soporte@museodeantioquia.co</div>
+                        </div>
+                    </a>
+
+                    <div
+                        class="flex items-center gap-3 px-6 py-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                        <div class="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-xs text-slate-500 font-semibold uppercase">Horario Prioritario</div>
+                            <div class="font-bold text-slate-800">7:30 AM - 9:50 AM</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+</body>
+
+</html>

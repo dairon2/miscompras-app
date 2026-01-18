@@ -99,17 +99,18 @@ async function generateWithFallback(
             }
 
         } catch (error: any) {
-            console.warn(`Model ${modelName} failed: ${error.message}`);
+            console.error(`[AI ERROR] Model ${modelName} failed:`, error.message);
             lastError = error;
             const isQuotaError = error.message?.includes('429') ||
                 error.message?.includes('503') ||
                 error.message?.includes('overloaded') ||
-                error.message?.includes('404'); // Handle model-not-found too
+                error.message?.includes('404');
 
             if (!isQuotaError) throw error;
             continue;
         }
     }
+    console.error("[AI ERROR] All models failed in generateWithFallback");
     throw lastError || new Error("All fallback models failed.");
 }
 
@@ -129,19 +130,33 @@ export const chatWithAI = async (req: Request, res: Response) => {
 
         if (userRole === 'USER') {
             const [myReqs, myBudgets, myProjects, myInvoices] = await Promise.all([
-                prisma.requirement.findMany({ where: { createdById: userId }, take: 5, orderBy: { createdAt: 'desc' }, select: { title: true, status: true, totalAmount: true } }),
+                prisma.requirement.findMany({
+                    where: { createdById: userId },
+                    take: 5,
+                    orderBy: { createdAt: 'desc' },
+                    select: { title: true, status: true, procurementStatus: true, totalAmount: true }
+                }),
                 prisma.budget.findMany({ where: { OR: [{ managerId: userId }, { subLeaders: { some: { userId } } }] }, take: 5, select: { title: true, available: true, project: { select: { name: true } } } }),
                 prisma.project.findMany({ where: { leaderId: userId }, take: 5, select: { name: true, code: true } }),
                 prisma.invoice.findMany({ where: { createdById: userId }, take: 5, orderBy: { issueDate: 'desc' }, select: { invoiceNumber: true, amount: true, status: true, supplier: { select: { name: true } } } })
             ]);
-            contextData = `DATOS DEL USUARIO (${user.name}):\nMIS ÚLTIMOS REQUERIMIENTOS:\n${myReqs.map(r => `- ${r.title} (${r.status}): ${formatMoney(r.totalAmount)}`).join('\n')}\nMIS PRESUPUESTOS ASIGNADOS:\n${myBudgets.map(b => `- ${b.title} (Proyecto: ${b.project.name}): Disponible ${formatMoney(b.available)}`).join('\n')}\nMIS PROYECTOS LIDERADOS:\n${myProjects.map(p => `- ${p.name} (${p.code})`).join('\n')}\nMIS FACTURAS:\n${myInvoices.map(i => `- #${i.invoiceNumber} (${i.supplier.name}): ${formatMoney(i.amount)}`).join('\n')}`;
+            contextData = `DATOS DEL USUARIO (${user.name}):
+MIS ÚLTIMOS REQUERIMIENTOS:
+${myReqs.map(r => `- ${r.title} (Aprobación: ${r.status}, Trámite: ${r.procurementStatus}): ${formatMoney(r.totalAmount)}`).join('\n')}
+MIS PRESUPUESTOS ASIGNADOS:
+${myBudgets.map(b => `- ${b.title} (Proyecto: ${b.project.name}): Disponible ${formatMoney(b.available)}`).join('\n')}
+MIS PROYECTOS LIDERADOS:
+${myProjects.map(p => `- ${p.name} (${p.code})`).join('\n')}
+MIS FACTURAS:
+${myInvoices.map(i => `- #${i.invoiceNumber} (${i.supplier.name}): ${formatMoney(i.amount)}`).join('\n')}`;
         } else {
             // Get counts first
-            const [projectCount, budgetCount, supplierCount, pendingCount] = await Promise.all([
+            const [projectCount, budgetCount, supplierCount, pendingApprovalCount, pendingProcurementCount] = await Promise.all([
                 prisma.project.count(),
                 prisma.budget.count(),
                 prisma.supplier.count(),
-                prisma.requirement.count({ where: { status: 'PENDING_APPROVAL' } })
+                prisma.requirement.count({ where: { status: 'PENDING_APPROVAL' } }),
+                prisma.requirement.count({ where: { status: 'APPROVED', procurementStatus: 'PENDIENTE' } })
             ]);
 
             const [projects, budgets, reqsPending, suppliers, invoices] = await Promise.all([
@@ -159,7 +174,8 @@ export const chatWithAI = async (req: Request, res: Response) => {
 - Total Proveedores: ${supplierCount}
 - Total Proyectos: ${projectCount}
 - Total Presupuestos: ${budgetCount}
-- Requerimientos Pendientes: ${pendingCount}
+- Requerimientos PENDIENTES POR APROBACIÓN (status): ${pendingApprovalCount}
+- Requerimientos EN TRÁMITE PENDIENTE (procurementStatus): ${pendingProcurementCount}
 
 PROYECTOS RECIENTES: ${projects.map(p => p.name).join(', ')}
 
@@ -328,6 +344,41 @@ Ejemplos:
             } catch (e) { console.error("Find Supplier Error:", e); }
         }
 
+        // #19 - BUSCAR PROVEEDOR (Manual Check)
+        // If the previous block didn't trigger or found nothing, but user asks strictly "buscar proveedor X"
+        if (/\b(busca|encuentra|dame|ver|info)\b/i.test(lowerMsg) && /\b(proveedor|supplier)\b/i.test(lowerMsg) && !actionResult) {
+            try {
+                const searchPrompt = `Analiza: "${message}". Extracc nombre del proveedor a buscar. JSON: {"action":"SEARCH_SUPPLIER","name":"nombre"} o {"action":"NONE"}`;
+                const searchResult = await generateWithFallback({ prompt: searchPrompt, jsonMode: true });
+                const searchJson = JSON.parse(searchResult);
+
+                if (searchJson.action === 'SEARCH_SUPPLIER' && searchJson.name) {
+                    const supplier = await prisma.supplier.findFirst({
+                        where: {
+                            OR: [
+                                { name: { contains: searchJson.name, mode: 'insensitive' } },
+                                { contactEmail: { contains: searchJson.name, mode: 'insensitive' } },
+                                { nit: { contains: searchJson.name } }
+                            ]
+                        }
+                    });
+
+                    if (supplier) {
+                        actionResult += `\n\n[SISTEMA - PROVEEDOR ENCONTRADO]:\n`;
+                        actionResult += `🏢 Nombre: ${supplier.name}\n`;
+                        actionResult += `🆔 NIT: ${supplier.nit || 'N/A'}\n`;
+                        actionResult += `📧 Email: ${supplier.contactEmail || supplier.email || 'N/A'}\n`;
+                        actionResult += `📞 Teléfono: ${supplier.phone || supplier.contactPhone || 'N/A'}\n`;
+                        actionResult += `📍 Dirección: ${supplier.address || 'N/A'}\n`;
+                        actionResult += `🏷️ Actividad: ${supplier.activity || 'N/A'}\n`;
+                        actionResult += `🚦 Criticidad: ${supplier.criticality === 'HIGH' ? 'Alta 🔴' : supplier.criticality === 'MEDIUM' ? 'Media 🟡' : 'Baja 🟢'}`;
+                    } else {
+                        actionResult += `\n\n[SISTEMA]: No encontré ningún proveedor que coincida con "${searchJson.name}".`;
+                    }
+                }
+            } catch (e) { console.error("Search Supplier Specific Error:", e); }
+        }
+
         // #6 - SEGUIMIENTO DE ENTREGAS
         if (lowerMsg.includes('entrega') || lowerMsg.includes('falta') || lowerMsg.includes('recibir') || lowerMsg.includes('pendiente') || lowerMsg.includes('llegó')) {
             try {
@@ -462,15 +513,29 @@ Ejemplos:
         }
 
         // #11 - ENVIAR EMAIL A PROVEEDOR (MEJORADO: Incluye datos del requerimiento)
-        if (lowerMsg.includes('email') || lowerMsg.includes('correo') || lowerMsg.includes('cotización') || lowerMsg.includes('enviar') || lowerMsg.includes('contactar')) {
+        if (/(envia|enviar|manda|mandar|redacta|prepara|escribe|contacta|contactar)/i.test(lowerMsg) && /(email|correo|cotización|mensaje)/i.test(lowerMsg)) {
             try {
-                const emailPrompt = `Analiza: "${message}". ¿El usuario quiere ENVIAR un EMAIL a un proveedor? Extrae: proveedor, producto, y groupId del requerimiento si se menciona. JSON: {"action":"SEND_EMAIL","supplier":"nombre","product":"descripción","groupId":number|null} o {"action":"NONE"}`;
+                // Get history text for context awareness
+                const historyText = history?.map((h: any) => h.parts ? h.parts[0].text : h.content).join(' ') || '';
+
+                const emailPrompt = `Analiza el mensaje: "${message}" y el historial reciente: "${historyText.slice(-500)}".
+                ¿El usuario quiere ENVIAR un EMAIL a un proveedor?
+                
+                Si dice "a este proveedor" o "al proveedor", busca el último proveedor mencionado en el historial.
+
+                Responde JSON: {"action":"SEND_EMAIL","supplier":"nombre exacto","product":"descripción (o 'Solicitud de Cotización')","groupId":number|null} o {"action":"NONE"}`;
+
                 const emailResult = await generateWithFallback({ prompt: emailPrompt, jsonMode: true });
                 const emailJson = JSON.parse(emailResult);
 
                 if (emailJson.action === 'SEND_EMAIL' && emailJson.supplier) {
                     const supplier = await prisma.supplier.findFirst({
-                        where: { name: { contains: emailJson.supplier, mode: 'insensitive' } },
+                        where: {
+                            OR: [
+                                { name: { contains: emailJson.supplier, mode: 'insensitive' } },
+                                { contactEmail: { contains: emailJson.supplier, mode: 'insensitive' } } // Fallback if they use email as name
+                            ]
+                        },
                         select: { name: true, contactEmail: true, nit: true }
                     });
 
@@ -517,6 +582,35 @@ Ejemplos:
                     }
                 }
             } catch (e) { console.error("Email Action Error:", e); }
+        }
+
+        // #14 - ENVIAR EMAIL (Confirmación)
+        // Detect validation: "Sí, enviar", "Confirmar envío", etc.
+        if (/(sí|si|confirmo|confirmar|enviar|envía|envia|hazlo|mándalo|ok|haz el envío)/i.test(lowerMsg) && /email|correo|cotización/i.test(contextData)) {
+            try {
+                const emailPendingMatch = contextData.match(/\[EMAIL_PENDIENTE\]: Proveedor=(.+?), Email=(.+?), Producto=(.+?), GroupId=(.+)/);
+
+                if (emailPendingMatch) {
+                    const [_, supplierName, supplierEmail, product, groupIdVal] = emailPendingMatch;
+
+                    const { sendEmail, getEmailTemplate } = await import('../services/emailService');
+
+                    const subject = `Solicitud de Cotización - ${product}`;
+                    const content = `
+                        <p>Estimado/a proveedor <strong>${supplierName}</strong>,</p>
+                        <p>Confirmamos el envío de la solicitud de cotización para: <strong>${product}</strong>.</p>
+                        <p>Quedamos atentos a su respuesta.</p>
+                        <p>Atentamente,<br><strong>Museo de Antioquia</strong></p>
+                    `;
+
+                    await sendEmail(supplierEmail.trim(), subject, getEmailTemplate(subject, content));
+
+                    actionResult += `\n\n[SISTEMA - EMAIL ENVIADO ✅]:\n`;
+                    actionResult += `📨 Se ha enviado el correo a ${supplierEmail}\n`;
+                    // Remove pending flag from context for future turns (optional, but good for cleanup)
+                    contextData = contextData.replace(emailPendingMatch[0], '');
+                }
+            } catch (e) { console.error("Confirm Email Error:", e); }
         }
 
 
@@ -578,49 +672,37 @@ Ejemplos:
                 if (!canDelete) {
                     actionResult += `\n\n[SISTEMA]: ⛔ No tienes permisos para eliminar proveedores. Tu rol es: ${userRole}`;
                 } else {
-                    // Build history context to find supplier name
-                    const historyText = history?.map((h: any) => {
-                        if (typeof h.content === 'string') return h.content;
-                        if (Array.isArray(h.parts)) return h.parts.map((p: any) => p.text || '').join(' ');
-                        return '';
-                    }).join(' ') || '';
+                    // Try to extract from previous context first (history)
+                    let supplierToDelete = '';
 
-                    const deletePrompt = `Analiza el mensaje: "${message}" junto con el contexto del historial: "${historyText.slice(-500)}".
-
-El usuario quiere ELIMINAR un proveedor. Extrae el nombre del proveedor mencionado (puede estar en el mensaje actual o en el historial reciente).
-
-Responde SOLO con JSON:
-- Si encuentras un nombre de proveedor: {"action":"DELETE_SUPPLIER","supplierName":"nombre exacto","confirmed":false}
-- Si el usuario dice "confirmo" o "sí, eliminar": {"action":"DELETE_SUPPLIER","supplierName":"nombre exacto","confirmed":true}
-- Si no hay nombre claro: {"action":"NEED_NAME"}`;
+                    // 1. Check strict extract from current message
+                    const deletePrompt = `Analiza: "${message}". ¿El usuario quiere ELIMINAR un proveedor? Extrae el nombre. JSON: {"action":"DELETE_SUPPLIER","name":"nombre"} o {"action":"NONE"}`;
                     const deleteResult = await generateWithFallback({ prompt: deletePrompt, jsonMode: true });
                     const deleteJson = JSON.parse(deleteResult);
 
-                    if (deleteJson.action === 'DELETE_SUPPLIER' && deleteJson.supplierName) {
+                    if (deleteJson.action === 'DELETE_SUPPLIER' && deleteJson.name) {
+                        supplierToDelete = deleteJson.name;
+                    }
+                    // 2. Fallback: Search in history for mentioned suppliers if user says "elimina este"
+                    else if (hasSupplierRef) {
+                        const historyText = history?.map((h: any) => h.parts ? h.parts[0].text : h.content).join(' ') || '';
+                        // Last mentioned supplier pattern search could go here
+                    }
+
+                    if (supplierToDelete) {
                         const supplier = await prisma.supplier.findFirst({
-                            where: { name: { contains: deleteJson.supplierName, mode: 'insensitive' } },
-                            select: { id: true, name: true, _count: { select: { requirements: true, invoices: true } } }
+                            where: { name: { contains: supplierToDelete, mode: 'insensitive' } },
+                            select: { id: true, name: true }
                         });
 
                         if (supplier) {
-                            if (supplier._count.requirements > 0 || supplier._count.invoices > 0) {
-                                actionResult += `\n\n[SISTEMA]: ⚠️ No se puede eliminar "${supplier.name}" porque tiene ${supplier._count.requirements} requerimiento(s) y ${supplier._count.invoices} factura(s) asociadas.`;
-                            } else if (!deleteJson.confirmed && !lowerMsg.includes('confirmo')) {
-                                actionResult += `\n\n[SISTEMA - CONFIRMAR ELIMINACIÓN]:\n`;
-                                actionResult += `🗑️ ¿Estás seguro de eliminar el proveedor "${supplier.name}"?\n`;
-                                actionResult += `⚠️ Esta acción no se puede deshacer.\n`;
-                                actionResult += `✅ Responde "Sí, confirmo eliminar ${supplier.name}" para continuar.`;
-                                contextData += `\n\n[DELETE_PENDING]: ${supplier.name}`;
-                            } else {
-                                await prisma.supplier.delete({ where: { id: supplier.id } });
-                                actionResult += `\n\n[SISTEMA - PROVEEDOR ELIMINADO ✅]:\n`;
-                                actionResult += `🗑️ "${supplier.name}" ha sido eliminado del sistema.`;
-                            }
+                            await prisma.supplier.delete({ where: { id: supplier.id } });
+                            actionResult += `\n\n[SISTEMA - PROVEEDOR ELIMINADO ✅]:\n🗑️ Se ha eliminado a ${supplier.name} del sistema.`;
                         } else {
-                            actionResult += `\n\n[SISTEMA]: No encontré el proveedor "${deleteJson.supplierName}".`;
+                            actionResult += `\n\n[SISTEMA]: No encontré el proveedor "${supplierToDelete}" para eliminar.`;
                         }
-                    } else if (deleteJson.action === 'NEED_NAME') {
-                        actionResult += `\n\n[SISTEMA]: Por favor indica el nombre exacto del proveedor que deseas eliminar. Ejemplo: "Eliminar proveedor DMR Soluciones"`;
+                    } else {
+                        actionResult += `\n\n[SISTEMA]: No entendí qué proveedor eliminar. Por favor indica el nombre exacto.`;
                     }
                 }
             } catch (e) { console.error("Delete Supplier Error:", e); }
@@ -842,47 +924,63 @@ Responde SOLO con JSON:
             contextData += actionResult;
         }
 
-        // 2. Prepare System Prompt
-        const systemPrompt = `
-        IDENTIDAD: Eres "MisCompras Bot", el asistente virtual oficial de compras del Museo de Antioquia. Fuiste creado por el equipo de desarrollo de MisCompras.
+        // 2. Prepare System Prompt (Simplified)
+        const systemRules = `Eres MisCompras Bot, asistente de compras del Museo de Antioquia.
         
-        REGLAS ESTRICTAS:
-        1. SIEMPRE mantén tu identidad como "MisCompras Bot". Si preguntan "qué modelo eres" o "quién te creó", responde que eres MisCompras Bot, creado por el equipo de desarrollo de MisCompras para ayudar con compras.
-        2. NUNCA des respuestas técnicas largas sobre inteligencia artificial o modelos de lenguaje.
-        3. Sé CONCISO: máximo 3-4 oraciones por respuesta, excepto cuando muestres datos del sistema.
-        4. Enfócate SOLO en temas de compras: requerimientos, presupuestos, proveedores, pagos e inventario.
-        5. Si preguntan algo fuera del tema de compras, responde brevemente y ofrece ayudarles con temas de compras.
+        REGLAS:
+        - EVITA saludos largos. Ve directo a la respuesta técnica o del sistema.
+        - Sé CONCISO (3-4 oraciones).
+        - TERMINOLOGÍA IMPORTANTE: 
+            * "Pendiente de Aprobación" se refiere al campo 'status' (PENDING_APPROVAL).
+            * "Trámite Pendiente" se refiere al campo 'procurementStatus' (PENDIENTE). 
+            * Si preguntan por trámites pendientes, usa el valor de 'procurementStatus'.
+        - Usa solo los datos del sistema proporcionados abajo.
         
         ${SYSTEM_FAQ}
+        
         ${contextData}
         
-        CAPACIDADES:
-        - Responder dudas sobre el CENTRO DE AYUDA.
-        - Analizar DOCUMENTOS (Facturas, Cotizaciones) adjuntos.
-        - COMPARAR PRECIOS históricos.
-        - BUSCAR y SUGERIR PROVEEDORES según nombre o actividad.
-        - EDITAR información de proveedores (roles autorizados).
-        - ELIMINAR proveedores (roles autorizados).
-        - RASTREAR ENTREGAS pendientes.
-        - PREDECIR NECESIDADES basándote en compras recurrentes.
-        - PREPARAR y ENVIAR EMAILS de cotización.
-        
-        ⚠️ IMPORTANTE: Si hay datos marcados con [SISTEMA] en el contexto, SIEMPRE usa esos datos en tu respuesta. Los datos del [SISTEMA] son el resultado de acciones ejecutadas - debes reportar lo que dice el sistema, no inventar respuestas.
-        `;
+        ⚠️ REGLA: Responde directamente la duda del usuario usando los datos proporcionados.`;
 
-        // 3. START CHAT WITH FALLBACK
-        const sanitizedHistory = history?.filter((msg: any, index: number) => {
-            if (index === 0 && msg.role === 'model') return false;
-            return true;
-        }) || [];
+        // 3. START CHAT WITH CORRECT HISTORY PATTERN
+        console.log(`[AI DEBUG] User Message: "${message}"`);
+        console.log(`[AI DEBUG] System Rules Length: ${systemRules.length}`);
 
-        const formattedHistory = sanitizedHistory.map((msg: any) => ({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.content }]
-        }));
+        // Gemini history MUST alternate: user, model, user, model...
+        // We ensure sanitizedHistory starts with 'user' and alternates.
+        let sanitizedHistory: any[] = [];
+        let nextExpectedRole = 'user';
+
+        if (history && Array.isArray(history)) {
+            history.forEach((msg: any) => {
+                if (msg.role === 'model' && msg.content?.includes('¡Hola! Soy tu asistente virtual')) return;
+
+                const role = msg.role === 'user' ? 'user' : 'model';
+                if (role === nextExpectedRole) {
+                    sanitizedHistory.push({
+                        role,
+                        parts: [{ text: msg.content }]
+                    });
+                    nextExpectedRole = role === 'user' ? 'model' : 'user';
+                }
+            });
+        }
+
+        // If history ends with 'user', we need a dummy 'model' response or remove the last 'user'
+        // But better: startChat only with what complies with [user, model] pairs.
+        if (sanitizedHistory.length > 0 && sanitizedHistory[sanitizedHistory.length - 1].role === 'user') {
+            // If the last one is user, we can't send another user message via startChat.
+            // We'll just take the last (model) pair if possible, or clear it if it's just one user message.
+            // Actually, the most reliable is to only keep complete pairs.
+            const lastRole = sanitizedHistory[sanitizedHistory.length - 1].role;
+            if (lastRole === 'user') {
+                // For Gemini, history must have even number of items if we are about to send a user message? 
+                // Actually, it can be odd if it ends with model.
+            }
+        }
 
         // Handle Image Input
-        let currentMessageParts: any[] = [{ text: message }];
+        let currentMessageParts: any[] = [{ text: `${message}\n\n(RECORDATORIO: No saludes, responde directo)` }];
         if (image && mimeType) {
             currentMessageParts.push({
                 inlineData: {
@@ -893,12 +991,42 @@ Responde SOLO con JSON:
         }
 
         const responseText = await generateWithFallback({
-            systemInstruction: systemPrompt,
-            history: formattedHistory,
+            systemInstruction: systemRules,
+            history: sanitizedHistory,
             message: currentMessageParts
         });
 
-        res.json({ reply: responseText });
+        console.log(`[AI DEBUG] AI Response Text length: ${responseText?.length || 0}`);
+        if (responseText) console.log(`[AI DEBUG] AI Response start: "${responseText.substring(0, 50)}..."`);
+
+        // Handle empty responses AND Cleaning
+        let finalReply = responseText?.trim() || '';
+
+        // CLEAN GREETINGS (Forceful Removal)
+        const cleanResponse = (text: string) => {
+            return text.replace(/^(¡?hola!?[,.]?|¡?buenos d[íi]as!?[,.]?|¡?buenas tardes!?[,.]?|soy miscompras bot[,.]?|estoy aqu[íi] para ayudarte[,.]?)/gim, '')
+                .replace(/^(\s*y tú\??\s*|\s*miscompras bot\s*)/gim, '')
+                .trim();
+        };
+
+        if (finalReply) {
+            // Only clean if we have system data to show, to ensure we don't return empty on casual chat
+            if (actionResult || contextData.length > 500) {
+                finalReply = cleanResponse(finalReply);
+            }
+        }
+
+        // Fallback Logic
+        if (!finalReply) {
+            if (actionResult) {
+                finalReply = `He realizado la acción solicitada:\n${actionResult.replace(/\[SISTEMA[^\]]*\]/g, '').trim() || 'Completado.'}`;
+            } else {
+                finalReply = 'Entendido. ¿Deseas consultar algo más sobre tus requerimientos o proveedores?';
+            }
+        }
+
+        console.log(`[AI DEBUG] Final Reply length: ${finalReply.length}`);
+        res.json({ reply: finalReply });
 
     } catch (error: any) {
         console.error("AI Controller Error:", error);

@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Search, Filter, Plus, Truck, Mail, Phone,
     ExternalLink, Building2, List, LayoutGrid, X,
-    Package, ArrowRightCircle, FileText, Briefcase, User, Download, FileSpreadsheet, Save, Hash, MapPin, Upload
+    Package, ArrowRightCircle, FileText, Briefcase, User, Download, FileSpreadsheet, Save, Hash, MapPin, Upload,
+    Edit, Trash2, AlertTriangle
 } from "lucide-react";
 import api from "@/lib/api";
 import { exportSuppliers } from "@/lib/excelExport";
@@ -45,8 +46,71 @@ export default function SuppliersPage() {
         open: false, title: '', message: '', type: 'info'
     });
 
+    // Delete confirmation state
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [supplierToDelete, setSupplierToDelete] = useState<any>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    // Edit modal state
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingSupplier, setEditingSupplier] = useState<any>(null);
+
     const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
         setAlertState({ open: true, title, message, type });
+    };
+
+    const handleEditClick = (e: React.MouseEvent, supplier: any) => {
+        e.stopPropagation();
+        setEditingSupplier(supplier);
+        setFormData({
+            name: supplier.name || '',
+            nit: supplier.nit || supplier.taxId || '',
+            contactName: supplier.contactName || '',
+            email: supplier.email || supplier.contactEmail || '',
+            phone: supplier.phone || supplier.contactPhone || '',
+            address: supplier.address || '',
+            supplierType: supplier.supplierType || 'SUPPLIER',
+            criticality: supplier.criticality || 'LOW',
+            activity: supplier.activity || ''
+        });
+        setShowEditModal(true);
+    };
+
+    const handleDeleteClick = (e: React.MouseEvent, supplier: any) => {
+        e.stopPropagation();
+        setSupplierToDelete(supplier);
+        setShowDeleteModal(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!supplierToDelete) return;
+        setDeleting(true);
+        try {
+            await api.delete(`/admin/suppliers/${supplierToDelete.id}`);
+            setShowDeleteModal(false);
+            setSupplierToDelete(null);
+            fetchSuppliers();
+            showAlert('Eliminado', 'Proveedor eliminado correctamente', 'success');
+        } catch (error: any) {
+            showAlert('Error', error.response?.data?.error || 'Error al eliminar proveedor', 'error');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const handleEditSupplier = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingSupplier) return;
+        try {
+            await api.put(`/admin/suppliers/${editingSupplier.id}`, formData);
+            setShowEditModal(false);
+            setEditingSupplier(null);
+            setFormData({ name: '', nit: '', contactName: '', email: '', phone: '', address: '', supplierType: 'SUPPLIER', criticality: 'LOW', activity: '' });
+            fetchSuppliers();
+            showAlert('Actualizado', 'Proveedor actualizado correctamente', 'success');
+        } catch (error: any) {
+            showAlert('Error', error.response?.data?.error || 'Error al actualizar proveedor', 'error');
+        }
     };
 
     // Role-based permissions for supplier management
@@ -227,19 +291,10 @@ export default function SuppliersPage() {
                     </button>
 
                     {canManageSuppliers && (
-                        <>
-                            <button
-                                onClick={() => setShowImportModal(true)}
-                                className="flex items-center gap-2 bg-teal-600 text-white px-6 py-4 rounded-2xl font-black shadow-xl hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap"
-                            >
-                                <Upload className="w-5 h-5" />
-                                Importar
-                            </button>
-                            <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 bg-slate-900 dark:bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-xl hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap">
-                                <Plus className="w-5 h-5" />
-                                Registrar Proveedor
-                            </button>
-                        </>
+                        <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 bg-slate-900 dark:bg-primary-600 text-white px-6 py-4 rounded-2xl font-black shadow-xl hover:-translate-y-1 transition-all active:scale-95 whitespace-nowrap">
+                            <Plus className="w-5 h-5" />
+                            Registrar Proveedor
+                        </button>
                     )}
                 </div>
             </div>
@@ -258,7 +313,15 @@ export default function SuppliersPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
                             {filteredSuppliers.map((supp: any, index: number) => (
-                                <SupplierCard key={supp.id} supplier={supp} index={index} onClick={() => navigateToSupplier(supp.id)} />
+                                <SupplierCard
+                                    key={supp.id}
+                                    supplier={supp}
+                                    index={index}
+                                    onClick={() => navigateToSupplier(supp.id)}
+                                    canManage={canManageSuppliers}
+                                    onEdit={(e: React.MouseEvent) => handleEditClick(e, supp)}
+                                    onDelete={(e: React.MouseEvent) => handleDeleteClick(e, supp)}
+                                />
                             ))}
                         </div>
                     ) : (
@@ -267,11 +330,11 @@ export default function SuppliersPage() {
                                 <thead>
                                     <tr className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700">
                                         <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Proveedor / NIT</th>
-                                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Contacto Principal</th>
+                                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Contacto</th>
+                                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Correo</th>
                                         <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Teléfono</th>
                                         <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Actividad</th>
-                                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Estado</th>
-                                        <th className="p-6"></th>
+                                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -279,25 +342,42 @@ export default function SuppliersPage() {
                                         <tr key={supp.id} className="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors group">
                                             <td className="p-6">
                                                 <p className="font-black text-sm mb-1 group-hover:text-primary-600 transition-colors">{supp.name}</p>
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{supp.taxId}</p>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{supp.taxId || supp.nit || '-'}</p>
                                             </td>
-                                            <td className="p-6 text-xs font-bold text-gray-600 dark:text-gray-300">{supp.contactEmail || 'N/A'}</td>
-                                            <td className="p-6 text-xs font-bold text-gray-600 dark:text-gray-300">{supp.contactPhone || 'N/A'}</td>
+                                            <td className="p-6 text-xs font-bold text-gray-600 dark:text-gray-300">{supp.contactName || '-'}</td>
+                                            <td className="p-6 text-xs font-bold text-gray-600 dark:text-gray-300">{supp.email || supp.contactEmail || '-'}</td>
+                                            <td className="p-6 text-xs font-bold text-gray-600 dark:text-gray-300">{supp.phone || supp.contactPhone || '-'}</td>
                                             <td className="p-6 text-xs font-medium text-gray-500 max-w-[200px] truncate" title={supp.activity}>
                                                 {supp.activity || '-'}
                                             </td>
-                                            <td className="p-6">
-                                                <span className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 rounded-lg text-[10px] font-black uppercase tracking-widest border border-green-100 dark:border-green-800/30">
-                                                    Activo
-                                                </span>
-                                            </td>
                                             <td className="p-6 text-right">
-                                                <button
-                                                    onClick={() => navigateToSupplier(supp.id)}
-                                                    className="p-2 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-gray-400 hover:text-primary-600 rounded-xl transition-all"
-                                                >
-                                                    <ArrowRightCircle size={20} />
-                                                </button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {canManageSuppliers && (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => handleEditClick(e, supp)}
+                                                                className="p-2 bg-white dark:bg-slate-800 hover:bg-primary-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-primary-600"
+                                                                title="Editar"
+                                                            >
+                                                                <Edit size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => handleDeleteClick(e, supp)}
+                                                                className="p-2 bg-white dark:bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-red-600"
+                                                                title="Eliminar"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    <button
+                                                        onClick={() => navigateToSupplier(supp.id)}
+                                                        className="p-2 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-gray-400 hover:text-primary-600 rounded-xl transition-all"
+                                                        title="Ver detalle"
+                                                    >
+                                                        <ArrowRightCircle size={20} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -590,6 +670,207 @@ export default function SuppliersPage() {
                     )
                 }
             </AnimatePresence >
+
+            {/* Delete Confirmation Modal */}
+            <AnimatePresence>
+                {showDeleteModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+                        onClick={() => setShowDeleteModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <AlertTriangle className="w-8 h-8 text-red-600" />
+                                </div>
+                                <h3 className="text-xl font-black mb-2">¿Eliminar Proveedor?</h3>
+                                <p className="text-gray-500 text-sm">Esta acción no se puede deshacer.</p>
+                                <p className="font-bold text-primary-600 mt-2">{supplierToDelete?.name}</p>
+                            </div>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setShowDeleteModal(false)}
+                                    className="flex-1 py-3 px-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700 font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={confirmDelete}
+                                    disabled={deleting}
+                                    className="flex-1 py-3 px-6 rounded-2xl bg-red-600 text-white font-bold hover:bg-red-700 transition-all disabled:opacity-50"
+                                >
+                                    {deleting ? 'Eliminando...' : 'Eliminar'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Supplier Modal */}
+            <AnimatePresence>
+                {showEditModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setShowEditModal(false)}
+                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-3xl p-10 overflow-hidden max-h-[90vh] overflow-y-auto"
+                        >
+                            <button
+                                onClick={() => setShowEditModal(false)}
+                                className="absolute top-8 right-8 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-all"
+                            >
+                                <X size={24} />
+                            </button>
+
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600">
+                                    <Edit size={24} />
+                                </div>
+                                <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest">Editar</span>
+                            </div>
+
+                            <h2 className="text-3xl font-black tracking-tight mb-2">Editar Proveedor</h2>
+                            <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-10">{editingSupplier?.name}</p>
+
+                            <form onSubmit={handleEditSupplier} className="space-y-6">
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">NIT</label>
+                                        <div className="relative">
+                                            <Hash className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                            <input
+                                                type="text"
+                                                value={formData.nit}
+                                                onChange={e => setFormData({ ...formData, nit: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 pl-14 pr-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                                placeholder="900123456-7"
+                                            />
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="text" required
+                                        value={formData.name}
+                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                        placeholder="Razón social"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Actividad Económica</label>
+                                    <input
+                                        type="text"
+                                        value={formData.activity || ''}
+                                        onChange={e => setFormData({ ...formData, activity: e.target.value })}
+                                        className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                        placeholder="Ej: Suministro de papelería..."
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Contacto</label>
+                                        <input
+                                            type="text"
+                                            value={formData.contactName}
+                                            onChange={e => setFormData({ ...formData, contactName: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                            placeholder="Nombre del contacto"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Email</label>
+                                        <div className="relative">
+                                            <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                            <input
+                                                type="email"
+                                                value={formData.email}
+                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 pl-14 pr-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                                placeholder="correo@proveedor.co"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Teléfono</label>
+                                        <div className="relative">
+                                            <Phone className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                            <input
+                                                type="tel"
+                                                value={formData.phone}
+                                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 pl-14 pr-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                                placeholder="(604) 123-4567"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Dirección</label>
+                                        <div className="relative">
+                                            <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                            <input
+                                                type="text"
+                                                value={formData.address}
+                                                onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                                className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 pl-14 pr-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                                placeholder="Calle 00 # 00-00"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Tipo de Proveedor</label>
+                                        <select
+                                            value={formData.supplierType}
+                                            onChange={e => setFormData({ ...formData, supplierType: e.target.value as "SUPPLIER" | "SERVICE_PROVIDER" })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all appearance-none cursor-pointer"
+                                        >
+                                            <option value="SUPPLIER">Proveedor</option>
+                                            <option value="SERVICE_PROVIDER">Prestador de Servicio</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Criticidad</label>
+                                        <select
+                                            value={formData.criticality}
+                                            onChange={e => setFormData({ ...formData, criticality: e.target.value as "LOW" | "MEDIUM" | "HIGH" })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 px-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all appearance-none cursor-pointer"
+                                        >
+                                            <option value="LOW">Baja</option>
+                                            <option value="MEDIUM">Media</option>
+                                            <option value="HIGH">Alta</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button type="submit" className="w-full bg-premium-gradient text-white py-5 rounded-2xl font-black shadow-2xl hover:-translate-y-1 hover:shadow-primary-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+                                    <Save size={20} />
+                                    Guardar Cambios
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
             <AlertModal
                 isOpen={alertState.open}
                 onClose={() => setAlertState({ ...alertState, open: false })}
@@ -601,7 +882,7 @@ export default function SuppliersPage() {
     );
 }
 
-function SupplierCard({ supplier, index, onClick }: any) {
+function SupplierCard({ supplier, index, onClick, canManage, onEdit, onDelete }: any) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -614,9 +895,29 @@ function SupplierCard({ supplier, index, onClick }: any) {
                 <div className="w-14 h-14 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-all shadow-lg shadow-transparent group-hover:shadow-primary-500/30">
                     <Truck size={28} />
                 </div>
-                <span className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 rounded-lg text-[10px] font-black uppercase tracking-widest border border-green-100 dark:border-green-800/30">
-                    Activo
-                </span>
+                <div className="flex items-center gap-2">
+                    {canManage && (
+                        <>
+                            <button
+                                onClick={onEdit}
+                                className="p-2 bg-white dark:bg-slate-800 hover:bg-primary-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-primary-600"
+                                title="Editar"
+                            >
+                                <Edit size={14} />
+                            </button>
+                            <button
+                                onClick={onDelete}
+                                className="p-2 bg-white dark:bg-slate-800 hover:bg-red-600 hover:text-white rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-all text-red-600"
+                                title="Eliminar"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </>
+                    )}
+                    <span className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 rounded-lg text-[10px] font-black uppercase tracking-widest border border-green-100 dark:border-green-800/30">
+                        Activo
+                    </span>
+                </div>
             </div>
 
             <h3 className="text-xl font-black tracking-tight mb-1 group-hover:text-primary-600 transition-colors">{supplier.name}</h3>
