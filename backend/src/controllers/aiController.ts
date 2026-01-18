@@ -101,12 +101,16 @@ async function generateWithFallback(
         } catch (error: any) {
             console.error(`[AI ERROR] Model ${modelName} failed:`, error.message);
             lastError = error;
-            const isQuotaError = error.message?.includes('429') ||
+            const shouldFallback = error.message?.includes('429') ||
                 error.message?.includes('503') ||
                 error.message?.includes('overloaded') ||
-                error.message?.includes('404');
+                error.message?.includes('404') ||
+                error.message?.includes('401') ||
+                error.message?.includes('403') ||
+                error.message?.includes('invalid_api_key') ||
+                error.message?.includes('API key not found');
 
-            if (!isQuotaError) throw error;
+            if (!shouldFallback) throw error;
             continue;
         }
     }
