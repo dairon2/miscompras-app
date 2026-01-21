@@ -67,9 +67,9 @@ export const translateAction = (action: string): string => {
         'EDITED': 'Editado',
         'OBSERVATIONS_UPDATED': 'Observaciones actualizadas',
         // Group-related actions
-        'GROUP_APPROVED': 'Grupo aprobado',
-        'GROUP_REJECTED': 'Grupo rechazado',
-        'GROUP_CREATED': 'Grupo creado',
+        'GROUP_APPROVED': 'Requerimiento aprobado',
+        'GROUP_REJECTED': 'Requerimiento rechazado',
+        'GROUP_CREATED': 'Requerimiento creado',
         'COORDINATOR_APPROVED': 'Aprobado por Coordinación',
         'COORDINATOR_REJECTED': 'Rechazado por Coordinación',
         'DIRECTOR_APPROVED': 'Aprobado por Dirección',
@@ -107,10 +107,10 @@ export const translateLogDetails = (details: string): string => {
         .replace(/Comment:/gi, 'Comentario:')
         .replace(/Por:/gi, 'Por:')
         // Group-related translations
-        .replace(/Group (\d+) approved by/gi, 'Grupo $1 aprobado por')
-        .replace(/Group (\d+) rejected by/gi, 'Grupo $1 rechazado por')
-        .replace(/Group approved by/gi, 'Grupo aprobado por')
-        .replace(/Group rejected by/gi, 'Grupo rechazado por')
+        .replace(/Group (\d+) approved by/gi, 'Requerimiento #$1 aprobado por')
+        .replace(/Group (\d+) rejected by/gi, 'Requerimiento #$1 rechazado por')
+        .replace(/Group approved by/gi, 'Requerimiento aprobado por')
+        .replace(/Group rejected by/gi, 'Requerimiento rechazado por')
         .replace(/approved by Director/gi, 'aprobado por Dirección')
         .replace(/approved by Coordinator/gi, 'aprobado por Coordinación')
         .replace(/rejected by Director/gi, 'rechazado por Dirección')

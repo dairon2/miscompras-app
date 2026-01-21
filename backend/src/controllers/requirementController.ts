@@ -1078,7 +1078,7 @@ export const approveRequirementGroup = async (req: AuthRequest, res: Response) =
         await prisma.historyLog.create({
             data: {
                 action: 'GROUP_APPROVED',
-                details: `Grupo ${id} aprobado por ${actionLabel} (${req.user?.email}). ${comments || ''}`,
+                details: `Requerimiento #${id} aprobado por ${actionLabel} (${req.user?.email}). ${comments || ''}`,
                 requirementId: group.requirements[0]?.id || '' // Link to first for reference
             }
         });

@@ -78,7 +78,7 @@ export const exportRequirements = (requirements: any[]) => {
     ];
 
     const data = requirements.map(r => ({
-        id: r.id?.substring(0, 8).toUpperCase() || '',
+        id: r.groupId ? `#${r.groupId}` : r.id?.substring(0, 8).toUpperCase() || '',
         title: r.title || '',
         value: r.actualAmount ? `$${parseFloat(r.actualAmount).toLocaleString('es-CO')}` : r.estimatedAmount ? `$${parseFloat(r.estimatedAmount).toLocaleString('es-CO')}` : '$0',
         invoice: r.invoiceNumber || '',

@@ -113,10 +113,24 @@ export const prismaMock: any = {
     user: {
         findUnique: async (args: any) => {
             if (args.where.email === 'daironmoreno24@gmail.com' || args.where.email === 'admin@museodeantioquia.co') {
-                return { id: 'mock-admin-id', email: args.where.email, role: 'ADMIN', name: 'Dairon Moreno (Admin)', areaId: 'area-3' };
+                return {
+                    id: 'mock-admin-id',
+                    email: args.where.email,
+                    role: 'ADMIN',
+                    name: 'Dairon Moreno (Admin)',
+                    areaId: 'area-3',
+                    password: '$2b$10$r/K4K1jPyAOQx3XyLJsjWu47LZhQlXwP.9LmnnUvGfiRiteJDxbKm2' // dairon24*
+                };
             }
             if (args.where.email === 'testuser@museodeantioquia.co') {
-                return { id: 'mock-user-id', email: 'testuser@museodeantioquia.co', role: 'USER', name: 'Usuario de Prueba', areaId: 'area-1' };
+                return {
+                    id: 'mock-user-id',
+                    email: 'testuser@museodeantioquia.co',
+                    role: 'USER',
+                    name: 'Usuario de Prueba',
+                    areaId: 'area-1',
+                    password: '$2b$10$r/K4K1jPyAOQx3XyLJsjWu47LZhQlXwP.9LmnnUvGfiRiteJDxbKm2' // dairon24*
+                };
             }
             return null;
         },
