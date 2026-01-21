@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Search, Filter, Plus, Truck, Mail, Phone,
     ExternalLink, Building2, List, LayoutGrid, X,
     Package, ArrowRightCircle, FileText, Briefcase, User, Download, FileSpreadsheet, Save, Hash, MapPin, Upload,
-    Edit, Trash2, AlertTriangle
+    Edit, Trash2, AlertTriangle, Loader2
 } from "lucide-react";
 import api from "@/lib/api";
 import { exportSuppliers } from "@/lib/excelExport";
@@ -15,6 +15,23 @@ import { useAuthStore } from "@/store/authStore";
 
 import { StarRatingDisplay } from "@/components/StarRating";
 import AlertModal from "@/components/AlertModal";
+
+// Custom hook for debounce
+function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+}
 
 export default function SuppliersPage() {
     const { user } = useAuthStore();
@@ -122,18 +139,30 @@ export default function SuppliersPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [typeFilter, setTypeFilter] = useState<'ALL' | 'SUPPLIER' | 'SERVICE_PROVIDER'>('ALL');
 
-    const filteredSuppliers = suppliers.filter((s: any) => {
-        const matchesSearch =
-            (s.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-            (s.taxId?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-            (s.contactName?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-            (s.contactEmail?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-            (s.contactPhone?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+    // Debounce search term for better performance (300ms delay)
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
+    const isSearching = searchTerm !== debouncedSearchTerm;
 
-        const matchesType = typeFilter === 'ALL' || s.supplierType === typeFilter;
+    // Memoize filtered suppliers for performance
+    const filteredSuppliers = useMemo(() => {
+        const searchLower = debouncedSearchTerm.toLowerCase();
+        return suppliers.filter((s: any) => {
+            const matchesSearch = !debouncedSearchTerm ||
+                (s.name?.toLowerCase() || "").includes(searchLower) ||
+                (s.taxId?.toLowerCase() || "").includes(searchLower) ||
+                (s.nit?.toLowerCase() || "").includes(searchLower) ||
+                (s.contactName?.toLowerCase() || "").includes(searchLower) ||
+                (s.contactEmail?.toLowerCase() || "").includes(searchLower) ||
+                (s.email?.toLowerCase() || "").includes(searchLower) ||
+                (s.contactPhone?.toLowerCase() || "").includes(searchLower) ||
+                (s.phone?.toLowerCase() || "").includes(searchLower) ||
+                (s.activity?.toLowerCase() || "").includes(searchLower);
 
-        return matchesSearch && matchesType;
-    });
+            const matchesType = typeFilter === 'ALL' || s.supplierType === typeFilter;
+
+            return matchesSearch && matchesType;
+        });
+    }, [suppliers, debouncedSearchTerm, typeFilter]);
 
     useEffect(() => {
         fetchSuppliers();
@@ -229,8 +258,11 @@ export default function SuppliersPage() {
                             placeholder="Buscar proveedor..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-white dark:bg-slate-800 border border-gray-100 dark:border-gray-700 rounded-2xl py-3 pl-12 pr-4 text-sm font-bold shadow-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                            className="w-full bg-white dark:bg-slate-800 border border-gray-100 dark:border-gray-700 rounded-2xl py-3 pl-12 pr-10 text-sm font-bold shadow-sm focus:ring-2 focus:ring-primary-500 outline-none"
                         />
+                        {isSearching && (
+                            <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-500 animate-spin" size={16} />
+                        )}
                     </div>
                 </div>
             </div>
