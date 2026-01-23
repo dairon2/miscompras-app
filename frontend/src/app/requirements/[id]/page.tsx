@@ -400,7 +400,8 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     const canApprovePending = pendingApprovalByCurrentUser && isApprover;
 
     const canManageProcurement = requirement.status === 'APPROVED' && (requirement.procurementStatus === 'PENDIENTE' || requirement.procurementStatus === 'EN_TRAMITE' || requirement.procurementStatus === 'ENTREGADO');
-    const canMarkReceived = requirement.procurementStatus === 'ENTREGADO' && isCreator && !requirement.receivedAtSatisfaction;
+    // Allow marking received satisfaction also when FINALIZADO but not yet confirmed (for cases where finalized without evaluation)
+    const canMarkReceived = (requirement.procurementStatus === 'ENTREGADO' || requirement.procurementStatus === 'FINALIZADO') && isCreator && !requirement.receivedAtSatisfaction;
 
     const canManage = userRole === 'ADMIN';
 
