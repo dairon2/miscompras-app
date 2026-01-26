@@ -359,3 +359,52 @@ export const sendRequirementNotificationEmail = async (data: RequirementEmailDat
 
     await sendEmail(data.to, subject, getEmailTemplate(subject, content, { text: 'Ver Solicitud', url: `${appUrl}/requirements/${data.requirementId}` }));
 };
+
+// ==================== CONTRACT EMAIL ====================
+
+export interface ContractEmailData {
+    to: string;
+    supplierName: string;
+    contractNumber: string;
+    requirementTitle: string;
+    amount: number;
+    contractHtml: string;
+}
+
+export const sendContractEmail = async (data: ContractEmailData) => {
+    const appUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    const subject = `Contrato de Prestación de Servicios - ${data.contractNumber}`;
+    const coverContent = `
+        <p style="color: #333; line-height: 1.6;">Estimado(a) <strong>${data.supplierName}</strong>,</p>
+        
+        <p style="color: #333; line-height: 1.6;">
+            Adjunto encontrará el contrato correspondiente a la prestación de servicios para el Museo de Antioquia.
+        </p>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Contrato No.:</strong> ${data.contractNumber}</p>
+            <p style="margin: 5px 0;"><strong>Concepto:</strong> ${data.requirementTitle}</p>
+            <p style="margin: 5px 0;"><strong>Valor:</strong> <span style="color: #667eea; font-weight: bold;">${formatCurrency(data.amount)}</span></p>
+        </div>
+        
+        <p style="color: #333; line-height: 1.6;">
+            Por favor revise el documento y, si está de acuerdo con los términos, proceda a firmarlo.
+            Para cualquier duda o aclaración, no dude en contactarnos.
+        </p>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #e8f4f8; border-radius: 8px; border-left: 4px solid #667eea;">
+            <p style="margin: 0; color: #333;">
+                <strong>📄 Ver contrato:</strong> El contrato completo se encuentra al final de este correo.
+            </p>
+        </div>
+    `;
+
+    // Combine cover email with full contract
+    const fullHtml = getEmailTemplate(subject, coverContent, { text: 'Ir al Sistema', url: appUrl }) +
+        '<div style="page-break-before: always;"></div>' +
+        data.contractHtml;
+
+    await sendEmail(data.to, subject, fullHtml);
+    console.log(`[Contract] Contract ${data.contractNumber} sent to ${data.to}`);
+};

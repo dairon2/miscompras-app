@@ -268,6 +268,7 @@ IMPORTANTE para REFERENCIAS:
             - TOP_REQUESTER: Usuario/área que más requerimientos ha creado (Ej: "quién más compra", "qué líder más compra", "área con más requerimientos"). Sin parámetros.
             - REQ_BY_STATUS: Listar requerimientos filtrados por estado de trámite (Ej: "requerimientos en trámite", "pendientes de entrega", "finalizados"). Parámetros: procurementStatus (PENDIENTE|EN_TRAMITE|ENTREGADO|FINALIZADO|ANULADO|POSTERGADO).
             - REQ_BY_CATEGORY: Contar o listar requerimientos por categoría (Ej: "cuántos son orden de servicio", "requerimientos de compra"). Parámetros: category (COMPRA|SERVICIO|ORDEN_COMPRA|ORDEN_SERVICIO|ANTICIPO|CONTRATO|ORDEN_PRODUCCION|COMPRA_ONLINE).
+            - GENERATE_CONTRACT: Generar y enviar contrato al proveedor de un requerimiento (Ej: "genera contrato para req #4", "envía contrato del requerimiento X", "crea contrato para ESE requerimiento"). Parámetros: groupId (number) o title (string).
             - SEND_QUOTE: Preparar solicitud de cotización para un proveedor. Parámetros: supplierName, product, groupId.
             - CONFIRM_ACTION: El usuario confirma una acción propuesta anteriormente (Ej: "sí, enviar", "confirmar", "hazlo", "sí").
             - PRICE_HISTORY: Consultar precios históricos o historial de pagos de un producto/item. Parámetros: item.
@@ -457,6 +458,82 @@ IMPORTANTE para REFERENCIAS:
                         const html = getEmailTemplate(subject, `<p>Estimado ${sName},</p><p>Solicitamos cotización para: ${sProd}.</p><p>Gracias.</p>`);
                         await sendEmail(sEmail, subject, html);
                         actionResult += `\n\n[SISTEMA - ACCIÓN REALIZADA ✅]: ¡Correo enviado exitosamente a ${sEmail}!`;
+                    }
+                    break;
+                }
+
+                case 'GENERATE_CONTRACT': {
+                    const { groupId, title } = intent.params;
+                    const where: any = {};
+                    if (groupId) where.groupId = Number(groupId);
+                    else if (title) where.title = { contains: title, mode: 'insensitive' };
+
+                    if (Object.keys(where).length > 0) {
+                        const req = await prisma.requirement.findFirst({
+                            where,
+                            include: {
+                                project: true,
+                                supplier: true,
+                                createdBy: { select: { name: true, email: true } }
+                            }
+                        });
+
+                        if (req) {
+                            if (!req.supplier) {
+                                actionResult += `\n\n[SISTEMA - ERROR]: El requerimiento #${req.groupId} no tiene proveedor asignado. Debe asignar un proveedor antes de generar el contrato.`;
+                            } else if (!req.supplier.contactEmail) {
+                                actionResult += `\n\n[SISTEMA - ERROR]: El proveedor "${req.supplier.name}" no tiene email configurado. Actualice los datos del proveedor.`;
+                            } else {
+                                // Generate contract
+                                const { getServiceContractTemplate } = await import('../utils/contractTemplates');
+                                const { sendContractEmail } = await import('../services/emailService');
+
+                                const contractNumber = `MC-${req.groupId}-${Date.now().toString(36).toUpperCase()}`;
+                                const contractDate = new Date().toLocaleDateString('es-CO', {
+                                    year: 'numeric', month: 'long', day: 'numeric'
+                                });
+
+                                const contractData = {
+                                    contractNumber,
+                                    contractDate,
+                                    supplierName: req.supplier.name,
+                                    supplierNit: req.supplier.nit || req.supplier.taxId || 'N/A',
+                                    supplierEmail: req.supplier.contactEmail,
+                                    supplierPhone: req.supplier.contactPhone || undefined,
+                                    supplierAddress: req.supplier.address || undefined,
+                                    requirementGroupId: req.groupId!,
+                                    requirementTitle: req.title,
+                                    requirementDescription: req.description || undefined,
+                                    amount: Number(req.totalAmount || req.estimatedAmount || 0),
+                                    projectName: req.project?.name || 'N/A',
+                                    projectCode: req.project?.code || undefined,
+                                    requesterName: req.createdBy?.name || req.createdBy?.email || 'N/A'
+                                };
+
+                                const contractHtml = getServiceContractTemplate(contractData);
+
+                                await sendContractEmail({
+                                    to: req.supplier.contactEmail,
+                                    supplierName: req.supplier.name,
+                                    contractNumber,
+                                    requirementTitle: req.title,
+                                    amount: contractData.amount,
+                                    contractHtml
+                                });
+
+                                actionResult += `\n\n[SISTEMA - CONTRATO GENERADO ✅]:\n`;
+                                actionResult += `📄 **Contrato No. ${contractNumber}**\n`;
+                                actionResult += `👤 Proveedor: ${req.supplier.name}\n`;
+                                actionResult += `📧 Enviado a: ${req.supplier.contactEmail}\n`;
+                                actionResult += `💰 Monto: ${formatMoney(contractData.amount)}\n`;
+                                actionResult += `📋 Requerimiento: #${req.groupId} - ${req.title}\n\n`;
+                                actionResult += `El proveedor recibirá el contrato para revisión y firma.`;
+                            }
+                        } else {
+                            actionResult += `\n\n[SISTEMA]: No encontré ningún requerimiento que coincida con la búsqueda.`;
+                        }
+                    } else {
+                        actionResult += `\n\n[SISTEMA]: No especificaste qué requerimiento usar para el contrato.`;
                     }
                     break;
                 }
