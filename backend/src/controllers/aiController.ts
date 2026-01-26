@@ -203,25 +203,89 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
                 return `${h.role === 'user' ? 'Usuario' : 'Asistente'}: ${content}`;
             }).join('\n') || '';
 
+            // ========== MEMORY EXTRACTION: Extract context from history ==========
+            let lastMentionedSupplier = "";
+            let lastMentionedReqGroupId = "";
+            let lastMentionedReqTitle = "";
+
+            // Look through history for recently mentioned entities
+            for (const h of (history || []).slice(-10).reverse()) {
+                const content = typeof h.content === 'string' ? h.content : (h.parts?.[0]?.text || '');
+
+                // Extract supplier from bot responses
+                if (h.role === 'model' && !lastMentionedSupplier) {
+                    // Pattern: "PROVEEDOR ASIGNADO:" or "Nombre: X"
+                    const supplierMatch = content.match(/(?:PROVEEDOR ASIGNADO|Nombre):\s*\**([^*\n]+)/i);
+                    if (supplierMatch) lastMentionedSupplier = supplierMatch[1].trim();
+
+                    // Pattern: "proveedor ... es X"
+                    const supplierMatch2 = content.match(/proveedor[^:]*es\s+([^,.\n]+)/i);
+                    if (supplierMatch2 && !lastMentionedSupplier) lastMentionedSupplier = supplierMatch2[1].trim();
+                }
+
+                // Extract requirement from bot responses
+                if (h.role === 'model' && !lastMentionedReqGroupId) {
+                    // Pattern: "#6 - Lupas..."
+                    const reqMatch = content.match(/#(\d+)\s*-\s*([^\n(]+)/);
+                    if (reqMatch) {
+                        lastMentionedReqGroupId = reqMatch[1];
+                        lastMentionedReqTitle = reqMatch[2].trim();
+                    }
+                }
+
+                // Stop if we have both
+                if (lastMentionedSupplier && lastMentionedReqGroupId) break;
+            }
+
+            const memoryContext = `
+CONTEXTO DE MEMORIA (entidades mencionadas recientemente):
+${lastMentionedSupplier ? `- Último proveedor mencionado: "${lastMentionedSupplier}"` : '- No hay proveedor reciente'}
+${lastMentionedReqGroupId ? `- Último requerimiento mencionado: #${lastMentionedReqGroupId} - ${lastMentionedReqTitle}` : '- No hay requerimiento reciente'}
+
+IMPORTANTE para REFERENCIAS:
+- Si el usuario dice "ese proveedor", "el mismo", "ese" refiriéndose a un proveedor, usa: "${lastMentionedSupplier || 'N/A'}"
+- Si el usuario dice "ese requerimiento", "el mismo", "esa solicitud", usa groupId: ${lastMentionedReqGroupId || 'N/A'}
+`;
+
             const classifierPrompt = `
             Actúa como el motor de intenciones de "MisCompras Bot". Analiza el mensaje del usuario y el historial para categorizar la acción.
             
             HISTORIAL RECIENTE:
             ${historyText}
             
+            ${memoryContext}
+            
             MENSAJE DEL USUARIO: "${message}"
             
             CATEGORÍAS DE ACCIÓN:
-            - FIND_SUPPLIER: Buscar proveedores (Ej: "busca proveedor x", "quien vende y"). Parámetros: keywords (array de palabras clave), type (name|activity|both).
+            - FIND_SUPPLIER: Buscar proveedores en el catálogo (Ej: "busca proveedor x", "quien vende y", "proveedores de papel"). Parámetros: keywords (array de palabras clave), type (name|activity|both).
             - DELETE_SUPPLIER: Eliminar un proveedor. Si el usuario dice "eliminalo", "borralo" o "quita a ese" refiriéndose al último mencionado, detecta a quién se refiere. Parámetros: name (nombre del proveedor).
-            - FIND_REQ: Buscar un requerimiento específico. Parámetros: groupId (number), id (uuid), title (string).
-            - COUNT_GLOBAL: Estadísticas generales (Ej: "¿cuántos requerimientos hay?", "¿total de proveedores?", "¿cuántos proyectos?"). Parámetros: entity (requirement|supplier|project|budget).
+            - FIND_REQ: Buscar un requerimiento específico O consultar el proveedor asignado a un requerimiento (Ej: "busca requerimiento #6", "dame info del req #6", "qué proveedor tiene el requerimiento X", "proveedor del requerimiento de lupas", "info de ESE requerimiento"). Usa el groupId del contexto de memoria si el usuario dice "ese/esa". Parámetros: groupId (number), id (uuid), title (string).
+            - REQS_BY_SUPPLIER: Buscar todos los requerimientos asignados a un proveedor específico (Ej: "qué requerimientos tiene el proveedor X", "otros requerimientos de ESE proveedor", "trabajos asignados a Juan"). Parámetros: supplierName (string).
+            - COUNT_GLOBAL: Estadísticas generales de CONTEO (Ej: "¿cuántos requerimientos hay?", "¿total de proveedores?", "¿cuántos proyectos?"). Parámetros: entity (requirement|supplier|project|budget).
+            - BUDGET_SUMMARY: Resumen financiero, gasto total, dinero ejecutado, ejecución presupuestal (Ej: "cuánto dinero se ha gastado", "cuánto se ha ejecutado", "resumen de presupuestos", "dinero gastado total"). Parámetros: projectName (opcional, nombre del proyecto específico).
+            - TOP_PROJECT: Proyecto con más gastos/ejecución (Ej: "proyecto con más gastos", "cuál proyecto ha gastado más"). Sin parámetros.
+            - TOP_REQUESTER: Usuario/área que más requerimientos ha creado (Ej: "quién más compra", "qué líder más compra", "área con más requerimientos"). Sin parámetros.
+            - REQ_BY_STATUS: Listar requerimientos filtrados por estado de trámite (Ej: "requerimientos en trámite", "pendientes de entrega", "finalizados"). Parámetros: procurementStatus (PENDIENTE|EN_TRAMITE|ENTREGADO|FINALIZADO|ANULADO|POSTERGADO).
+            - REQ_BY_CATEGORY: Contar o listar requerimientos por categoría (Ej: "cuántos son orden de servicio", "requerimientos de compra"). Parámetros: category (COMPRA|SERVICIO|ORDEN_COMPRA|ORDEN_SERVICIO|ANTICIPO|CONTRATO|ORDEN_PRODUCCION|COMPRA_ONLINE).
             - SEND_QUOTE: Preparar solicitud de cotización para un proveedor. Parámetros: supplierName, product, groupId.
             - CONFIRM_ACTION: El usuario confirma una acción propuesta anteriormente (Ej: "sí, enviar", "confirmar", "hazlo", "sí").
             - PRICE_HISTORY: Consultar precios históricos o historial de pagos de un producto/item. Parámetros: item.
             - EXEC_SUMMARY: Reporte ejecutivo/resumen de un proyecto o área específica. Parámetros: target (project|area), name.
             - APPROVE_REQ: Autorizar o aprobar un requerimiento. Parámetros: groupId.
             - NONE: Si es saludo, charla informal o duda sobre cómo usar el sistema sin pedir una acción específica.
+
+            IMPORTANTE: 
+            - Si el usuario pregunta por "dinero gastado", "cuánto se ha ejecutado", "gasto total" -> usa BUDGET_SUMMARY, NO COUNT_GLOBAL.
+            - Si pregunta "cuál proyecto gastó más" -> usa TOP_PROJECT.
+            - Si pregunta "quién más compra" o "qué líder" -> usa TOP_REQUESTER.
+            - Si pregunta "en trámite", "pendientes", "finalizados" -> usa REQ_BY_STATUS.
+            - Si pregunta "orden de compra", "orden de servicio", categorías -> usa REQ_BY_CATEGORY.
+            - Si pregunta "qué proveedor tiene el requerimiento X" o "proveedor del requerimiento" -> usa FIND_REQ (NO FIND_SUPPLIER).
+            - Si pregunta "qué requerimientos tiene ESE proveedor" o "otros requerimientos de X" -> usa REQS_BY_SUPPLIER con el supplierName del contexto de memoria.
+            - Si el usuario dice "ese requerimiento", "info de ese", usa FIND_REQ con el groupId del contexto de memoria.
+            - COUNT_GLOBAL es solo para CONTEOS numéricos simples de entidades.
+            - FIND_SUPPLIER es para buscar proveedores en el catálogo, NO para consultar el proveedor de un requerimiento.
 
             Responde ÚNICAMENTE un JSON válido:
             {
@@ -291,18 +355,62 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
                     if (Object.keys(where).length > 0) {
                         const req = await prisma.requirement.findFirst({
                             where,
-                            include: { project: true, area: true, supplier: true, budget: true }
+                            include: { project: true, area: true, supplier: true, budget: true, createdBy: { select: { name: true, email: true } } }
                         });
                         if (req) {
                             actionResult += `\n\n[SISTEMA - REQUERIMIENTO ENCONTRADO]:\n`;
-                            actionResult += `📋 #${req.groupId} - ${req.title}\n`;
+                            actionResult += `📋 **#${req.groupId} - ${req.title}**\n`;
                             actionResult += `📊 Estado: ${req.status} | Trámite: ${req.procurementStatus}\n`;
                             actionResult += `💰 Monto: ${formatMoney(req.totalAmount || req.estimatedAmount)}\n`;
-                            actionResult += `🏢 Proyecto: ${req.project?.name || 'N/A'} | Área: ${req.area?.name || 'N/A'}\n`;
-                            if (req.supplier) actionResult += `🏪 Proveedor: ${req.supplier.name}\n`;
+                            actionResult += `🏢 Proyecto: ${req.project?.name || 'N/A'}\n`;
+                            actionResult += `👤 Solicitante: ${req.createdBy?.name || req.createdBy?.email || 'N/A'}\n`;
+                            if (req.supplier) {
+                                actionResult += `\n🏪 **PROVEEDOR ASIGNADO:**\n`;
+                                actionResult += `   Nombre: ${req.supplier.name}\n`;
+                                actionResult += `   NIT: ${req.supplier.nit || req.supplier.taxId || 'N/A'}\n`;
+                                actionResult += `   Email: ${req.supplier.contactEmail || 'N/A'}\n`;
+                                actionResult += `   Teléfono: ${req.supplier.contactPhone || 'N/A'}\n`;
+                            } else {
+                                actionResult += `\n⚠️ **SIN PROVEEDOR ASIGNADO**\n`;
+                            }
                         } else {
                             actionResult += `\n\n[SISTEMA]: No encontré ningún requerimiento que coincida con la búsqueda.`;
                         }
+                    }
+                    break;
+                }
+
+                case 'REQS_BY_SUPPLIER': {
+                    const supplierName = intent.params.supplierName;
+                    if (supplierName) {
+                        // Find supplier first
+                        const supplier = await prisma.supplier.findFirst({
+                            where: { name: { contains: supplierName, mode: 'insensitive' } },
+                            select: { id: true, name: true }
+                        });
+
+                        if (supplier) {
+                            const reqs = await prisma.requirement.findMany({
+                                where: { supplierId: supplier.id },
+                                orderBy: { createdAt: 'desc' },
+                                select: { groupId: true, id: true, title: true, status: true, procurementStatus: true, totalAmount: true, project: { select: { name: true } } }
+                            });
+
+                            if (reqs.length > 0) {
+                                const totalAmount = reqs.reduce((sum, r) => sum + Number(r.totalAmount || 0), 0);
+                                actionResult += `\n\n[SISTEMA - REQUERIMIENTOS DE ${supplier.name}]:\n`;
+                                actionResult += `📊 Total: **${reqs.length} requerimientos** por ${formatMoney(totalAmount)}\n\n`;
+                                reqs.forEach(r => {
+                                    actionResult += `• #${r.groupId || r.id.slice(0, 6)} - ${r.title} (${r.procurementStatus}) ${formatMoney(r.totalAmount || 0)}\n`;
+                                });
+                            } else {
+                                actionResult += `\n\n[SISTEMA]: El proveedor "${supplier.name}" no tiene requerimientos asignados.`;
+                            }
+                        } else {
+                            actionResult += `\n\n[SISTEMA]: No encontré ningún proveedor con el nombre "${supplierName}".`;
+                        }
+                    } else {
+                        actionResult += `\n\n[SISTEMA]: No especificaste el nombre del proveedor.`;
                     }
                     break;
                 }
@@ -408,9 +516,188 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
                     }
                     break;
                 }
+
+                case 'BUDGET_SUMMARY': {
+                    const projectName = intent.params.projectName;
+
+                    if (projectName) {
+                        // Resumen de un proyecto específico
+                        const project = await prisma.project.findFirst({
+                            where: { name: { contains: projectName, mode: 'insensitive' } },
+                            include: {
+                                budgets: true,
+                                requirements: { select: { totalAmount: true, actualAmount: true, status: true, procurementStatus: true } }
+                            }
+                        });
+
+                        if (project) {
+                            const totalBudget = project.budgets.reduce((sum, b) => sum + Number(b.amount || 0), 0);
+                            const availableBudget = project.budgets.reduce((sum, b) => sum + Number(b.available || 0), 0);
+                            const executedBudget = totalBudget - availableBudget;
+                            const executionPercent = totalBudget > 0 ? ((executedBudget / totalBudget) * 100).toFixed(1) : 0;
+
+                            actionResult += `\n\n[SISTEMA - RESUMEN FINANCIERO: ${project.name}]:\n`;
+                            actionResult += `💰 Presupuesto Total: ${formatMoney(totalBudget)}\n`;
+                            actionResult += `✅ Disponible: ${formatMoney(availableBudget)}\n`;
+                            actionResult += `📊 Ejecutado: ${formatMoney(executedBudget)} (${executionPercent}%)\n`;
+                            actionResult += `📋 Requerimientos: ${project.requirements.length}`;
+                        } else {
+                            actionResult += `\n\n[SISTEMA]: No encontré un proyecto con el nombre "${projectName}".`;
+                        }
+                    } else {
+                        // Resumen global de todos los presupuestos
+                        const budgets = await prisma.budget.findMany({
+                            include: { project: { select: { name: true } } }
+                        });
+
+                        const totalBudget = budgets.reduce((sum, b) => sum + Number(b.amount || 0), 0);
+                        const availableBudget = budgets.reduce((sum, b) => sum + Number(b.available || 0), 0);
+                        const executedBudget = totalBudget - availableBudget;
+                        const executionPercent = totalBudget > 0 ? ((executedBudget / totalBudget) * 100).toFixed(1) : 0;
+
+                        actionResult += `\n\n[SISTEMA - RESUMEN FINANCIERO GLOBAL]:\n`;
+                        actionResult += `💰 Presupuesto Total Asignado: ${formatMoney(totalBudget)}\n`;
+                        actionResult += `✅ Saldo Disponible: ${formatMoney(availableBudget)}\n`;
+                        actionResult += `📊 **Dinero Ejecutado (Gastado): ${formatMoney(executedBudget)}** (${executionPercent}% de ejecución)\n`;
+                        actionResult += `📁 Total de Presupuestos: ${budgets.length}`;
+                    }
+                    break;
+                }
+
+                case 'TOP_PROJECT': {
+                    // Find project with most spending (amount - available = executed)
+                    const projects = await prisma.project.findMany({
+                        include: { budgets: true }
+                    });
+
+                    const projectSpending = projects.map(p => {
+                        const totalBudget = p.budgets.reduce((sum, b) => sum + Number(b.amount || 0), 0);
+                        const available = p.budgets.reduce((sum, b) => sum + Number(b.available || 0), 0);
+                        const executed = totalBudget - available;
+                        return { name: p.name, executed, totalBudget };
+                    }).filter(p => p.totalBudget > 0).sort((a, b) => b.executed - a.executed);
+
+                    if (projectSpending.length > 0) {
+                        const top = projectSpending[0];
+                        const percent = top.totalBudget > 0 ? ((top.executed / top.totalBudget) * 100).toFixed(1) : 0;
+                        actionResult += `\n\n[SISTEMA - PROYECTO CON MÁS GASTOS]:\n`;
+                        actionResult += `🏆 **${top.name}**\n`;
+                        actionResult += `📊 Ejecutado: ${formatMoney(top.executed)} (${percent}% de ${formatMoney(top.totalBudget)})\n\n`;
+                        actionResult += `📋 Top 5 Proyectos por Gasto:\n`;
+                        projectSpending.slice(0, 5).forEach((p, i) => {
+                            actionResult += `${i + 1}. ${p.name}: ${formatMoney(p.executed)}\n`;
+                        });
+                    } else {
+                        actionResult += `\n\n[SISTEMA]: No hay proyectos con presupuesto asignado.`;
+                    }
+                    break;
+                }
+
+                case 'TOP_REQUESTER': {
+                    // Find user/area with most requirements
+                    const reqsByUser = await prisma.requirement.groupBy({
+                        by: ['createdById'],
+                        _count: { id: true },
+                        _sum: { totalAmount: true },
+                        orderBy: { _count: { id: 'desc' } },
+                        take: 10
+                    });
+
+                    if (reqsByUser.length > 0) {
+                        // Get user details
+                        const userIds = reqsByUser.map(r => r.createdById);
+                        const users = await prisma.user.findMany({
+                            where: { id: { in: userIds } },
+                            select: { id: true, name: true, email: true, area: { select: { name: true } } }
+                        });
+
+                        const userMap = new Map(users.map(u => [u.id, u]));
+
+                        actionResult += `\n\n[SISTEMA - USUARIOS QUE MÁS COMPRAN]:\n`;
+                        reqsByUser.slice(0, 5).forEach((r, i) => {
+                            const user = userMap.get(r.createdById);
+                            const name = user?.name || user?.email || 'Desconocido';
+                            const area = user?.area?.name || 'Sin área';
+                            actionResult += `${i + 1}. **${name}** (${area}): ${r._count.id} requerimientos - ${formatMoney(r._sum.totalAmount || 0)}\n`;
+                        });
+                    } else {
+                        actionResult += `\n\n[SISTEMA]: No hay requerimientos registrados.`;
+                    }
+                    break;
+                }
+
+                case 'REQ_BY_STATUS': {
+                    const status = intent.params.procurementStatus || 'PENDIENTE';
+                    const reqs = await prisma.requirement.findMany({
+                        where: { procurementStatus: status },
+                        take: 15,
+                        orderBy: { createdAt: 'desc' },
+                        include: {
+                            project: { select: { name: true } },
+                            createdBy: { select: { name: true, email: true } }
+                        }
+                    });
+
+                    const count = await prisma.requirement.count({ where: { procurementStatus: status } });
+
+                    const statusLabels: Record<string, string> = {
+                        'PENDIENTE': 'Pendientes',
+                        'EN_TRAMITE': 'En Trámite',
+                        'ENTREGADO': 'Entregados',
+                        'FINALIZADO': 'Finalizados',
+                        'ANULADO': 'Anulados',
+                        'POSTERGADO': 'Postergados'
+                    };
+
+                    actionResult += `\n\n[SISTEMA - REQUERIMIENTOS ${statusLabels[status] || status}]: (${count} total)\n`;
+                    if (reqs.length > 0) {
+                        reqs.forEach(r => {
+                            actionResult += `• #${r.groupId || r.id.slice(0, 6)} - ${r.title} (${r.project?.name || 'Sin proyecto'})\n`;
+                        });
+                        if (count > 15) actionResult += `... y ${count - 15} más.`;
+                    } else {
+                        actionResult += `No hay requerimientos en estado "${statusLabels[status] || status}".`;
+                    }
+                    break;
+                }
+
+                case 'REQ_BY_CATEGORY': {
+                    const category = intent.params.category || 'COMPRA';
+                    const count = await prisma.requirement.count({ where: { reqCategory: category } });
+                    const reqs = await prisma.requirement.findMany({
+                        where: { reqCategory: category },
+                        take: 10,
+                        orderBy: { createdAt: 'desc' },
+                        select: { groupId: true, id: true, title: true, status: true, procurementStatus: true, totalAmount: true }
+                    });
+
+                    const categoryLabels: Record<string, string> = {
+                        'COMPRA': 'Compra',
+                        'SERVICIO': 'Servicio',
+                        'ORDEN_COMPRA': 'Orden de Compra',
+                        'ORDEN_SERVICIO': 'Orden de Servicio',
+                        'ANTICIPO': 'Anticipo',
+                        'CONTRATO': 'Contrato',
+                        'ORDEN_PRODUCCION': 'Orden de Producción',
+                        'COMPRA_ONLINE': 'Compra Online'
+                    };
+
+                    actionResult += `\n\n[SISTEMA - REQUERIMIENTOS CATEGORÍA "${categoryLabels[category] || category}"]:\n`;
+                    actionResult += `📊 Total: **${count} requerimientos**\n\n`;
+
+                    if (reqs.length > 0) {
+                        reqs.forEach(r => {
+                            actionResult += `• #${r.groupId || r.id.slice(0, 6)} - ${r.title}: ${formatMoney(r.totalAmount || 0)} (${r.procurementStatus})\n`;
+                        });
+                    }
+                    break;
+                }
             }
         } catch (e: any) {
-            console.error("Intent Classifier Error:", e.message);
+            console.error("[AI ERROR] Intent Classifier/Action Execution Error:", e.message);
+            console.error("[AI ERROR] Stack:", e.stack);
+            // Add error to action result so user knows something went wrong
+            actionResult += `\n\n[SISTEMA - ERROR]: Hubo un problema ejecutando la acción. Detalle técnico: ${e.message}`;
         }
 
 
@@ -420,26 +707,26 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
         }
 
         // 2. Prepare System Prompt (MisCompras Bot Identity)
-        const systemRules = `Eres MisCompras Bot, un asistente virtual profesional y eficiente creado por el equipo de desarrollo de MisCompras para el Museo de Antioquia.
+        const systemRules = `Eres MisCompras Bot, un asistente virtual profesional creado por el equipo de desarrollo de MisCompras para el Museo de Antioquia.
         
-        IDENTIDAD Y TONO:
-        - Tu nombre es MisCompras Bot.
-        - Eres servicial, técnico y muy conciso.
-        - Si te preguntan quién te creó, responde: "Fui creado por el equipo de desarrollo de MisCompras". No menciones modelos de lenguaje (Gemini, OpenAI, etc.).
-
-        REGLAS DE RESPUESTA:
-        - NO saludes ("Hola", "Buen día"). Ve directo al grano.
-        - Máximo 3 oraciones, a menos que presentes datos tabulares o listas del sistema.
-        - Usa solo los datos proporcionados en el contexto (Action Results y Database Context).
-        - Si una acción se realizó (ej. eliminación), confírmala brevemente.
-
-        CENTRO DE CONOCIMIENTO:
+        ⛔ PROHIBIDO ABSOLUTAMENTE:
+        - NO digas "Hola", "¡Hola!", "Buenos días", "Buenas tardes" ni NINGÚN saludo.
+        - NO te presentes ("Soy MisCompras Bot", "Estoy aquí para ayudarte").
+        - NO ofrezcas ayuda genérica ("¿En qué puedo ayudarte?", "¿Qué necesitas?").
+        
+        ✅ QUÉ HACER:
+        - Responde DIRECTO a la pregunta con datos concretos.
+        - Si hay datos del sistema en [SISTEMA], úsalos para responder.
+        - Máximo 3 oraciones, a menos que presentes datos tabulares o listas.
+        - Si te preguntan quién te creó: "El equipo de desarrollo de MisCompras" (NO menciones IA, Gemini, OpenAI).
+        
+        📚 REGLAS DE NEGOCIO:
         ${SYSTEM_FAQ}
         
-        CONTEXTO DE LA OPERACIÓN ACTUAL:
+        📊 DATOS ACTUALES DEL SISTEMA:
         ${contextData}
         
-        ⚠️ REGLA DE ORO: Si no tienes datos específicos para responder una duda técnica, invita al usuario a consultar el manual o contactar a soporte.`;
+        ⚠️ REGLA DE ORO: Si no tienes datos específicos para responder, invita al usuario a consultar el manual o contactar a soporte. NUNCA inventes datos.`;
 
         // 3. START CHAT WITH CORRECT HISTORY PATTERN
         console.log(`[AI DEBUG] User Message: "${message}"`);
@@ -501,18 +788,26 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
         // Handle empty responses AND Cleaning
         let finalReply = responseText?.trim() || '';
 
-        // CLEAN GREETINGS (Forceful Removal)
+        // CLEAN GREETINGS (Aggressive Removal - Always Applied!)
         const cleanResponse = (text: string) => {
-            return text.replace(/^(¡?hola!?[,.]?|¡?buenos d[íi]as!?[,.]?|¡?buenas tardes!?[,.]?|soy miscompras bot[,.]?|estoy aqu[íi] para ayudarte[,.]?)/gim, '')
-                .replace(/^(\s*y tú\??\s*|\s*miscompras bot\s*)/gim, '')
+            return text
+                // Remove greetings at the start
+                .replace(/^[¡!]*(hola|buenos?\s*d[íi]as?|buenas?\s*(tardes?|noches?))[¡!.,\s]*/gim, '')
+                // Remove self-introductions
+                .replace(/^(soy\s+miscompras\s*bot[.,]?\s*)/gim, '')
+                .replace(/^(como\s+(tu\s+)?asistente[.,]?\s*)/gim, '')
+                .replace(/^(estoy\s+(listo|aquí|disponible)\s+(para\s+)?(proporcionar|ayudar)[^.]*\.?\s*)/gim, '')
+                // Remove generic help offers
+                .replace(/^(¿en\s+qu[ée]\s+(te\s+)?puedo\s+ayudar(te)?(\s+hoy)?\??[.,]?\s*)/gim, '')
+                .replace(/^(¿qu[ée]\s+necesitas\??[.,]?\s*)/gim, '')
+                // Clean extra whitespace
+                .replace(/^\s+/, '')
                 .trim();
         };
 
+        // ALWAYS clean the response - no conditions!
         if (finalReply) {
-            // Only clean if we have system data to show, to ensure we don't return empty on casual chat
-            if (actionResult || contextData.length > 500) {
-                finalReply = cleanResponse(finalReply);
-            }
+            finalReply = cleanResponse(finalReply);
         }
 
         // Fallback Logic

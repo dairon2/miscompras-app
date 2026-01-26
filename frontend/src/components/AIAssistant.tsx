@@ -20,7 +20,7 @@ interface Attachment {
 export default function AIAssistant() {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'model', content: '¡Hola! Soy tu asistente virtual de MisCompras. 🤖\n\nPuedo ayudarte a consultar el estado de tus proyectos, presupuestos o requerimientos.\n\n¿En qué te puedo ayudar hoy?' }
+        { role: 'model', content: '🤖 **MisCompras Bot activo**\n\nConsulta proyectos, presupuestos, requerimientos o busca proveedores. Ejemplos:\n• "¿Cuánto dinero se ha ejecutado?"\n• "Busca proveedores de papelería"\n• "Dame el resumen del proyecto X"' }
     ]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
