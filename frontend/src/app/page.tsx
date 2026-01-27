@@ -116,15 +116,6 @@ export default function HomePage() {
           trendColor="text-blue-500"
         />
         <StatCard
-          title="Total Solicitado"
-          value={`$${(stats.totalAmount / 1e6).toFixed(1)}M`}
-          sub="Presupuesto ejecutado"
-          icon={<DollarSign />}
-          color="bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400"
-          trend={[40, 60, 55, 80, 75, 90]}
-          trendColor="text-primary-500"
-        />
-        <StatCard
           title="Finalizados"
           value={stats.finalizado.toString()}
           sub="Completados"
@@ -132,6 +123,15 @@ export default function HomePage() {
           color="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
           trend={[10, 15, 25, 35, 45, stats.finalizado]}
           trendColor="text-emerald-500"
+        />
+        <StatCard
+          title="Total Solicitado"
+          value={`$${(stats.totalAmount / 1e6).toFixed(1)}M`}
+          sub="Presupuesto ejecutado"
+          icon={<DollarSign />}
+          color="bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400"
+          trend={[40, 60, 55, 80, 75, 90]}
+          trendColor="text-primary-500"
         />
       </div>
 

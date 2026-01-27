@@ -65,6 +65,7 @@ app.use(compression());
 app.use(express.json({ limit: '50mb' }));
 app.use('/uploads', express.static('uploads'));
 app.use('/api/uploads', express.static('uploads'));
+app.use('/api/exports', express.static('exports'));
 
 // Public Routes (No auth needed)
 app.use('/api/auth', authRoutes);

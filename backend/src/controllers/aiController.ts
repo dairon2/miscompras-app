@@ -264,6 +264,13 @@ IMPORTANTE para REFERENCIAS:
             - REQS_BY_SUPPLIER: Buscar todos los requerimientos asignados a un proveedor específico (Ej: "qué requerimientos tiene el proveedor X", "otros requerimientos de ESE proveedor", "trabajos asignados a Juan"). Parámetros: supplierName (string).
             - COUNT_GLOBAL: Estadísticas generales de CONTEO (Ej: "¿cuántos requerimientos hay?", "¿total de proveedores?", "¿cuántos proyectos?"). Parámetros: entity (requirement|supplier|project|budget).
             - BUDGET_SUMMARY: Resumen financiero, gasto total, dinero ejecutado, ejecución presupuestal (Ej: "cuánto dinero se ha gastado", "cuánto se ha ejecutado", "resumen de presupuestos", "dinero gastado total"). Parámetros: projectName (opcional, nombre del proyecto específico).
+            - LOW_BUDGET_ALERT: Presupuestos con poco saldo disponible, alertas de presupuesto bajo (Ej: "¿qué presupuestos están bajos?", "alertas de presupuesto", "presupuestos críticos", "presupuestos con menos del 20%"). Sin parámetros.
+            - WEEKLY_REPORT: Reporte ejecutivo semanal con resumen de actividad (Ej: "dame el resumen de la semana", "reporte semanal", "qué pasó esta semana", "resumen ejecutivo"). Sin parámetros.
+            - SPENDING_TRENDS: Tendencias y comparativo de gastos por período (Ej: "cuánto gastamos este mes vs el anterior", "tendencia de gastos", "comparativo mensual", "evolución del gasto"). Parámetros: period (month|quarter|year).
+            - COMPARE_SUPPLIERS: Comparar proveedores por precios/productos (Ej: "quién tiene mejores precios para X", "compara proveedores de papelería", "proveedor más barato para Y"). Parámetros: product (string).
+            - EXPORT_DATA: Exportar datos a Excel o PDF (Ej: "exporta los requerimientos del proyecto X", "genera excel de proveedores", "descarga reporte en PDF"). Parámetros: entity (requirements|suppliers|budgets), projectName (opcional), format (excel|pdf).
+            - CREATE_REQ: Crear un nuevo requerimiento via chat (Ej: "crea un requerimiento de papelería por 500mil para Mantenimiento", "nuevo requerimiento de transporte por 2 millones"). Parámetros: title (string), amount (number), projectName (string), description (opcional).
+            - ASSIGN_SUPPLIER: Asignar un proveedor a un requerimiento (Ej: "asigna el proveedor X al requerimiento #5", "pon a Juan como proveedor del req #3"). Parámetros: supplierName (string), groupId (number).
             - TOP_PROJECT: Proyecto con más gastos/ejecución (Ej: "proyecto con más gastos", "cuál proyecto ha gastado más"). Sin parámetros.
             - TOP_REQUESTER: Usuario/área que más requerimientos ha creado (Ej: "quién más compra", "qué líder más compra", "área con más requerimientos"). Sin parámetros.
             - REQ_BY_STATUS: Listar requerimientos filtrados por estado de trámite (Ej: "requerimientos en trámite", "pendientes de entrega", "finalizados"). Parámetros: procurementStatus (PENDIENTE|EN_TRAMITE|ENTREGADO|FINALIZADO|ANULADO|POSTERGADO).
@@ -278,6 +285,7 @@ IMPORTANTE para REFERENCIAS:
 
             IMPORTANTE: 
             - Si el usuario pregunta por "dinero gastado", "cuánto se ha ejecutado", "gasto total" -> usa BUDGET_SUMMARY, NO COUNT_GLOBAL.
+            - Si pregunta "gastos del mes", "resumen de gastos", "cuánto gastamos este mes", "gastos mensuales", "comparativo de gastos" -> usa SPENDING_TRENDS.
             - Si pregunta "cuál proyecto gastó más" -> usa TOP_PROJECT.
             - Si pregunta "quién más compra" o "qué líder" -> usa TOP_REQUESTER.
             - Si pregunta "en trámite", "pendientes", "finalizados" -> usa REQ_BY_STATUS.
@@ -285,6 +293,11 @@ IMPORTANTE para REFERENCIAS:
             - Si pregunta "qué proveedor tiene el requerimiento X" o "proveedor del requerimiento" -> usa FIND_REQ (NO FIND_SUPPLIER).
             - Si pregunta "qué requerimientos tiene ESE proveedor" o "otros requerimientos de X" -> usa REQS_BY_SUPPLIER con el supplierName del contexto de memoria.
             - Si el usuario dice "ese requerimiento", "info de ese", usa FIND_REQ con el groupId del contexto de memoria.
+            - Si pregunta "presupuestos bajos", "alertas de presupuesto", "críticos" -> usa LOW_BUDGET_ALERT.
+            - Si pregunta "resumen de la semana", "reporte semanal", "qué pasó esta semana" -> usa WEEKLY_REPORT.
+            - Si pregunta "exporta", "descarga", "genera excel/pdf", "exportar a excel", "exportar a pdf" -> usa EXPORT_DATA.
+            - Si pregunta "crea requerimiento", "nuevo requerimiento" -> usa CREATE_REQ.
+            - Si pregunta "asigna proveedor", "pon a X como proveedor" -> usa ASSIGN_SUPPLIER.
             - COUNT_GLOBAL es solo para CONTEOS numéricos simples de entidades.
             - FIND_SUPPLIER es para buscar proveedores en el catálogo, NO para consultar el proveedor de un requerimiento.
 
@@ -766,6 +779,371 @@ IMPORTANTE para REFERENCIAS:
                         reqs.forEach(r => {
                             actionResult += `• #${r.groupId || r.id.slice(0, 6)} - ${r.title}: ${formatMoney(r.totalAmount || 0)} (${r.procurementStatus})\n`;
                         });
+                    }
+                    break;
+                }
+
+                case 'LOW_BUDGET_ALERT': {
+                    // Find budgets with less than 20% available
+                    const budgets = await prisma.budget.findMany({
+                        where: { amount: { gt: 0 } },
+                        include: { project: { select: { name: true } } }
+                    });
+
+                    const lowBudgets = budgets
+                        .map(b => {
+                            const total = Number(b.amount || 0);
+                            const available = Number(b.available || 0);
+                            const percent = total > 0 ? (available / total) * 100 : 0;
+                            return { ...b, total, available, percent };
+                        })
+                        .filter(b => b.percent < 20)
+                        .sort((a, b) => a.percent - b.percent);
+
+                    if (lowBudgets.length > 0) {
+                        actionResult += `\n\n[SISTEMA - ⚠️ ALERTAS DE PRESUPUESTO BAJO]:\n`;
+                        actionResult += `Hay **${lowBudgets.length} presupuestos** con menos del 20% disponible:\n\n`;
+                        lowBudgets.forEach(b => {
+                            const status = b.percent < 5 ? '🔴 CRÍTICO' : b.percent < 10 ? '🟠 BAJO' : '🟡 ALERTA';
+                            actionResult += `${status} **${b.title || b.code}** (${b.project?.name || 'Sin proyecto'})\n`;
+                            actionResult += `   Disponible: ${formatMoney(b.available)} de ${formatMoney(b.total)} (${b.percent.toFixed(1)}%)\n\n`;
+                        });
+                    } else {
+                        actionResult += `\n\n[SISTEMA]: ✅ No hay presupuestos con alertas. Todos tienen más del 20% disponible.`;
+                    }
+                    break;
+                }
+
+                case 'WEEKLY_REPORT': {
+                    const oneWeekAgo = new Date();
+                    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+                    // Requirements created this week
+                    const newReqs = await prisma.requirement.count({
+                        where: { createdAt: { gte: oneWeekAgo } }
+                    });
+
+                    // Requirements approved this week
+                    const approvedReqs = await prisma.requirement.count({
+                        where: { status: 'APPROVED', updatedAt: { gte: oneWeekAgo } }
+                    });
+
+                    // Requirements finalized this week
+                    const finalizedReqs = await prisma.requirement.count({
+                        where: { procurementStatus: 'FINALIZADO', updatedAt: { gte: oneWeekAgo } }
+                    });
+
+                    // Total spent this week (based on approved reqs)
+                    const weekReqs = await prisma.requirement.aggregate({
+                        where: { status: 'APPROVED', updatedAt: { gte: oneWeekAgo } },
+                        _sum: { totalAmount: true }
+                    });
+
+                    // Pending requirements
+                    const pendingReqs = await prisma.requirement.count({
+                        where: { procurementStatus: 'PENDIENTE' }
+                    });
+
+                    // In progress requirements
+                    const inProgressReqs = await prisma.requirement.count({
+                        where: { procurementStatus: 'EN_TRAMITE' }
+                    });
+
+                    actionResult += `\n\n[SISTEMA - 📊 REPORTE SEMANAL]:\n`;
+                    actionResult += `📅 Período: ${oneWeekAgo.toLocaleDateString('es-CO')} - ${new Date().toLocaleDateString('es-CO')}\n\n`;
+                    actionResult += `**Actividad de la semana:**\n`;
+                    actionResult += `• 📝 Nuevos requerimientos: ${newReqs}\n`;
+                    actionResult += `• ✅ Aprobados: ${approvedReqs}\n`;
+                    actionResult += `• 🏁 Finalizados: ${finalizedReqs}\n`;
+                    actionResult += `• 💰 Monto aprobado: ${formatMoney(weekReqs._sum.totalAmount || 0)}\n\n`;
+                    actionResult += `**Estado actual:**\n`;
+                    actionResult += `• ⏳ Pendientes: ${pendingReqs}\n`;
+                    actionResult += `• 🔄 En trámite: ${inProgressReqs}\n`;
+                    break;
+                }
+
+                case 'SPENDING_TRENDS': {
+                    const now = new Date();
+                    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+
+                    // This month spending
+                    const thisMonthReqs = await prisma.requirement.aggregate({
+                        where: { status: 'APPROVED', createdAt: { gte: thisMonth } },
+                        _sum: { totalAmount: true },
+                        _count: { id: true }
+                    });
+
+                    // Last month spending
+                    const lastMonthReqs = await prisma.requirement.aggregate({
+                        where: { status: 'APPROVED', createdAt: { gte: lastMonth, lt: thisMonth } },
+                        _sum: { totalAmount: true },
+                        _count: { id: true }
+                    });
+
+                    // Two months ago
+                    const twoMonthsAgoReqs = await prisma.requirement.aggregate({
+                        where: { status: 'APPROVED', createdAt: { gte: twoMonthsAgo, lt: lastMonth } },
+                        _sum: { totalAmount: true },
+                        _count: { id: true }
+                    });
+
+                    const thisMonthTotal = Number(thisMonthReqs._sum.totalAmount || 0);
+                    const lastMonthTotal = Number(lastMonthReqs._sum.totalAmount || 0);
+                    const twoMonthsAgoTotal = Number(twoMonthsAgoReqs._sum.totalAmount || 0);
+
+                    const change = lastMonthTotal > 0 ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal * 100) : 0;
+                    const changeIcon = change > 0 ? '📈' : change < 0 ? '📉' : '➡️';
+
+                    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+                    actionResult += `\n\n[SISTEMA - 📈 TENDENCIAS DE GASTO]:\n\n`;
+                    actionResult += `| Mes | Monto | Reqs |\n`;
+                    actionResult += `|-----|-------|------|\n`;
+                    actionResult += `| ${monthNames[now.getMonth()]} (actual) | ${formatMoney(thisMonthTotal)} | ${thisMonthReqs._count.id} |\n`;
+                    actionResult += `| ${monthNames[now.getMonth() - 1 < 0 ? 11 : now.getMonth() - 1]} | ${formatMoney(lastMonthTotal)} | ${lastMonthReqs._count.id} |\n`;
+                    actionResult += `| ${monthNames[now.getMonth() - 2 < 0 ? now.getMonth() + 10 : now.getMonth() - 2]} | ${formatMoney(twoMonthsAgoTotal)} | ${twoMonthsAgoReqs._count.id} |\n\n`;
+                    actionResult += `${changeIcon} **Variación:** ${change >= 0 ? '+' : ''}${change.toFixed(1)}% vs mes anterior\n`;
+                    break;
+                }
+
+                case 'COMPARE_SUPPLIERS': {
+                    const product = intent.params.product || '';
+                    if (product) {
+                        // Find invoices/requirements related to this product
+                        const reqs = await prisma.requirement.findMany({
+                            where: {
+                                title: { contains: product, mode: 'insensitive' },
+                                supplierId: { not: null }
+                            },
+                            include: { supplier: true },
+                            orderBy: { totalAmount: 'asc' }
+                        });
+
+                        if (reqs.length > 0) {
+                            // Group by supplier
+                            const supplierStats = new Map<string, { name: string, count: number, totalAmount: number, avgAmount: number }>();
+                            reqs.forEach(r => {
+                                if (r.supplier) {
+                                    const existing = supplierStats.get(r.supplier.id) || { name: r.supplier.name, count: 0, totalAmount: 0, avgAmount: 0 };
+                                    existing.count++;
+                                    existing.totalAmount += Number(r.totalAmount || 0);
+                                    existing.avgAmount = existing.totalAmount / existing.count;
+                                    supplierStats.set(r.supplier.id, existing);
+                                }
+                            });
+
+                            const sorted = Array.from(supplierStats.values()).sort((a, b) => a.avgAmount - b.avgAmount);
+
+                            actionResult += `\n\n[SISTEMA - 🏆 COMPARATIVO DE PROVEEDORES para "${product}"]:\n\n`;
+                            sorted.forEach((s, i) => {
+                                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
+                                actionResult += `${medal} **${s.name}**\n`;
+                                actionResult += `   Promedio: ${formatMoney(s.avgAmount)} | ${s.count} trabajos | Total: ${formatMoney(s.totalAmount)}\n\n`;
+                            });
+                        } else {
+                            actionResult += `\n\n[SISTEMA]: No encontré requerimientos de "${product}" con proveedores asignados para comparar.`;
+                        }
+                    } else {
+                        actionResult += `\n\n[SISTEMA]: Especifica qué producto o servicio deseas comparar. Ej: "compara proveedores de transporte"`;
+                    }
+                    break;
+                }
+
+                case 'EXPORT_DATA': {
+                    const entity = intent.params.entity || 'requirements';
+                    const projectName = intent.params.projectName;
+                    const format = intent.params.format || 'excel';
+
+                    try {
+                        const XLSX = await import('xlsx');
+                        const fs = await import('fs');
+                        const path = await import('path');
+
+                        let data: any[] = [];
+                        let filename = '';
+                        let columns: string[] = [];
+
+                        if (entity === 'requirements') {
+                            const where: any = {};
+                            if (projectName) {
+                                const project = await prisma.project.findFirst({ where: { name: { contains: projectName, mode: 'insensitive' } } });
+                                if (project) where.projectId = project.id;
+                            }
+
+                            const reqs = await prisma.requirement.findMany({
+                                where,
+                                include: { project: true, supplier: true, createdBy: { select: { name: true } } },
+                                orderBy: { createdAt: 'desc' }
+                            });
+
+                            columns = ['#', 'Título', 'Proyecto', 'Estado', 'Trámite', 'Monto', 'Proveedor', 'Solicitante', 'Fecha'];
+                            data = reqs.map(r => ({
+                                '#': r.groupId || '',
+                                'Título': r.title,
+                                'Proyecto': r.project?.name || '',
+                                'Estado': r.status,
+                                'Trámite': r.procurementStatus,
+                                'Monto': Number(r.totalAmount || 0),
+                                'Proveedor': r.supplier?.name || 'Sin asignar',
+                                'Solicitante': r.createdBy?.name || '',
+                                'Fecha': r.createdAt ? new Date(r.createdAt).toLocaleDateString('es-CO') : ''
+                            }));
+                            filename = `requerimientos_${projectName?.replace(/\s+/g, '_') || 'todos'}_${Date.now()}`;
+                        } else if (entity === 'suppliers') {
+                            const suppliers = await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
+                            columns = ['Nombre', 'NIT', 'Email', 'Teléfono', 'Actividad', 'Dirección'];
+                            data = suppliers.map(s => ({
+                                'Nombre': s.name,
+                                'NIT': s.nit || s.taxId || '',
+                                'Email': s.contactEmail || '',
+                                'Teléfono': s.contactPhone || '',
+                                'Actividad': s.activity || '',
+                                'Dirección': s.address || ''
+                            }));
+                            filename = `proveedores_${Date.now()}`;
+                        } else if (entity === 'budgets') {
+                            const budgets = await prisma.budget.findMany({ include: { project: true } });
+                            columns = ['Código', 'Título', 'Proyecto', 'Monto Total', 'Disponible', 'Ejecutado', '% Ejecución'];
+                            data = budgets.map(b => ({
+                                'Código': b.code || '',
+                                'Título': b.title,
+                                'Proyecto': b.project?.name || '',
+                                'Monto Total': Number(b.amount || 0),
+                                'Disponible': Number(b.available || 0),
+                                'Ejecutado': Number(b.amount || 0) - Number(b.available || 0),
+                                '% Ejecución': b.amount ? ((Number(b.amount) - Number(b.available)) / Number(b.amount) * 100).toFixed(1) + '%' : '0%'
+                            }));
+                            filename = `presupuestos_${Date.now()}`;
+                        }
+
+                        if (data.length === 0) {
+                            actionResult += `\n\n[SISTEMA]: No hay datos para exportar.`;
+                        } else {
+                            // Create workbook
+                            const ws = XLSX.utils.json_to_sheet(data, { header: columns });
+                            const wb = XLSX.utils.book_new();
+                            XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+
+                            // Ensure exports directory exists
+                            const exportsDir = path.join(process.cwd(), 'exports');
+                            if (!fs.existsSync(exportsDir)) {
+                                fs.mkdirSync(exportsDir, { recursive: true });
+                            }
+
+                            // Save file
+                            const filePath = path.join(exportsDir, `${filename}.xlsx`);
+                            XLSX.writeFile(wb, filePath);
+
+                            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+                            const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+                            const downloadUrl = `${backendUrl}/api/exports/${filename}.xlsx`;
+
+                            actionResult += `\n\n[SISTEMA - ✅ ARCHIVO EXPORTADO]:\n`;
+                            actionResult += `📊 **${data.length} registros** exportados\n`;
+                            actionResult += `📋 Tipo: ${entity === 'requirements' ? 'Requerimientos' : entity === 'suppliers' ? 'Proveedores' : 'Presupuestos'}\n`;
+                            if (projectName) actionResult += `📁 Proyecto: ${projectName}\n`;
+                            actionResult += `\n📥 **Descarga tu archivo:** [${filename}.xlsx](${downloadUrl})`;
+                        }
+                    } catch (error: any) {
+                        console.error('[Export Error]:', error);
+                        actionResult += `\n\n[SISTEMA - ERROR]: No pude generar el archivo. ${error.message}`;
+                    }
+                    break;
+                }
+
+                case 'CREATE_REQ': {
+                    const { title, amount, projectName, description } = intent.params;
+
+                    if (!title || !amount || !projectName) {
+                        actionResult += `\n\n[SISTEMA - CREAR REQUERIMIENTO]:\n`;
+                        actionResult += `Para crear un requerimiento necesito:\n`;
+                        actionResult += `• **Título**: ${title || '❌ No especificado'}\n`;
+                        actionResult += `• **Monto**: ${amount ? formatMoney(amount) : '❌ No especificado'}\n`;
+                        actionResult += `• **Proyecto**: ${projectName || '❌ No especificado'}\n\n`;
+                        actionResult += `Ejemplo: "Crea un requerimiento de papelería por 500000 para Mantenimiento"`;
+                    } else {
+                        // Find project
+                        const project = await prisma.project.findFirst({
+                            where: { name: { contains: projectName, mode: 'insensitive' } }
+                        });
+
+                        if (!project) {
+                            actionResult += `\n\n[SISTEMA]: No encontré el proyecto "${projectName}". Verifica el nombre.`;
+                        } else {
+                            // Get next groupId
+                            const lastReq = await prisma.requirement.findFirst({ orderBy: { groupId: 'desc' } });
+                            const nextGroupId = (lastReq?.groupId || 0) + 1;
+
+                            // Get any area from the system (areas are not project-specific)
+                            const area = await prisma.area.findFirst();
+
+                            if (!area) {
+                                actionResult += `\n\n[SISTEMA]: No hay áreas configuradas en el sistema. Crea el requerimiento desde la interfaz.`;
+                            } else {
+                                // Create requirement
+                                const newReq = await prisma.requirement.create({
+                                    data: {
+                                        title,
+                                        description: description || '',
+                                        estimatedAmount: Number(amount),
+                                        totalAmount: Number(amount),
+                                        projectId: project.id,
+                                        areaId: area.id,
+                                        groupId: nextGroupId,
+                                        status: 'PENDING_APPROVAL',
+                                        procurementStatus: 'PENDIENTE',
+                                        reqCategory: 'COMPRA',
+                                        createdById: (req as any).userId || ''
+                                    }
+                                });
+
+                                actionResult += `\n\n[SISTEMA - ✅ REQUERIMIENTO CREADO]:\n`;
+                                actionResult += `📋 **#${newReq.groupId} - ${newReq.title}**\n`;
+                                actionResult += `💰 Monto: ${formatMoney(Number(amount))}\n`;
+                                actionResult += `📁 Proyecto: ${project.name}\n`;
+                                actionResult += `📝 Estado: Pendiente de aprobación\n\n`;
+                                actionResult += `El requerimiento ha sido creado y está pendiente de aprobación.`;
+                            }
+                        }
+                    }
+                    break;
+                }
+
+                case 'ASSIGN_SUPPLIER': {
+                    const { supplierName, groupId } = intent.params;
+
+                    if (!supplierName || !groupId) {
+                        actionResult += `\n\n[SISTEMA]: Especifica el proveedor y el requerimiento. Ej: "Asigna Juan Pérez al requerimiento #5"`;
+                    } else {
+                        // Find supplier
+                        const supplier = await prisma.supplier.findFirst({
+                            where: { name: { contains: supplierName, mode: 'insensitive' } }
+                        });
+
+                        if (!supplier) {
+                            actionResult += `\n\n[SISTEMA]: No encontré el proveedor "${supplierName}".`;
+                        } else {
+                            // Find requirement
+                            const requirement = await prisma.requirement.findFirst({
+                                where: { groupId: Number(groupId) }
+                            });
+
+                            if (!requirement) {
+                                actionResult += `\n\n[SISTEMA]: No encontré el requerimiento #${groupId}.`;
+                            } else {
+                                // Update requirement
+                                await prisma.requirement.update({
+                                    where: { id: requirement.id },
+                                    data: { supplierId: supplier.id }
+                                });
+
+                                actionResult += `\n\n[SISTEMA - ✅ PROVEEDOR ASIGNADO]:\n`;
+                                actionResult += `👤 Proveedor: **${supplier.name}**\n`;
+                                actionResult += `📋 Requerimiento: #${groupId} - ${requirement.title}\n`;
+                            }
+                        }
                     }
                     break;
                 }
