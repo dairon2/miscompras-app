@@ -328,7 +328,7 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
         console.error('Error creating budget:', error);
         // Better error handling for unique constraint
         if (error.code === 'P2002') {
-            return res.status(400).json({ error: 'Ya existe un presupuesto con esta combinación de Proyecto, Área, Categoría y Año.' });
+            return res.status(400).json({ error: 'Ya existe un presupuesto con este título. El título debe ser único.' });
         }
         res.status(500).json({ error: 'Error al crear presupuesto: ' + (error.message || 'Error desconocido') });
     }
@@ -606,25 +606,20 @@ export const createMassBudgets = async (req: AuthRequest, res: Response) => {
             }
 
             try {
-                // Check for existing budget with same unique combination
-                const budgetYear = year || new Date().getFullYear();
+                // Check for existing budget with same unique title
                 const existingBudget = await prisma.budget.findFirst({
-                    where: {
-                        projectId,
-                        areaId,
-                        categoryId,
-                        year: budgetYear
-                    }
+                    where: { title }
                 });
 
                 if (existingBudget) {
                     errors.push({
                         title: title || 'Sin título',
-                        error: `Ya existe un presupuesto para esta combinación de Proyecto, Área, Categoría y Año (${budgetYear}). ID existente: ${existingBudget.id}`
+                        error: `Ya existe un presupuesto con el título "${title}".`
                     });
                     continue; // Skip to next budget item
                 }
 
+                const budgetYear = year || new Date().getFullYear();
                 const newBudget = await prisma.budget.create({
                     data: {
                         title: (budgets.length > 1) ? `${title}` : title, // Keep original title

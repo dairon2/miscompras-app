@@ -391,8 +391,8 @@ export default function HelpPage() {
                                     <Mail size={18} className="text-primary-500" />
                                     <div>
                                         <p className="text-[10px] font-black uppercase text-gray-400">Email</p>
-                                        <a href="mailto:daironmoreno24@gmail.com" className="font-bold hover:text-amber-500 transition-colors">
-                                            daironmoreno24@gmail.com
+                                        <a href="mailto:contacto@dmrtech.cloud" className="font-bold hover:text-amber-500 transition-colors">
+                                            contacto@dmrtech.cloud
                                         </a>
                                     </div>
                                 </div>
