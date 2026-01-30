@@ -79,6 +79,9 @@ interface Requirement {
     leaderComment?: string;
     coordinatorComment?: string;
     directorComment?: string;
+    coordinatorComment?: string;
+    directorComment?: string;
+    purchaseComments?: string;
     groupId?: number;
 }
 
@@ -187,7 +190,10 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                 deliveryDate: response.data.deliveryDate ? response.data.deliveryDate.split('T')[0] : '',
                 receivedDate: response.data.receivedDate ? response.data.receivedDate.split('T')[0] : '',
                 receivedAtSatisfaction: response.data.receivedAtSatisfaction,
-                suggestedSupplier: response.data.suggestedSupplier || ''
+                suggestedSupplier: response.data.suggestedSupplier || '',
+                purchaseComments: response.data.purchaseComments || '',
+                directorComment: response.data.directorComment || '',
+                coordinatorComment: response.data.coordinatorComment || ''
             });
             setStatusForm({
                 status: response.data.status,
@@ -994,6 +1000,57 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                             className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none resize-none"
                                         />
                                     </div>
+
+                                    {/* Comment Fields Section - Role-based */}
+                                    {['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole) && (
+                                        <div className="space-y-4 bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800">
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Comentarios del Proceso</h4>
+
+                                            {/* Purchase Comments - Editable by all 3 roles */}
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-primary-600 ml-2">Comentarios de la Compra</label>
+                                                <textarea
+                                                    rows={2}
+                                                    value={editForm.purchaseComments || ''}
+                                                    onChange={(e) => setEditForm({ ...editForm, purchaseComments: e.target.value })}
+                                                    placeholder="Notas sobre el proceso de compra..."
+                                                    className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none resize-none text-sm"
+                                                />
+                                            </div>
+
+                                            {/* Director Comment - Only visible in form, editable by Director/Admin */}
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-purple-600 ml-2 flex items-center gap-2">
+                                                    Comentario de Dirección
+                                                    {userRole !== 'DIRECTOR' && userRole !== 'ADMIN' && <span className="text-gray-400">(Solo lectura)</span>}
+                                                </label>
+                                                <textarea
+                                                    rows={2}
+                                                    value={editForm.directorComment || ''}
+                                                    onChange={(e) => setEditForm({ ...editForm, directorComment: e.target.value })}
+                                                    placeholder={userRole === 'DIRECTOR' || userRole === 'ADMIN' ? "Comentario de Dirección..." : "Sin comentarios de Dirección"}
+                                                    readOnly={userRole !== 'DIRECTOR' && userRole !== 'ADMIN'}
+                                                    className={`w-full border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-purple-500 outline-none resize-none text-sm ${userRole === 'DIRECTOR' || userRole === 'ADMIN' ? 'bg-white dark:bg-slate-800' : 'bg-gray-100 dark:bg-slate-800/50 text-gray-500 cursor-not-allowed'}`}
+                                                />
+                                            </div>
+
+                                            {/* Coordinator Comment - Editable by Coordinator/Admin */}
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-amber-600 ml-2 flex items-center gap-2">
+                                                    Comentario de Coordinación
+                                                    {userRole !== 'COORDINATOR' && userRole !== 'ADMIN' && <span className="text-gray-400">(Solo lectura)</span>}
+                                                </label>
+                                                <textarea
+                                                    rows={2}
+                                                    value={editForm.coordinatorComment || ''}
+                                                    onChange={(e) => setEditForm({ ...editForm, coordinatorComment: e.target.value })}
+                                                    placeholder={userRole === 'COORDINATOR' || userRole === 'ADMIN' ? "Comentario de Coordinación..." : "Sin comentarios de Coordinación"}
+                                                    readOnly={userRole !== 'COORDINATOR' && userRole !== 'ADMIN'}
+                                                    className={`w-full border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-amber-500 outline-none resize-none text-sm ${userRole === 'COORDINATOR' || userRole === 'ADMIN' ? 'bg-white dark:bg-slate-800' : 'bg-gray-100 dark:bg-slate-800/50 text-gray-500 cursor-not-allowed'}`}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Multiple Payments Toggle */}
                                     <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/20">

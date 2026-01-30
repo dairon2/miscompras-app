@@ -427,9 +427,11 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
         purchaseOrderNumber, invoiceNumber, deliveryDate,
         receivedDate, reqCategory, procurementStatus,
         receivedAtSatisfaction, satisfactionComments,
-        deleteAttachmentIds, hasMultiplePayments, suggestedSupplier
+        deleteAttachmentIds, hasMultiplePayments, suggestedSupplier,
+        purchaseComments, directorComment, coordinatorComment
     } = req.body;
     const files = req.files as Express.Multer.File[];
+    const userRole = req.user?.role;
 
     try {
         const currentReq = await prisma.requirement.findUnique({
@@ -511,6 +513,16 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 receivedAtSatisfaction: receivedAtSatisfaction !== undefined ? (receivedAtSatisfaction === 'true' || receivedAtSatisfaction === true) : undefined,
                 satisfactionComments: satisfactionComments === 'null' ? null : satisfactionComments,
                 hasMultiplePayments: hasMultiplePayments !== undefined ? (hasMultiplePayments === 'true' || hasMultiplePayments === true) : undefined,
+                // Role-based comment fields
+                purchaseComments: ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole || '')
+                    ? (purchaseComments === 'null' ? null : purchaseComments)
+                    : undefined,
+                directorComment: userRole === 'DIRECTOR' || userRole === 'ADMIN'
+                    ? (directorComment === 'null' ? null : directorComment)
+                    : undefined,
+                coordinatorComment: userRole === 'COORDINATOR' || userRole === 'ADMIN'
+                    ? (coordinatorComment === 'null' ? null : coordinatorComment)
+                    : undefined,
                 attachments: {
                     create: await processFileUploads(files, 'requirements')
                 }
