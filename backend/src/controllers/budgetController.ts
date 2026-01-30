@@ -326,10 +326,6 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
         res.status(201).json(budget);
     } catch (error: any) {
         console.error('Error creating budget:', error);
-        // Better error handling for unique constraint
-        if (error.code === 'P2002') {
-            return res.status(400).json({ error: 'Ya existe un presupuesto con este título. El título debe ser único.' });
-        }
         res.status(500).json({ error: 'Error al crear presupuesto: ' + (error.message || 'Error desconocido') });
     }
 };
@@ -606,18 +602,7 @@ export const createMassBudgets = async (req: AuthRequest, res: Response) => {
             }
 
             try {
-                // Check for existing budget with same unique title
-                const existingBudget = await prisma.budget.findFirst({
-                    where: { title }
-                });
-
-                if (existingBudget) {
-                    errors.push({
-                        title: title || 'Sin título',
-                        error: `Ya existe un presupuesto con el título "${title}".`
-                    });
-                    continue; // Skip to next budget item
-                }
+                // No uniqueness validation - budgets can have repeated categories, titles, etc.
 
                 const budgetYear = year || new Date().getFullYear();
                 const newBudget = await prisma.budget.create({

@@ -150,8 +150,6 @@ model Budget {
   adjustments       BudgetAdjustment[]
   subLeaders        BudgetSubLeader[]
   requirements      Requirement[]
-
-  @@unique([projectId, areaId, categoryId, year])
 }
 
 model BudgetGroup {
