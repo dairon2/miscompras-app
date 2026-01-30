@@ -79,8 +79,6 @@ interface Requirement {
     leaderComment?: string;
     coordinatorComment?: string;
     directorComment?: string;
-    coordinatorComment?: string;
-    directorComment?: string;
     purchaseComments?: string;
     groupId?: number;
 }
