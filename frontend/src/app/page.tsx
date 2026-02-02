@@ -74,67 +74,49 @@ export default function HomePage() {
           Resumen de tus actividades de compras y aprobaciones pendientes.
         </p>
 
-        {/* Submission Schedule Banner - Enhanced with full schedule display */}
+        {/* Submission Schedule Banner - Simple and Clear */}
         {submissionInfo && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`mt-6 p-6 rounded-[2rem] border transition-all shadow-lg ${submissionInfo.canSubmit
-              ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800/50"
-              : "bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800/50"
+            className={`mt-6 p-5 rounded-2xl border transition-all shadow-md ${submissionInfo.canSubmit
+              ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50"
+              : "bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/50"
               }`}
           >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-start gap-4">
-                <div className={`p-4 rounded-2xl ${submissionInfo.canSubmit
-                  ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
-                  : "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
-                  }`}>
-                  <CalendarClock size={28} />
-                </div>
-                <div>
-                  <h3 className={`text-xl font-black tracking-tight ${submissionInfo.canSubmit ? "text-emerald-800 dark:text-emerald-200" : "text-amber-800 dark:text-amber-200"}`}>
-                    {submissionInfo.canSubmit ? "¡Sistema Abierto para Requerimientos!" : "Sistema Cerrado en este momento"}
-                  </h3>
-                  <p className={`text-sm font-bold mt-1 ${submissionInfo.canSubmit ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-                    {submissionInfo.message}
-                  </p>
-                  {!submissionInfo.canSubmit && submissionInfo.nextAvailable && (
-                    <p className="text-xs font-black uppercase tracking-widest mt-2 text-amber-500">
-                      PRÓXIMO: {submissionInfo.nextAvailable.day} {submissionInfo.nextAvailable.date} • {submissionInfo.nextAvailable.startTime} - {submissionInfo.nextAvailable.endTime}
-                    </p>
-                  )}
-                </div>
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-xl ${submissionInfo.canSubmit
+                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+                : "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+                }`}>
+                <CalendarClock size={24} />
               </div>
+              <div>
+                <h3 className={`text-lg font-bold ${submissionInfo.canSubmit ? "text-emerald-800 dark:text-emerald-200" : "text-amber-800 dark:text-amber-200"}`}>
+                  {submissionInfo.canSubmit ? "¡Sistema Abierto!" : "Sistema Cerrado"}
+                </h3>
+                <p className={`text-sm ${submissionInfo.canSubmit ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+                  {(() => {
+                    // Build a simple schedule message from the rules
+                    const rules = submissionInfo.allRules?.filter((r: any) => !r.isHolidayRule) || [];
+                    if (rules.length === 0) return "No hay horarios disponibles configurados.";
 
-              {/* Weekly Schedule Grid */}
-              <div className="flex flex-wrap gap-2 md:justify-end">
-                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie'].map((day, idx) => {
-                  const dayMap: Record<string, number> = { 'Lun': 1, 'Mar': 2, 'Mié': 3, 'Jue': 4, 'Vie': 5 };
-                  const rulesForDay = submissionInfo.allRules?.filter((r: any) => r.dayOfWeek === dayMap[day] && !r.isHolidayRule) || [];
-                  const isCurrentDay = new Date().getDay() === dayMap[day];
+                    const dayNames: Record<number, string> = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes' };
+                    const uniqueDays = [...new Set(rules.map((r: any) => r.dayOfWeek))].sort((a, b) => a - b);
+                    const dayList = uniqueDays.map(d => dayNames[d]).join(', ');
 
-                  return (
-                    <div
-                      key={day}
-                      className={`px-4 py-3 rounded-2xl border text-center min-w-[80px] transition-all ${isCurrentDay
-                        ? "bg-white dark:bg-slate-800 border-primary-500 shadow-md scale-105 z-10"
-                        : "bg-white/50 dark:bg-slate-900/40 border-gray-100 dark:border-gray-800 opacity-60"
-                        }`}
-                    >
-                      <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${isCurrentDay ? "text-primary-600" : "text-gray-400"}`}>{day}</p>
-                      {rulesForDay.length > 0 ? (
-                        rulesForDay.map((r: any, i: number) => (
-                          <p key={i} className="text-[10px] font-bold text-gray-700 dark:text-gray-300">
-                            {r.startTime}<br />{r.endTime}
-                          </p>
-                        ))
-                      ) : (
-                        <p className="text-[10px] font-bold text-gray-400 italic">Cerrado</p>
-                      )}
-                    </div>
-                  );
-                })}
+                    // Get time range from first rule (assuming all rules have same hours)
+                    const firstRule = rules[0];
+                    const timeRange = firstRule ? `${firstRule.startTime} - ${firstRule.endTime}` : '';
+
+                    return `Horario: ${dayList} de ${timeRange}`;
+                  })()}
+                </p>
+                {!submissionInfo.canSubmit && submissionInfo.nextAvailable && (
+                  <p className="text-xs font-semibold mt-1 text-amber-500">
+                    Próxima apertura: {submissionInfo.nextAvailable.day} {submissionInfo.nextAvailable.date} a las {submissionInfo.nextAvailable.startTime}
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
