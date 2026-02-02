@@ -206,9 +206,9 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
         const userRole = req.user?.role;
         const userId = req.user?.id;
 
-        // Only DIRECTOR can create budgets
-        if (userRole !== 'DIRECTOR') {
-            return res.status(403).json({ error: 'Solo el DIRECTOR puede crear presupuestos' });
+        // Only DIRECTOR or ADMIN can create budgets
+        if (userRole !== 'DIRECTOR' && userRole !== 'ADMIN') {
+            return res.status(403).json({ error: 'Solo el DIRECTOR o el administrador pueden crear presupuestos' });
         }
 
         const {
@@ -330,16 +330,16 @@ export const createBudget = async (req: AuthRequest, res: Response) => {
     }
 };
 
-// ==================== UPDATE BUDGET (DIRECTOR only) ====================
+// ==================== UPDATE BUDGET (ADMIN or DIRECTOR) ====================
 
 export const updateBudget = async (req: AuthRequest, res: Response) => {
     try {
         const userRole = req.user?.role;
         const { id } = req.params;
 
-        // Only DIRECTOR can update budgets
-        if (userRole !== 'DIRECTOR') {
-            return res.status(403).json({ error: 'Solo el DIRECTOR puede editar presupuestos' });
+        // Allow DIRECTOR and ADMIN to update budgets
+        if (userRole !== 'DIRECTOR' && userRole !== 'ADMIN') {
+            return res.status(403).json({ error: 'Solo el DIRECTOR o el administrador pueden editar presupuestos' });
         }
 
         const {
@@ -348,35 +348,46 @@ export const updateBudget = async (req: AuthRequest, res: Response) => {
             subLeaders
         } = req.body;
 
-        // Get current budget
+        // Get current budget to calculate diff or preserve fields
         const currentBudget = await prisma.budget.findUnique({ where: { id } });
         if (!currentBudget) {
             return res.status(404).json({ error: 'Presupuesto no encontrado' });
         }
 
-        // Calculate new available if amount changed
-        const amountDiff = amount ? parseFloat(amount) - parseFloat(currentBudget.amount.toString()) : 0;
-        const newAvailable = parseFloat(currentBudget.available.toString()) + amountDiff;
+        // Prepare data object for update
+        const updateData: any = {
+            title,
+            description,
+            code,
+            projectId,
+            areaId,
+            categoryId,
+            version: { increment: 1 }
+        };
 
-        // Update budget
+        // Handle amount change robustly
+        if (amount !== undefined && amount !== null && amount !== '') {
+            const parsedAmount = parseFloat(amount);
+            if (!isNaN(parsedAmount)) {
+                const amountDiff = parsedAmount - parseFloat(currentBudget.amount.toString());
+                updateData.amount = parsedAmount;
+                updateData.available = parseFloat(currentBudget.available.toString()) + amountDiff;
+            }
+        }
+
+        // Handle managerId correctly (only update if provided)
+        if (managerId !== undefined) {
+            updateData.managerId = (managerId === 'null' || managerId === '') ? null : managerId;
+        }
+
+        // Update main budget fields
         const budget = await prisma.budget.update({
             where: { id },
-            data: {
-                title,
-                description,
-                code,
-                amount: (amount !== undefined && amount !== null && amount !== '') ? parseFloat(amount) : undefined,
-                available: (amount !== undefined && amount !== null && amount !== '') ? newAvailable : undefined,
-                projectId,
-                areaId,
-                category: categoryId ? { connect: { id: categoryId } } : undefined,
-                managerId: (managerId && managerId !== 'null' && managerId !== '') ? managerId : null,
-                version: { increment: 1 }
-            }
+            data: updateData
         });
 
-        // Update sublíders 
-        if (subLeaders) {
+        // Update sub-leaders if provided
+        if (subLeaders && Array.isArray(subLeaders)) {
             // Remove existing and add new
             await prisma.budgetSubLeader.deleteMany({ where: { budgetId: id } });
             if (subLeaders.length > 0) {
@@ -389,7 +400,10 @@ export const updateBudget = async (req: AuthRequest, res: Response) => {
         res.json(budget);
     } catch (error: any) {
         console.error('Error updating budget:', error);
-        res.status(500).json({ error: 'Error al actualizar presupuesto' });
+        res.status(500).json({
+            error: 'Error al actualizar presupuesto',
+            details: error.message
+        });
     }
 };
 
@@ -400,9 +414,9 @@ export const deleteBudget = async (req: AuthRequest, res: Response) => {
         const userRole = req.user?.role;
         const { id } = req.params;
 
-        // Only DIRECTOR can delete budgets
-        if (userRole !== 'DIRECTOR') {
-            return res.status(403).json({ error: 'Solo el DIRECTOR puede eliminar presupuestos' });
+        // Only DIRECTOR or ADMIN can delete budgets
+        if (userRole !== 'DIRECTOR' && userRole !== 'ADMIN') {
+            return res.status(403).json({ error: 'Solo el DIRECTOR o el administrador pueden eliminar presupuestos' });
         }
 
         // Check if budget has requirements
@@ -561,8 +575,8 @@ export const createMassBudgets = async (req: AuthRequest, res: Response) => {
         const userId = req.user?.id;
         const { budgets } = req.body; // Expects array of budget objects
 
-        if (userRole !== 'DIRECTOR') {
-            return res.status(403).json({ error: 'Solo el DIRECTOR puede crear presupuestos' });
+        if (userRole !== 'DIRECTOR' && userRole !== 'ADMIN') {
+            return res.status(403).json({ error: 'Solo el DIRECTOR o el administrador pueden crear presupuestos' });
         }
 
         if (!budgets || !Array.isArray(budgets) || budgets.length === 0) {

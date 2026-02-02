@@ -35,20 +35,20 @@ router.get('/', getBudgets);
 // Get budget by ID
 router.get('/:id', getBudgetById);
 
-// Create budget - DIRECTOR only
-router.post('/', roleCheck(['DIRECTOR']), createBudget);
+// Create budget - DIRECTOR or ADMIN
+router.post('/', roleCheck(['DIRECTOR', 'ADMIN']), createBudget);
 
-// Update budget - DIRECTOR only
-router.put('/:id', roleCheck(['DIRECTOR']), updateBudget);
+// Update budget - DIRECTOR or ADMIN
+router.put('/:id', roleCheck(['DIRECTOR', 'ADMIN']), updateBudget);
 
-// Delete budget - DIRECTOR only
-router.delete('/:id', roleCheck(['DIRECTOR']), deleteBudget);
+// Delete budget - DIRECTOR or ADMIN
+router.delete('/:id', roleCheck(['DIRECTOR', 'ADMIN']), deleteBudget);
 
 // Approve/Reject budget (by assigned manager/leader)
 router.patch('/:id/approve', approveBudget);
 
 // Mass creation and Group management
-router.post('/mass-create', roleCheck(['DIRECTOR']), createMassBudgets);
+router.post('/mass-create', roleCheck(['DIRECTOR', 'ADMIN']), createMassBudgets);
 router.post('/group/:id/approve', approveBudgetGroup);
 router.post('/group/:id/reject', rejectBudgetGroup);
 
