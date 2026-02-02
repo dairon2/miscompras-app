@@ -64,6 +64,13 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
         const invoiceWhere: any = {};
         if (projectId) invoiceWhere.requirement = { projectId };
 
+        // Apply scope-based filtering for invoices
+        if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
+            invoiceWhere.requirement = { ...invoiceWhere.requirement, areaId: { in: directedAreaIds } };
+        } else if (dataScope === 'USER' && filterUserId) {
+            invoiceWhere.requirement = { ...invoiceWhere.requirement, createdById: filterUserId };
+        }
+
         const invoices = await prisma.invoice.findMany({
             where: invoiceWhere,
             select: { amount: true, status: true }
@@ -105,11 +112,30 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
 export const getBudgetExecutionByProject = async (req: AuthRequest, res: Response) => {
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
 
+    // Data scope from middleware
+    const dataScope = (req as any).dataScope as string;
+    const directedAreaIds = (req as any).directedAreaIds as string[] | undefined;
+    const filterUserId = (req as any).filterUserId as string | undefined;
+
     try {
+        const projectWhere: any = {};
+
+        // Scope-based filtering: we only show projects that have budgets the user can see
+        if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
+            projectWhere.budgets = { some: { areaId: { in: directedAreaIds }, year } };
+        } else if (dataScope === 'USER' && filterUserId) {
+            projectWhere.budgets = { some: { managerId: filterUserId, year } };
+        }
+
         const projects = await prisma.project.findMany({
+            where: projectWhere,
             include: {
                 budgets: {
-                    where: { year },
+                    where: {
+                        year,
+                        ...(dataScope === 'AREA' && directedAreaIds ? { areaId: { in: directedAreaIds } } : {}),
+                        ...(dataScope === 'USER' && filterUserId ? { managerId: filterUserId } : {})
+                    },
                     select: { amount: true, available: true }
                 }
             }
@@ -143,16 +169,20 @@ export const getRequirementsByStatus = async (req: AuthRequest, res: Response) =
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
     const projectId = req.query.projectId as string;
 
-    // For area directors (USER role), filter by their directed areas
+    // Data scope from middleware
+    const dataScope = (req as any).dataScope as string;
     const directedAreaIds = (req as any).directedAreaIds as string[] | undefined;
+    const filterUserId = (req as any).filterUserId as string | undefined;
 
     try {
         const where: any = { year };
         if (projectId) where.projectId = projectId;
 
-        // Apply area filter for area directors
-        if (directedAreaIds && directedAreaIds.length > 0) {
+        // Apply scope-based filtering for requirements
+        if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
             where.areaId = { in: directedAreaIds };
+        } else if (dataScope === 'USER' && filterUserId) {
+            where.createdById = filterUserId;
         }
 
         const statuses = await prisma.requirement.groupBy({
@@ -199,14 +229,28 @@ export const getTopSuppliers = async (req: AuthRequest, res: Response) => {
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
     const limit = parseInt(req.query.limit as string) || 10;
 
+    // Data scope from middleware
+    const dataScope = (req as any).dataScope as string;
+    const directedAreaIds = (req as any).directedAreaIds as string[] | undefined;
+    const filterUserId = (req as any).filterUserId as string | undefined;
+
     try {
+        const reqWhere: any = {
+            year,
+            status: 'APPROVED'
+        };
+
+        // Apply scope for requirements linked to suppliers
+        if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
+            reqWhere.areaId = { in: directedAreaIds };
+        } else if (dataScope === 'USER' && filterUserId) {
+            reqWhere.createdById = filterUserId;
+        }
+
         const suppliers = await prisma.supplier.findMany({
             include: {
                 requirements: {
-                    where: {
-                        year,
-                        status: 'APPROVED'
-                    },
+                    where: reqWhere,
                     select: {
                         actualAmount: true
                     }
@@ -243,8 +287,10 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
     const projectId = req.query.projectId as string;
 
-    // For area directors (USER role), filter by their directed areas
+    // Data scope from middleware
+    const dataScope = (req as any).dataScope as string;
     const directedAreaIds = (req as any).directedAreaIds as string[] | undefined;
+    const filterUserId = (req as any).filterUserId as string | undefined;
 
     try {
         const where: any = {
@@ -253,9 +299,11 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
         };
         if (projectId) where.projectId = projectId;
 
-        // Apply area filter for area directors
-        if (directedAreaIds && directedAreaIds.length > 0) {
+        // Apply scope-based filtering for requirements
+        if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
             where.areaId = { in: directedAreaIds };
+        } else if (dataScope === 'USER' && filterUserId) {
+            where.createdById = filterUserId;
         }
 
         const requirements = await prisma.requirement.findMany({
@@ -297,11 +345,30 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
 export const getBudgetExecutionByArea = async (req: AuthRequest, res: Response) => {
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
 
+    // Data scope from middleware
+    const dataScope = (req as any).dataScope as string;
+    const directedAreaIds = (req as any).directedAreaIds as string[] | undefined;
+    const filterUserId = (req as any).filterUserId as string | undefined;
+
     try {
+        const areaWhere: any = {};
+
+        // Scope-based filtering for areas
+        if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
+            areaWhere.id = { in: directedAreaIds };
+        } else if (dataScope === 'USER' && filterUserId) {
+            // If they are area director, AREA scope handle it. If just USER, filter by budgets they manage
+            areaWhere.budgets = { some: { managerId: filterUserId, year } };
+        }
+
         const areas = await prisma.area.findMany({
+            where: areaWhere,
             include: {
                 budgets: {
-                    where: { year },
+                    where: {
+                        year,
+                        ...(dataScope === 'USER' && filterUserId ? { managerId: filterUserId } : {})
+                    },
                     select: { amount: true, available: true }
                 }
             }
@@ -328,14 +395,27 @@ export const getBudgetExecutionByArea = async (req: AuthRequest, res: Response) 
         res.status(500).json({ error: 'Failed to fetch budget execution by area', details: error.message });
     }
 };
-
 // ==================== PAYMENTS CALENDAR ====================
 export const getPaymentsCalendar = async (req: AuthRequest, res: Response) => {
+    // Data scope from middleware
+    const dataScope = (req as any).dataScope as string;
+    const directedAreaIds = (req as any).directedAreaIds as string[] | undefined;
+    const filterUserId = (req as any).filterUserId as string | undefined;
+
     try {
+        const invoiceWhere: any = {
+            status: { in: ['RECEIVED', 'VERIFIED', 'APPROVED'] }
+        };
+
+        // Apply scope-based filtering for invoices in calendar
+        if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
+            invoiceWhere.requirement = { areaId: { in: directedAreaIds } };
+        } else if (dataScope === 'USER' && filterUserId) {
+            invoiceWhere.requirement = { createdById: filterUserId };
+        }
+
         const invoices = await prisma.invoice.findMany({
-            where: {
-                status: { in: ['RECEIVED', 'VERIFIED', 'APPROVED'] }
-            },
+            where: invoiceWhere,
             include: {
                 requirement: {
                     select: {

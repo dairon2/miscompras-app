@@ -23,7 +23,7 @@ const setupDataFiltering = async (req: any, res: any, next: any) => {
         const userId = req.user?.id;
 
         // Roles that see all data
-        const fullAccessRoles = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'];
+        const fullAccessRoles = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'];
 
         if (fullAccessRoles.includes(userRole)) {
             req.dataScope = 'ALL';

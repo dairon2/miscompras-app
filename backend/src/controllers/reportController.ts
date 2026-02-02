@@ -5,7 +5,18 @@ import { generateExcelWorkbook } from '../services/excelService';
 
 export const exportRequirements = async (req: AuthRequest, res: Response) => {
     try {
+        const userRole = req.user?.role || '';
+        const userId = req.user?.id;
+        const fullAccessRoles = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'];
+
+        const where: any = {};
+        if (!fullAccessRoles.includes(userRole)) {
+            // Restricted role: only their own requirements
+            where.createdById = userId;
+        }
+
         const requirements = await prisma.requirement.findMany({
+            where,
             include: {
                 project: true,
                 area: true,
@@ -58,7 +69,18 @@ export const exportRequirements = async (req: AuthRequest, res: Response) => {
 
 export const exportBudgets = async (req: AuthRequest, res: Response) => {
     try {
+        const userRole = req.user?.role || '';
+        const userId = req.user?.id;
+        const fullAccessRoles = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'];
+
+        const where: any = {};
+        if (!fullAccessRoles.includes(userRole)) {
+            // Restricted role: only budgets they manage
+            where.managerId = userId;
+        }
+
         const budgets = await prisma.budget.findMany({
+            where,
             include: {
                 project: true,
                 area: true,
@@ -113,9 +135,28 @@ export const exportBudgets = async (req: AuthRequest, res: Response) => {
 
 export const exportSuppliers = async (req: AuthRequest, res: Response) => {
     try {
-        const suppliers = await prisma.supplier.findMany({
-            orderBy: { name: 'asc' }
-        });
+        const userRole = req.user?.role || '';
+        const userId = req.user?.id;
+        const fullAccessRoles = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'];
+
+        let suppliers;
+        if (fullAccessRoles.includes(userRole)) {
+            suppliers = await prisma.supplier.findMany({
+                orderBy: { name: 'asc' }
+            });
+        } else {
+            // Restricted role: only suppliers they have used in their requirements
+            suppliers = await prisma.supplier.findMany({
+                where: {
+                    requirements: {
+                        some: {
+                            createdById: userId
+                        }
+                    }
+                },
+                orderBy: { name: 'asc' }
+            });
+        }
 
         const columns = [
             { header: 'NOMBRE PROVEEDOR', key: 'name', width: 35 },
