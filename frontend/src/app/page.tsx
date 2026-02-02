@@ -92,30 +92,30 @@ export default function HomePage() {
                 <CalendarClock size={24} />
               </div>
               <div>
-                <h3 className={`text-lg font-bold ${submissionInfo.canSubmit ? "text-emerald-800 dark:text-emerald-200" : "text-amber-800 dark:text-amber-200"}`}>
-                  {submissionInfo.canSubmit ? "¡Sistema Abierto!" : "Sistema Cerrado"}
-                </h3>
-                <p className={`text-sm ${submissionInfo.canSubmit ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-                  {(() => {
-                    // Build a simple schedule message from the rules
-                    const rules = submissionInfo.allRules?.filter((r: any) => !r.isHolidayRule) || [];
-                    if (rules.length === 0) return "No hay horarios disponibles configurados.";
-
-                    const dayNames: Record<number, string> = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes' };
-                    const uniqueDays = [...new Set(rules.map((r: any) => r.dayOfWeek))].sort((a, b) => a - b);
-                    const dayList = uniqueDays.map(d => dayNames[d]).join(', ');
-
-                    // Get time range from first rule (assuming all rules have same hours)
-                    const firstRule = rules[0];
-                    const timeRange = firstRule ? `${firstRule.startTime} - ${firstRule.endTime}` : '';
-
-                    return `Horario: ${dayList} de ${timeRange}`;
-                  })()}
-                </p>
-                {!submissionInfo.canSubmit && submissionInfo.nextAvailable && (
-                  <p className="text-xs font-semibold mt-1 text-amber-500">
-                    Próxima apertura: {submissionInfo.nextAvailable.day} {submissionInfo.nextAvailable.date} a las {submissionInfo.nextAvailable.startTime}
-                  </p>
+                {submissionInfo.canSubmit ? (
+                  <>
+                    <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-200">
+                      ¡Sistema Abierto!
+                    </h3>
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                      Actualmente puedes enviar Requerimientos.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-lg font-bold text-amber-800 dark:text-amber-200">
+                      Sistema Cerrado
+                    </h3>
+                    {submissionInfo.nextAvailable ? (
+                      <p className="text-sm text-amber-600 dark:text-amber-400">
+                        Próxima apertura: <strong>{submissionInfo.nextAvailable.day} {submissionInfo.nextAvailable.date}</strong> de {submissionInfo.nextAvailable.startTime} a {submissionInfo.nextAvailable.endTime}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-amber-600 dark:text-amber-400">
+                        No hay horarios disponibles próximamente.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
