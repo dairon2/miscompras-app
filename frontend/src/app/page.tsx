@@ -18,6 +18,8 @@ export default function HomePage() {
     canSubmit: boolean;
     message: string;
     nextAvailable?: { day: string; date: string; startTime: string; endTime: string };
+    allRules?: any[];
+    currentRule?: any;
   } | null>(null);
 
   useEffect(() => {
