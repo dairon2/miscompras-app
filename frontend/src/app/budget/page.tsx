@@ -56,12 +56,31 @@ export default function BudgetsPage() {
 
     const userRole = user?.role?.toUpperCase() || 'USER';
     const isDirector = userRole === 'DIRECTOR';
+    const isUser = userRole === 'USER';
     const canManageBudgets = isDirector; // Only DIRECTOR can create/edit/delete
-    const canViewAll = ['ADMIN', 'DIRECTOR', 'LEADER'].includes(userRole);
+    const canViewAll = ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole);
 
     const [budgets, setBudgets] = useState<Budget[]>([]);
     const [loading, setLoading] = useState(true);
-    const [viewMode, setViewMode] = useState<'grid' | 'table' | 'visual'>('visual');
+
+    // Persist viewMode in localStorage
+    const [viewMode, setViewMode] = useState<'grid' | 'table' | 'visual'>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('budgetViewMode');
+            if (saved === 'grid' || saved === 'table' || saved === 'visual') {
+                return saved;
+            }
+        }
+        return 'visual';
+    });
+
+    // Save viewMode to localStorage when it changes
+    useEffect(() => {
+        if (mounted) {
+            localStorage.setItem('budgetViewMode', viewMode);
+        }
+    }, [viewMode, mounted]);
+
     const [searchTerm, setSearchTerm] = useState('');
 
     // Year filter
@@ -563,14 +582,23 @@ export default function BudgetsPage() {
                     transition={{ delay: 0.3 }}
                     className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden"
                 >
-                    <div className="hidden lg:block overflow-x-auto max-h-[600px] overflow-y-auto">
+                    <div className="hidden lg:block overflow-x-auto">
                         <table className="w-full text-left">
                             <thead className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700">
                                 <tr>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Código</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Proyecto</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Rubro</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Líder</th>
+                                    {isUser ? (
+                                        <>
+                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Categoría</th>
+                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Actividad</th>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Rubro</th>
+                                            <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Líder</th>
+                                        </>
+                                    )}
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Presupuesto</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Ejecutado</th>
                                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Disponible</th>
@@ -602,13 +630,22 @@ export default function BudgetsPage() {
                                             >
                                                 <td className="px-6 py-4 text-xs font-black" style={{ color: '#4c6ef5' }}>{budget.project?.code || budget.code || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-500 font-bold">{budget.project?.name}</td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-sm text-gray-500">{budget.category?.name || '-'}</div>
-                                                    {budget.title && (
-                                                        <div className="text-xs text-primary-600 font-medium mt-0.5">{budget.title}</div>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-gray-500">{budget.manager?.name || '-'}</td>
+                                                {isUser ? (
+                                                    <>
+                                                        <td className="px-6 py-4 text-sm text-gray-500">{budget.category?.name || '-'}</td>
+                                                        <td className="px-6 py-4 text-sm text-primary-600 font-medium">{budget.title || '-'}</td>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-sm text-gray-500">{budget.category?.name || '-'}</div>
+                                                            {budget.title && (
+                                                                <div className="text-xs text-primary-600 font-medium mt-0.5">{budget.title}</div>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm text-gray-500">{budget.manager?.name || '-'}</td>
+                                                    </>
+                                                )}
                                                 <td className="px-6 py-4 font-bold">{formatCurrency(totalAmount)}</td>
                                                 <td className="px-6 py-4 font-black" style={{ color: '#d97706' }}>{formatCurrency(executedAmount)}</td>
                                                 <td className="px-6 py-4">

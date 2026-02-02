@@ -19,8 +19,11 @@ const FALLBACK_MODELS = [
     "gemini-2.0-flash",       // Primary (Reliable)
     "groq/llama-3.3-70b-versatile", // Fast OpenSource Fallback
     "gemini-2.0-flash-lite",
-    "groq/deepseek-r1-distill-llama-70b" // Reasoning Fallback
+    "groq/llama-3.1-8b-instant" // Small fast fallback
 ];
+
+// Roles that can see ALL data (global statistics, all suppliers, all budgets, etc.)
+const FULL_ACCESS_ROLES = ['ADMIN', 'DIRECTOR', 'COORDINATOR'];
 
 // ... (Imports and previous code)
 
@@ -431,18 +434,57 @@ IMPORTANTE para REFERENCIAS:
 
                 case 'COUNT_GLOBAL': {
                     const entity = intent.params.entity;
+                    const hasFullAccess = FULL_ACCESS_ROLES.includes(userRole);
+
                     if (entity === 'requirement') {
-                        const count = await prisma.requirement.count();
-                        actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Actualmente existen **${count} requerimientos** registrados en total.`;
+                        if (hasFullAccess) {
+                            const count = await prisma.requirement.count();
+                            actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Actualmente existen **${count} requerimientos** registrados en total.`;
+                        } else {
+                            // Restricted: only count user's own requirements
+                            const count = await prisma.requirement.count({ where: { createdById: userId } });
+                            actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Tienes **${count} requerimientos** creados por ti.`;
+                        }
                     } else if (entity === 'supplier') {
-                        const count = await prisma.supplier.count();
-                        actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Hay **${count} proveedores** en tu base de datos.`;
+                        if (hasFullAccess) {
+                            const count = await prisma.supplier.count();
+                            actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Hay **${count} proveedores** en la base de datos.`;
+                        } else {
+                            // Restricted: only count suppliers they've used
+                            const supplierIds = await prisma.requirement.findMany({
+                                where: { createdById: userId, supplierId: { not: null } },
+                                select: { supplierId: true },
+                                distinct: ['supplierId']
+                            });
+                            actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Has trabajado con **${supplierIds.length} proveedores** en tus requerimientos.`;
+                        }
                     } else if (entity === 'project') {
-                        const count = await prisma.project.count();
-                        actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Gestionas un total de **${count} proyectos**.`;
+                        if (hasFullAccess) {
+                            const count = await prisma.project.count();
+                            actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Gestionas un total de **${count} proyectos**.`;
+                        } else {
+                            // Restricted: only count projects where user is leader or has budget
+                            const projectCount = await prisma.project.count({
+                                where: {
+                                    OR: [
+                                        { leaderId: userId },
+                                        { budgets: { some: { OR: [{ managerId: userId }, { subLeaders: { some: { userId } } }] } } }
+                                    ]
+                                }
+                            });
+                            actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Tienes acceso a **${projectCount} proyectos** asignados a ti.`;
+                        }
                     } else if (entity === 'budget') {
-                        const count = await prisma.budget.count();
-                        actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Hay **${count} presupuestos** configurados.`;
+                        if (hasFullAccess) {
+                            const count = await prisma.budget.count();
+                            actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Hay **${count} presupuestos** configurados.`;
+                        } else {
+                            // Restricted: only count user's assigned budgets
+                            const count = await prisma.budget.count({
+                                where: { OR: [{ managerId: userId }, { subLeaders: { some: { userId } } }] }
+                            });
+                            actionResult += `\n\n[SISTEMA - ESTADÍSTICA]: Tienes **${count} presupuestos** asignados a ti.`;
+                        }
                     }
                     break;
                 }
@@ -609,6 +651,7 @@ IMPORTANTE para REFERENCIAS:
 
                 case 'BUDGET_SUMMARY': {
                     const projectName = intent.params.projectName;
+                    const hasFullAccess = FULL_ACCESS_ROLES.includes(userRole);
 
                     if (projectName) {
                         // Resumen de un proyecto específico
@@ -621,6 +664,20 @@ IMPORTANTE para REFERENCIAS:
                         });
 
                         if (project) {
+                            // For restricted users, check if they have access to this project
+                            if (!hasFullAccess) {
+                                const hasAccess = await prisma.budget.findFirst({
+                                    where: {
+                                        projectId: project.id,
+                                        OR: [{ managerId: userId }, { subLeaders: { some: { userId } } }]
+                                    }
+                                });
+                                if (!hasAccess) {
+                                    actionResult += `\n\n[SISTEMA]: ⛔ No tienes acceso a la información financiera de este proyecto.`;
+                                    break;
+                                }
+                            }
+
                             const totalBudget = project.budgets.reduce((sum, b) => sum + Number(b.amount || 0), 0);
                             const availableBudget = project.budgets.reduce((sum, b) => sum + Number(b.available || 0), 0);
                             const executedBudget = totalBudget - availableBudget;
@@ -635,18 +692,28 @@ IMPORTANTE para REFERENCIAS:
                             actionResult += `\n\n[SISTEMA]: No encontré un proyecto con el nombre "${projectName}".`;
                         }
                     } else {
-                        // Resumen global de todos los presupuestos
-                        const budgets = await prisma.budget.findMany({
-                            include: { project: { select: { name: true } } }
-                        });
+                        // Resumen global o de presupuestos asignados
+                        let budgets;
+                        if (hasFullAccess) {
+                            budgets = await prisma.budget.findMany({
+                                include: { project: { select: { name: true } } }
+                            });
+                        } else {
+                            // Restricted: only user's assigned budgets
+                            budgets = await prisma.budget.findMany({
+                                where: { OR: [{ managerId: userId }, { subLeaders: { some: { userId } } }] },
+                                include: { project: { select: { name: true } } }
+                            });
+                        }
 
                         const totalBudget = budgets.reduce((sum, b) => sum + Number(b.amount || 0), 0);
                         const availableBudget = budgets.reduce((sum, b) => sum + Number(b.available || 0), 0);
                         const executedBudget = totalBudget - availableBudget;
                         const executionPercent = totalBudget > 0 ? ((executedBudget / totalBudget) * 100).toFixed(1) : 0;
 
-                        actionResult += `\n\n[SISTEMA - RESUMEN FINANCIERO GLOBAL]:\n`;
-                        actionResult += `💰 Presupuesto Total Asignado: ${formatMoney(totalBudget)}\n`;
+                        const title = hasFullAccess ? 'RESUMEN FINANCIERO GLOBAL' : 'RESUMEN DE TUS PRESUPUESTOS';
+                        actionResult += `\n\n[SISTEMA - ${title}]:\n`;
+                        actionResult += `💰 Presupuesto Total${hasFullAccess ? ' Asignado' : ''}: ${formatMoney(totalBudget)}\n`;
                         actionResult += `✅ Saldo Disponible: ${formatMoney(availableBudget)}\n`;
                         actionResult += `📊 **Dinero Ejecutado (Gastado): ${formatMoney(executedBudget)}** (${executionPercent}% de ejecución)\n`;
                         actionResult += `📁 Total de Presupuestos: ${budgets.length}`;
@@ -655,6 +722,12 @@ IMPORTANTE para REFERENCIAS:
                 }
 
                 case 'TOP_PROJECT': {
+                    // Only allow for full access roles
+                    if (!FULL_ACCESS_ROLES.includes(userRole)) {
+                        actionResult += `\n\n[SISTEMA]: ⛔ Esta información está disponible solo para roles administrativos (Director, Coordinador, Admin).`;
+                        break;
+                    }
+
                     // Find project with most spending (amount - available = executed)
                     const projects = await prisma.project.findMany({
                         include: { budgets: true }
@@ -684,6 +757,12 @@ IMPORTANTE para REFERENCIAS:
                 }
 
                 case 'TOP_REQUESTER': {
+                    // Only allow for full access roles
+                    if (!FULL_ACCESS_ROLES.includes(userRole)) {
+                        actionResult += `\n\n[SISTEMA]: ⛔ Esta información está disponible solo para roles administrativos (Director, Coordinador, Admin).`;
+                        break;
+                    }
+
                     // Find user/area with most requirements
                     const reqsByUser = await prisma.requirement.groupBy({
                         by: ['createdById'],
@@ -718,8 +797,15 @@ IMPORTANTE para REFERENCIAS:
 
                 case 'REQ_BY_STATUS': {
                     const status = intent.params.procurementStatus || 'PENDIENTE';
+                    const hasFullAccess = FULL_ACCESS_ROLES.includes(userRole);
+
+                    const whereClause: any = { procurementStatus: status };
+                    if (!hasFullAccess) {
+                        whereClause.createdById = userId;
+                    }
+
                     const reqs = await prisma.requirement.findMany({
-                        where: { procurementStatus: status },
+                        where: whereClause,
                         take: 15,
                         orderBy: { createdAt: 'desc' },
                         include: {
@@ -728,7 +814,7 @@ IMPORTANTE para REFERENCIAS:
                         }
                     });
 
-                    const count = await prisma.requirement.count({ where: { procurementStatus: status } });
+                    const count = await prisma.requirement.count({ where: whereClause });
 
                     const statusLabels: Record<string, string> = {
                         'PENDIENTE': 'Pendientes',
@@ -739,7 +825,8 @@ IMPORTANTE para REFERENCIAS:
                         'POSTERGADO': 'Postergados'
                     };
 
-                    actionResult += `\n\n[SISTEMA - REQUERIMIENTOS ${statusLabels[status] || status}]: (${count} total)\n`;
+                    const scope = hasFullAccess ? '' : ' (tus requerimientos)';
+                    actionResult += `\n\n[SISTEMA - REQUERIMIENTOS ${statusLabels[status] || status}${scope}]: (${count} total)\n`;
                     if (reqs.length > 0) {
                         reqs.forEach(r => {
                             actionResult += `• #${r.groupId || r.id.slice(0, 6)} - ${r.title} (${r.project?.name || 'Sin proyecto'})\n`;
@@ -753,9 +840,16 @@ IMPORTANTE para REFERENCIAS:
 
                 case 'REQ_BY_CATEGORY': {
                     const category = intent.params.category || 'COMPRA';
-                    const count = await prisma.requirement.count({ where: { reqCategory: category } });
+                    const hasFullAccess = FULL_ACCESS_ROLES.includes(userRole);
+
+                    const whereClause: any = { reqCategory: category };
+                    if (!hasFullAccess) {
+                        whereClause.createdById = userId;
+                    }
+
+                    const count = await prisma.requirement.count({ where: whereClause });
                     const reqs = await prisma.requirement.findMany({
-                        where: { reqCategory: category },
+                        where: whereClause,
                         take: 10,
                         orderBy: { createdAt: 'desc' },
                         select: { groupId: true, id: true, title: true, status: true, procurementStatus: true, totalAmount: true }
@@ -772,7 +866,8 @@ IMPORTANTE para REFERENCIAS:
                         'COMPRA_ONLINE': 'Compra Online'
                     };
 
-                    actionResult += `\n\n[SISTEMA - REQUERIMIENTOS CATEGORÍA "${categoryLabels[category] || category}"]:\n`;
+                    const scope = hasFullAccess ? '' : ' (tus requerimientos)';
+                    actionResult += `\n\n[SISTEMA - REQUERIMIENTOS CATEGORÍA "${categoryLabels[category] || category}"${scope}]:\n`;
                     actionResult += `📊 Total: **${count} requerimientos**\n\n`;
 
                     if (reqs.length > 0) {
@@ -784,11 +879,25 @@ IMPORTANTE para REFERENCIAS:
                 }
 
                 case 'LOW_BUDGET_ALERT': {
+                    const hasFullAccess = FULL_ACCESS_ROLES.includes(userRole);
+
                     // Find budgets with less than 20% available
-                    const budgets = await prisma.budget.findMany({
-                        where: { amount: { gt: 0 } },
-                        include: { project: { select: { name: true } } }
-                    });
+                    let budgets;
+                    if (hasFullAccess) {
+                        budgets = await prisma.budget.findMany({
+                            where: { amount: { gt: 0 } },
+                            include: { project: { select: { name: true } } }
+                        });
+                    } else {
+                        // Restricted: only user's assigned budgets
+                        budgets = await prisma.budget.findMany({
+                            where: {
+                                amount: { gt: 0 },
+                                OR: [{ managerId: userId }, { subLeaders: { some: { userId } } }]
+                            },
+                            include: { project: { select: { name: true } } }
+                        });
+                    }
 
                     const lowBudgets = budgets
                         .map(b => {
@@ -800,8 +909,9 @@ IMPORTANTE para REFERENCIAS:
                         .filter(b => b.percent < 20)
                         .sort((a, b) => a.percent - b.percent);
 
+                    const scope = hasFullAccess ? '' : ' (tus presupuestos)';
                     if (lowBudgets.length > 0) {
-                        actionResult += `\n\n[SISTEMA - ⚠️ ALERTAS DE PRESUPUESTO BAJO]:\n`;
+                        actionResult += `\n\n[SISTEMA - ⚠️ ALERTAS DE PRESUPUESTO BAJO${scope}]:\n`;
                         actionResult += `Hay **${lowBudgets.length} presupuestos** con menos del 20% disponible:\n\n`;
                         lowBudgets.forEach(b => {
                             const status = b.percent < 5 ? '🔴 CRÍTICO' : b.percent < 10 ? '🟠 BAJO' : '🟡 ALERTA';
@@ -809,12 +919,20 @@ IMPORTANTE para REFERENCIAS:
                             actionResult += `   Disponible: ${formatMoney(b.available)} de ${formatMoney(b.total)} (${b.percent.toFixed(1)}%)\n\n`;
                         });
                     } else {
-                        actionResult += `\n\n[SISTEMA]: ✅ No hay presupuestos con alertas. Todos tienen más del 20% disponible.`;
+                        actionResult += `\n\n[SISTEMA]: ✅ No hay presupuestos${scope} con alertas. Todos tienen más del 20% disponible.`;
                     }
                     break;
                 }
 
                 case 'WEEKLY_REPORT': {
+                    const hasFullAccess = FULL_ACCESS_ROLES.includes(userRole);
+
+                    // Only allow for full access roles
+                    if (!hasFullAccess) {
+                        actionResult += `\n\n[SISTEMA]: ⛔ El reporte semanal global está disponible solo para roles administrativos. Puedes consultar tus propios requerimientos con "mis requerimientos pendientes".`;
+                        break;
+                    }
+
                     const oneWeekAgo = new Date();
                     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
@@ -863,6 +981,14 @@ IMPORTANTE para REFERENCIAS:
                 }
 
                 case 'SPENDING_TRENDS': {
+                    const hasFullAccess = FULL_ACCESS_ROLES.includes(userRole);
+
+                    // Only allow for full access roles
+                    if (!hasFullAccess) {
+                        actionResult += `\n\n[SISTEMA]: ⛔ Las tendencias de gasto globales están disponibles solo para roles administrativos (Director, Coordinador, Admin).`;
+                        break;
+                    }
+
                     const now = new Date();
                     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
                     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -1280,8 +1406,8 @@ IMPORTANTE para REFERENCIAS:
     } catch (error: any) {
         console.error("AI Controller Error:", error);
         res.status(500).json({
-            error: "Error interno del asistente.",
-            details: error.message,
+            error: "Hubo un problema al procesar tu solicitud. Por favor intenta de nuevo.",
+            // details removed - never expose model names
             keyPresent: !!process.env.GEMINI_API_KEY
         });
     }
