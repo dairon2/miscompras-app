@@ -15,6 +15,8 @@ interface SubmissionCheckResult {
         startTime: string;
         endTime: string;
     };
+    allRules?: any[];
+    currentRule?: any;
 }
 
 /**
@@ -206,7 +208,9 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
         if (currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes) {
             return {
                 canSubmit: true,
-                message: `Puedes enviar requerimientos hasta las ${rule.endTime}.`
+                message: `Puedes enviar requerimientos hasta las ${rule.endTime}.`,
+                allRules: rules,
+                currentRule: rule
             };
         }
     }
@@ -218,7 +222,8 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
     return {
         canSubmit: false,
         message: 'No puedes enviar requerimientos en este momento.',
-        nextAvailable
+        nextAvailable,
+        allRules: rules
     };
 };
 
