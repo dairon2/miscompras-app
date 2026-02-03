@@ -58,6 +58,14 @@ export default function BudgetsPage() {
     const isDirector = userRole === 'DIRECTOR';
     const isUser = userRole === 'USER';
     const canManageBudgets = isDirector; // Only DIRECTOR can create/edit/delete
+    const canViewBudgets = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(userRole);
+
+    // Redirect USER role to home - they shouldn't access budgets page
+    useEffect(() => {
+        if (user && !canViewBudgets) {
+            router.push('/');
+        }
+    }, [user, canViewBudgets, router]);
     const canViewAll = ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole);
 
     const [budgets, setBudgets] = useState<Budget[]>([]);

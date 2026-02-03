@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     BarChart3, PieChart, TrendingUp, DollarSign, FileText, Users, Clock,
@@ -104,10 +105,22 @@ type ChartType = 'bar' | 'line' | 'area' | 'donut';
 
 export default function ReportsPage() {
     const { user } = useAuthStore();
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [years, setYears] = useState<number[]>([]);
     const [activeTab, setActiveTab] = useState<'overview' | 'budget' | 'suppliers' | 'analytics'>('overview');
+
+    // Role-based access control
+    const userRole = user?.role?.toUpperCase() || 'USER';
+    const canViewReports = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(userRole);
+
+    // Redirect USER role to home - they shouldn't access reports
+    useEffect(() => {
+        if (user && !canViewReports) {
+            router.push('/');
+        }
+    }, [user, canViewReports, router]);
 
     // Filters
     const [showFilters, setShowFilters] = useState(false);
