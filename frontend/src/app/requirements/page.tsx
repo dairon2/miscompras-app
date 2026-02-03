@@ -511,7 +511,7 @@ export default function RequirementsPage() {
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: -20 }}
-                                        className="hidden lg:block overflow-x-auto max-h-[calc(100vh-180px)] overflow-y-auto"
+                                        className="hidden lg:block overflow-x-auto"
                                     >
                                         <table className="w-full">
 
@@ -706,7 +706,7 @@ export default function RequirementsPage() {
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
-                                    className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[600px] overflow-y-auto"
+                                    className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                                 >
                                     {filteredReqs.map((req: any) => (
                                         <RequirementCard
