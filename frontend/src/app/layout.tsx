@@ -172,14 +172,8 @@ export default function RootLayout({
                 <nav className="hidden lg:flex items-center gap-10 text-[11px] font-black uppercase tracking-widest text-gray-400">
                   <NavItem href="/" icon={<LayoutDashboard size={14} />} label="Inicio" active={pathname === "/"} />
                   <NavItem icon={<FileText size={14} />} label="Requerimientos" href="/requirements" active={pathname === "/requirements" || pathname.startsWith("/requirements/")} />
-                  {/* Budget - only for privileged roles */}
-                  {['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(user?.role || '') && (
-                    <NavItem icon={<Building2 size={14} />} label="Presupuesto" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
-                  )}
-                  {/* Suppliers - only for privileged roles */}
-                  {['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(user?.role || '') && (
-                    <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers" || pathname.startsWith("/suppliers/")} />
-                  )}
+                  <NavItem icon={<Building2 size={14} />} label="Presupuesto" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
+                  <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers" || pathname.startsWith("/suppliers/")} />
                   {['DIRECTOR', 'COORDINATOR'].includes(user?.role || '') && (
                     <NavItem
                       icon={<CheckCircle size={14} />}
@@ -458,17 +452,15 @@ function NavItem({ href, icon, label, active, badge }: any) {
 function MobileNavbar({ pathname, userRole }: { pathname: string, userRole: string }) {
   const router = useRouter();
 
-  // Role-based navigation filtering
-  const privilegedRoles = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'];
+  // Fixed order: Inicio, Reqs, Presupuestos, Proveedores, Aprobaciones
+  // Aprobaciones only visible to DIRECTOR and COORDINATOR
   const canApprove = ['DIRECTOR', 'COORDINATOR'].includes(userRole);
-  const isPrivileged = privilegedRoles.includes(userRole);
 
   const navItems = [
     { href: "/", icon: <LayoutDashboard size={20} />, label: "Inicio" },
     { href: "/requirements", icon: <FileText size={20} />, label: "Reqs" },
-    // Budget and Suppliers only for privileged roles
-    ...(isPrivileged ? [{ href: "/budget", icon: <Building2 size={20} />, label: "Presu" }] : []),
-    ...(isPrivileged ? [{ href: "/suppliers", icon: <Package size={20} />, label: "Prov" }] : []),
+    { href: "/budget", icon: <Building2 size={20} />, label: "Presu" },
+    { href: "/suppliers", icon: <Package size={20} />, label: "Prov" },
     ...(canApprove ? [{ href: "/approvals", icon: <CheckCircle size={20} />, label: "Aprobar" }] : []),
   ];
 

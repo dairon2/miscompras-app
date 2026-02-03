@@ -133,14 +133,6 @@ export default function SuppliersPage() {
     // Role-based permissions for supplier management
     const userRole = user?.role || 'USER';
     const canManageSuppliers = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
-    const canViewSuppliers = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(userRole);
-
-    // Redirect USER role to home - they shouldn't access suppliers
-    useEffect(() => {
-        if (user && !canViewSuppliers) {
-            router.push('/');
-        }
-    }, [user, canViewSuppliers, router]);
 
 
     // Search and Filter State
@@ -173,10 +165,8 @@ export default function SuppliersPage() {
     }, [suppliers, debouncedSearchTerm, typeFilter]);
 
     useEffect(() => {
-        if (canViewSuppliers) {
-            fetchSuppliers();
-        }
-    }, [canViewSuppliers]);
+        fetchSuppliers();
+    }, []);
 
     const fetchSuppliers = async () => {
         setLoading(true);
