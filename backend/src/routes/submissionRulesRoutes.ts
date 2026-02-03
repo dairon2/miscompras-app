@@ -22,7 +22,9 @@ const ADMIN_ROLES = ['ADMIN', 'DIRECTOR', 'LEADER'];
 router.get('/can-submit', authMiddleware, async (req: AuthRequest, res: Response) => {
     try {
         const userRole = req.user?.role || 'USER';
+        console.log('[can-submit] Checking for role:', userRole);
         const result = await checkSubmissionAllowed(userRole);
+        console.log('[can-submit] Result:', JSON.stringify(result, null, 2));
         res.json(result);
     } catch (error: any) {
         console.error('Error checking submission:', error);
