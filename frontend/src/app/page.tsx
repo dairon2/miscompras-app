@@ -17,6 +17,7 @@ export default function HomePage() {
   const [submissionInfo, setSubmissionInfo] = useState<{
     canSubmit: boolean;
     message: string;
+    isUnrestricted?: boolean;
     nextAvailable?: { day: string; date: string; startTime: string; endTime: string };
     allRules?: any[];
     currentRule?: any;
@@ -98,7 +99,9 @@ export default function HomePage() {
                       ¡Sistema Abierto!
                     </h3>
                     <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                      Actualmente puedes enviar Requerimientos.
+                      {submissionInfo.isUnrestricted
+                        ? "Tu rol no tiene restricciones de horario."
+                        : "Actualmente puedes enviar Requerimientos."}
                     </p>
                   </>
                 ) : (

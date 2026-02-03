@@ -9,6 +9,7 @@ const UNRESTRICTED_ROLES = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDIN
 interface SubmissionCheckResult {
     canSubmit: boolean;
     message: string;
+    isUnrestricted?: boolean;
     nextAvailable?: {
         day: string;
         date: string;
@@ -148,7 +149,8 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
     if (UNRESTRICTED_ROLES.includes(userRole?.toUpperCase())) {
         return {
             canSubmit: true,
-            message: 'Puedes enviar requerimientos en cualquier momento.'
+            isUnrestricted: true,
+            message: 'Puedes enviar requerimientos en cualquier momento (sin restricciones para tu rol).'
         };
     }
 
