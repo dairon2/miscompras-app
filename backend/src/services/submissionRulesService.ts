@@ -165,6 +165,19 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
     const currentMinute = colombiaTime.getMinutes();
     const currentTimeMinutes = currentHour * 60 + currentMinute;
 
+    console.log('[SubmissionRules] Debug Info:', {
+        serverNow: now.toISOString(),
+        serverOffset: localOffset,
+        colombiaOffset: colombiaOffset,
+        colombiaTime: colombiaTime.toISOString(),
+        currentDay: currentDay,
+        dayName: dayNames[currentDay],
+        currentHour: currentHour,
+        currentMinute: currentMinute,
+        currentTimeMinutes: currentTimeMinutes,
+        userRole: userRole
+    });
+
     // Verificar si el día anterior fue festivo
     const previousDay = getPreviousWorkday(colombiaTime);
     const wasPreviousDayHoliday = await isHoliday(previousDay);
@@ -174,6 +187,14 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
         where: { isActive: true },
         orderBy: { priority: 'desc' }
     });
+
+    console.log('[SubmissionRules] Active rules found:', rules.map(r => ({
+        name: r.name,
+        dayOfWeek: r.dayOfWeek,
+        startTime: r.startTime,
+        endTime: r.endTime,
+        isHolidayRule: r.isHolidayRule
+    })));
 
     if (rules.length === 0) {
         // Si no hay reglas configuradas, permitir siempre
