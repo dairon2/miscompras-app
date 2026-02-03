@@ -386,7 +386,15 @@ export default function ApprovalsPage() {
                                                                         <div className="font-black text-gray-800 dark:text-gray-200">{req.title}</div>
                                                                     </td>
                                                                     <td className="py-6 px-4">
-                                                                        <div className="text-xs text-gray-500 line-clamp-2">{req.description}</div>
+                                                                        <div className="relative group">
+                                                                            <div className="text-xs text-gray-500 line-clamp-2 cursor-help">{req.description}</div>
+                                                                            {req.description && req.description.length > 100 && (
+                                                                                <div className="absolute z-50 left-0 top-full mt-2 p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
+                                                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Descripción/Justificación</p>
+                                                                                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{req.description}</p>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
                                                                     </td>
                                                                     <td className="py-6 px-4">
                                                                         <div className="font-bold text-xs">{req.project.name}</div>
