@@ -22,14 +22,11 @@ const setupDataFiltering = async (req: any, res: any, next: any) => {
         const userRole = req.user?.role;
         const userId = req.user?.id;
 
-        console.log('[Reports Middleware] User ID:', userId, 'Role:', userRole);
-
         // Roles that see all data
         const fullAccessRoles = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'];
 
         if (fullAccessRoles.includes(userRole)) {
             req.dataScope = 'ALL';
-            console.log('[Reports Middleware] Full access granted, dataScope: ALL');
             return next();
         }
 
@@ -47,21 +44,18 @@ const setupDataFiltering = async (req: any, res: any, next: any) => {
                 // Area director: filter by their areas
                 req.dataScope = 'AREA';
                 req.directedAreaIds = userAreasDirected.map(a => a.id);
-                console.log('[Reports Middleware] Area director, dataScope: AREA, areas:', req.directedAreaIds);
                 return next();
             }
 
             // Normal user: filter by their own created data
             req.dataScope = 'USER';
             req.filterUserId = userId;
-            console.log('[Reports Middleware] Normal USER, dataScope: USER, filterUserId:', userId);
             return next();
         }
 
         // Default: user-level access
         req.dataScope = 'USER';
         req.filterUserId = userId;
-        console.log('[Reports Middleware] Default fallback, dataScope: USER, filterUserId:', userId);
         return next();
     } catch (error) {
         console.error('Error in data filtering middleware:', error);
