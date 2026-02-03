@@ -75,7 +75,7 @@ export default function HomePage() {
           Resumen de tus actividades de compras y aprobaciones pendientes.
         </p>
 
-        {/* Submission Schedule Banner - Simple and Clear */}
+        {/* TEMPORALMENTE OCULTO - Banner de horarios de envío
         {submissionInfo && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -124,6 +124,7 @@ export default function HomePage() {
             </div>
           </motion.div>
         )}
+        */}
       </motion.section>
 
       {/* Stats Grid - Enhanced with mini charts */}
