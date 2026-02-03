@@ -155,10 +155,11 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
     }
 
     const now = new Date();
-    // Ajustar a la zona horaria de Colombia (UTC-5)
-    const colombiaOffset = -5 * 60; // minutos
-    const localOffset = now.getTimezoneOffset();
-    const colombiaTime = new Date(now.getTime() + (localOffset - colombiaOffset) * 60000);
+
+    // Calcular hora Colombia directamente (UTC-5)
+    // El servidor está en UTC, necesitamos restar 5 horas
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000); // Convertir a UTC
+    const colombiaTime = new Date(utcTime - (5 * 60 * 60000)); // Restar 5 horas para Colombia
 
     const currentDay = colombiaTime.getDay();
     const currentHour = colombiaTime.getHours();
@@ -167,13 +168,12 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
 
     console.log('[SubmissionRules] Debug Info:', {
         serverNow: now.toISOString(),
-        serverOffset: localOffset,
-        colombiaOffset: colombiaOffset,
+        serverTimezoneOffset: now.getTimezoneOffset(),
+        utcTimeMs: utcTime,
         colombiaTime: colombiaTime.toISOString(),
+        colombiaLocalTime: `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`,
         currentDay: currentDay,
         dayName: dayNames[currentDay],
-        currentHour: currentHour,
-        currentMinute: currentMinute,
         currentTimeMinutes: currentTimeMinutes,
         userRole: userRole
     });
