@@ -699,8 +699,8 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
             // isAsiento filter removed to show everything by default
         };
 
-        // ADMIN, DIRECTOR (global), LEADER, COORDINATOR and AUDITOR see everything
-        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'].includes(userRole || '');
+        // ADMIN, DIRECTOR (global), COORDINATOR, AUDITOR and DEVELOPER see everything. LEADER is restricted to their projects.
+        const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
 
         if (!isGlobalViewer) {
             // Check if user is director of any area
