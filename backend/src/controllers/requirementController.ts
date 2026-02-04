@@ -135,6 +135,17 @@ export const createMassRequirements = async (req: AuthRequest, res: Response) =>
 
     if (!userId) return res.status(401).json({ error: 'User not authenticated' });
 
+    // Verificar si el usuario puede enviar requerimientos en este momento
+    const userRole = req.user?.role || 'USER';
+    const submissionCheck = await checkSubmissionAllowed(userRole);
+    if (!submissionCheck.canSubmit) {
+        return res.status(403).json({
+            error: 'No puedes enviar requerimientos en este momento',
+            message: submissionCheck.message,
+            nextAvailable: submissionCheck.nextAvailable
+        });
+    }
+
     // Handle JSON string from FormData
     if (typeof requirements === 'string') {
         try {
