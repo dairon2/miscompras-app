@@ -23,7 +23,15 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
         if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
             budgetWhere.areaId = { in: directedAreaIds };
         } else if (dataScope === 'USER' && filterUserId) {
-            budgetWhere.managerId = filterUserId;
+            // Expanded logic: USER can see budgets where:
+            // 1. They are the manager
+            // 2. They are a sub-leader
+            // 3. They are the project leader or sub-leader
+            budgetWhere.OR = [
+                { managerId: filterUserId },
+                { subLeaders: { some: { userId: filterUserId } } },
+                { project: { OR: [{ leaderId: filterUserId }, { subLeaderId: filterUserId }] } }
+            ];
         }
 
         // Get all budgets
@@ -49,7 +57,21 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
         if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
             reqWhere.areaId = { in: directedAreaIds };
         } else if (dataScope === 'USER' && filterUserId) {
-            reqWhere.createdById = filterUserId;
+            // Expanded logic: USER can see requirements where:
+            // 1. They created it
+            // 2. They have access to the budget (manager, sub-leader, or project leader/sub-leader)
+            reqWhere.OR = [
+                { createdById: filterUserId },
+                {
+                    budget: {
+                        OR: [
+                            { managerId: filterUserId },
+                            { subLeaders: { some: { userId: filterUserId } } },
+                            { project: { OR: [{ leaderId: filterUserId }, { subLeaderId: filterUserId }] } }
+                        ]
+                    }
+                }
+            ];
         }
 
         const [totalRequirements, pendienteProcurement, enTramiteProcurement, entregadoProcurement, finalizadoProcurement] = await Promise.all([
@@ -68,7 +90,22 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
         if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
             invoiceWhere.requirement = { ...invoiceWhere.requirement, areaId: { in: directedAreaIds } };
         } else if (dataScope === 'USER' && filterUserId) {
-            invoiceWhere.requirement = { ...invoiceWhere.requirement, createdById: filterUserId };
+            // Apply similar logic for invoices
+            invoiceWhere.requirement = {
+                ...invoiceWhere.requirement,
+                OR: [
+                    { createdById: filterUserId },
+                    {
+                        budget: {
+                            OR: [
+                                { managerId: filterUserId },
+                                { subLeaders: { some: { userId: filterUserId } } },
+                                { project: { OR: [{ leaderId: filterUserId }, { subLeaderId: filterUserId }] } }
+                            ]
+                        }
+                    }
+                ]
+            };
         }
 
         const invoices = await prisma.invoice.findMany({
@@ -124,7 +161,22 @@ export const getBudgetExecutionByProject = async (req: AuthRequest, res: Respons
         if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
             projectWhere.budgets = { some: { areaId: { in: directedAreaIds }, year } };
         } else if (dataScope === 'USER' && filterUserId) {
-            projectWhere.budgets = { some: { managerId: filterUserId, year } };
+            // Show projects where user handles at least one budget OR is project leader/sub-leader
+            projectWhere.OR = [
+                { leaderId: filterUserId },
+                { subLeaderId: filterUserId },
+                {
+                    budgets: {
+                        some: {
+                            year,
+                            OR: [
+                                { managerId: filterUserId },
+                                { subLeaders: { some: { userId: filterUserId } } }
+                            ]
+                        }
+                    }
+                }
+            ];
         }
 
         const projects = await prisma.project.findMany({
@@ -182,7 +234,18 @@ export const getRequirementsByStatus = async (req: AuthRequest, res: Response) =
         if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
             where.areaId = { in: directedAreaIds };
         } else if (dataScope === 'USER' && filterUserId) {
-            where.createdById = filterUserId;
+            where.OR = [
+                { createdById: filterUserId },
+                {
+                    budget: {
+                        OR: [
+                            { managerId: filterUserId },
+                            { subLeaders: { some: { userId: filterUserId } } },
+                            { project: { OR: [{ leaderId: filterUserId }, { subLeaderId: filterUserId }] } }
+                        ]
+                    }
+                }
+            ];
         }
 
         const statuses = await prisma.requirement.groupBy({
@@ -244,7 +307,18 @@ export const getTopSuppliers = async (req: AuthRequest, res: Response) => {
         if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
             reqWhere.areaId = { in: directedAreaIds };
         } else if (dataScope === 'USER' && filterUserId) {
-            reqWhere.createdById = filterUserId;
+            reqWhere.OR = [
+                { createdById: filterUserId },
+                {
+                    budget: {
+                        OR: [
+                            { managerId: filterUserId },
+                            { subLeaders: { some: { userId: filterUserId } } },
+                            { project: { OR: [{ leaderId: filterUserId }, { subLeaderId: filterUserId }] } }
+                        ]
+                    }
+                }
+            ];
         }
 
         const suppliers = await prisma.supplier.findMany({
@@ -303,7 +377,18 @@ export const getMonthlyTrend = async (req: AuthRequest, res: Response) => {
         if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
             where.areaId = { in: directedAreaIds };
         } else if (dataScope === 'USER' && filterUserId) {
-            where.createdById = filterUserId;
+            where.OR = [
+                { createdById: filterUserId },
+                {
+                    budget: {
+                        OR: [
+                            { managerId: filterUserId },
+                            { subLeaders: { some: { userId: filterUserId } } },
+                            { project: { OR: [{ leaderId: filterUserId }, { subLeaderId: filterUserId }] } }
+                        ]
+                    }
+                }
+            ];
         }
 
         const requirements = await prisma.requirement.findMany({
@@ -357,8 +442,17 @@ export const getBudgetExecutionByArea = async (req: AuthRequest, res: Response) 
         if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
             areaWhere.id = { in: directedAreaIds };
         } else if (dataScope === 'USER' && filterUserId) {
-            // If they are area director, AREA scope handle it. If just USER, filter by budgets they manage
-            areaWhere.budgets = { some: { managerId: filterUserId, year } };
+            // If they are area director, AREA scope handle it. If just USER, filter by budgets they manage or sub-lead or are project leaders
+            areaWhere.budgets = {
+                some: {
+                    year,
+                    OR: [
+                        { managerId: filterUserId },
+                        { subLeaders: { some: { userId: filterUserId } } },
+                        { project: { OR: [{ leaderId: filterUserId }, { subLeaderId: filterUserId }] } }
+                    ]
+                }
+            };
         }
 
         const areas = await prisma.area.findMany({
@@ -411,7 +505,20 @@ export const getPaymentsCalendar = async (req: AuthRequest, res: Response) => {
         if (dataScope === 'AREA' && directedAreaIds && directedAreaIds.length > 0) {
             invoiceWhere.requirement = { areaId: { in: directedAreaIds } };
         } else if (dataScope === 'USER' && filterUserId) {
-            invoiceWhere.requirement = { createdById: filterUserId };
+            invoiceWhere.requirement = {
+                OR: [
+                    { createdById: filterUserId },
+                    {
+                        budget: {
+                            OR: [
+                                { managerId: filterUserId },
+                                { subLeaders: { some: { userId: filterUserId } } },
+                                { project: { OR: [{ leaderId: filterUserId }, { subLeaderId: filterUserId }] } }
+                            ]
+                        }
+                    }
+                ]
+            };
         }
 
         const invoices = await prisma.invoice.findMany({

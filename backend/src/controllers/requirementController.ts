@@ -224,10 +224,7 @@ export const getMyRequirements = async (req: AuthRequest, res: Response) => {
     const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
     const includeAsientos = req.query.includeAsientos === 'true';
 
-    // Pagination params
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 25));
-    const skip = (page - 1) * limit;
+    // No pagination - load all requirements for filtering
 
     try {
         const where: any = {
@@ -281,19 +278,12 @@ export const getMyRequirements = async (req: AuthRequest, res: Response) => {
                 },
                 attachments: true
             },
-            orderBy: { createdAt: 'desc' },
-            skip,
-            take: limit
+            orderBy: { createdAt: 'desc' }
         });
 
         res.json({
             data: requirements,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit)
-            }
+            total: requirements.length
         });
     } catch (error: any) {
         res.status(500).json({ error: 'Failed to fetch requirements' });
@@ -698,10 +688,7 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
     const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
     const includeAsientos = req.query.includeAsientos === 'true';
 
-    // Pagination params
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 25));
-    const skip = (page - 1) * limit;
+    // No pagination - load all requirements for filtering
 
     const userId = req.user?.id;
     const userRole = req.user?.role;
@@ -789,19 +776,12 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
                 },
                 attachments: true
             },
-            orderBy: { createdAt: 'desc' },
-            skip,
-            take: limit
+            orderBy: { createdAt: 'desc' }
         });
 
         res.json({
             data: requirements,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit)
-            }
+            total: requirements.length
         });
     } catch (error: any) {
         console.error("Error fetching all requirements:", error);

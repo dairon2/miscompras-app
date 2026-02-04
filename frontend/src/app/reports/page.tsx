@@ -113,7 +113,7 @@ export default function ReportsPage() {
 
     // Role-based access control
     const userRole = user?.role?.toUpperCase() || 'USER';
-    const canViewReports = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(userRole);
+    const canViewReports = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR', 'USER'].includes(userRole);
 
     // Redirect USER role to home - they shouldn't access reports
     useEffect(() => {

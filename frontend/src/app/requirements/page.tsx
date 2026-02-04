@@ -144,22 +144,25 @@ export default function RequirementsPage() {
     // PERMISO DE ELIMINACIÓN: Solo Director, Coordinador y Admin (Developer para debug si necesario, pero instruccion dice nadie mas)
     const canDelete = ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole);
 
+    // Fetch requirements when year changes
     useEffect(() => {
         if (user) {
             fetchRequirements();
             fetchCatalogs();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedYear]); // Remove userRole and isAdmin from dependencies
+    }, [selectedYear]);
 
     const fetchRequirements = async () => {
         try {
+            setLoading(true);
             // Admins/Directors/Leaders see all requirements, Users see only their own
             const endpoint = isAdmin ? "/requirements/all" : "/requirements/me";
             const response = await api.get(endpoint, {
                 params: { year: selectedYear }
             });
-            setRequirements(response.data.data || response.data);
+            const data = response.data.data || response.data;
+            setRequirements(data);
         } catch (err) {
             console.error("Error fetching requirements", err);
         } finally {
@@ -254,10 +257,22 @@ export default function RequirementsPage() {
     };
 
     const filteredReqs = requirements.filter((r: any) => {
-        const searchText = searchTerm.toLowerCase();
-        const matchesSearch = r.title.toLowerCase().includes(searchText) ||
-            r.id.toLowerCase().includes(searchText) ||
-            (r.groupId && r.groupId.toString().includes(searchText));
+        const searchText = searchTerm.toLowerCase().trim();
+
+        // Smart search: if only numbers, search by groupId; if has letters, search by title/description
+        const isOnlyNumbers = /^\d+$/.test(searchText);
+
+        let matchesSearch = true;
+        if (searchText) {
+            if (isOnlyNumbers) {
+                // Only numbers: search by groupId
+                matchesSearch = r.groupId && r.groupId.toString().includes(searchText);
+            } else {
+                // Has letters: search by title and description
+                matchesSearch = r.title.toLowerCase().includes(searchText) ||
+                    (r.description && r.description.toLowerCase().includes(searchText));
+            }
+        }
         const matchesProc = !filters.procurementStatus || r.procurementStatus === filters.procurementStatus;
         const matchesArea = !filters.areaId || r.areaId === filters.areaId;
         const matchesUser = !filters.createdById || r.createdById === filters.createdById;
@@ -359,7 +374,7 @@ export default function RequirementsPage() {
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Buscar por título, ID o número de requerimiento..."
+                            placeholder="Buscar por título, descripción o número de requerimiento..."
                             className="w-full bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold text-sm"
                         />
                     </div>
@@ -701,25 +716,27 @@ export default function RequirementsPage() {
                                     </div>
                                 </>
                             ) : (
-                                <motion.div
-                                    key="grid"
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                                >
-                                    {filteredReqs.map((req: any) => (
-                                        <RequirementCard
-                                            key={req.id}
-                                            req={req}
-                                            onClick={() => router.push(`/requirements/${req.id}`)}
-                                            onDuplicate={(e) => {
-                                                e.stopPropagation();
-                                                router.push(`/requirements/new?sourceId=${req.id}`);
-                                            }}
-                                        />
-                                    ))}
-                                </motion.div>
+                                <>
+                                    <motion.div
+                                        key="grid"
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                                    >
+                                        {filteredReqs.map((req: any) => (
+                                            <RequirementCard
+                                                key={req.id}
+                                                req={req}
+                                                onClick={() => router.push(`/requirements/${req.id}`)}
+                                                onDuplicate={(e) => {
+                                                    e.stopPropagation();
+                                                    router.push(`/requirements/new?sourceId=${req.id}`);
+                                                }}
+                                            />
+                                        ))}
+                                    </motion.div>
+                                </>
                             )}
                         </>
                     )}

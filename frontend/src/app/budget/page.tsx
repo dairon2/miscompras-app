@@ -219,19 +219,6 @@ export default function BudgetsPage() {
         return isNaN(num) ? 0 : num;
     };
 
-    const stats = {
-        totalBudget: budgets.reduce((sum, b) => sum + safeNumber(b.amount), 0),
-        totalAvailable: budgets.reduce((sum, b) => sum + safeNumber(b.available), 0),
-        totalExecuted: budgets.reduce((sum, b) => sum + (safeNumber(b.amount) - safeNumber(b.available)), 0),
-        criticalCount: budgets.filter(b => {
-            const amount = safeNumber(b.amount);
-            const available = safeNumber(b.available);
-            if (amount === 0) return false;
-            const pct = (available / amount) * 100;
-            return pct < 10;
-        }).length
-    };
-
     const formatCurrency = (val: number | undefined | null) => {
         const safeVal = val != null && !isNaN(Number(val)) ? Number(val) : 0;
         return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(safeVal);
@@ -268,6 +255,20 @@ export default function BudgetsPage() {
             b.category?.name?.toLowerCase().includes(term)
         );
     });
+
+    // Calculate stats based on filtered budgets (respects search term)
+    const stats = {
+        totalBudget: filteredBudgets.reduce((sum, b) => sum + safeNumber(b.amount), 0),
+        totalAvailable: filteredBudgets.reduce((sum, b) => sum + safeNumber(b.available), 0),
+        totalExecuted: filteredBudgets.reduce((sum, b) => sum + (safeNumber(b.amount) - safeNumber(b.available)), 0),
+        criticalCount: filteredBudgets.filter(b => {
+            const amount = safeNumber(b.amount);
+            const available = safeNumber(b.available);
+            if (amount === 0) return false;
+            const pct = (available / amount) * 100;
+            return pct < 10;
+        }).length
+    };
 
     // Export to Excel function
     const exportToExcel = () => {

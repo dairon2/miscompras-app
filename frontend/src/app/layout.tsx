@@ -44,6 +44,7 @@ export default function RootLayout({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -76,6 +77,7 @@ export default function RootLayout({
   const { theme } = useThemeStore();
 
   useEffect(() => {
+    setMounted(true);
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
 
@@ -87,6 +89,7 @@ export default function RootLayout({
     }
   }, [theme]);
 
+  // Polling for notifications and approvals
   useEffect(() => {
     if (isAuthenticated) {
       fetchNotifications();
@@ -174,7 +177,7 @@ export default function RootLayout({
                   <NavItem icon={<FileText size={14} />} label="Requerimientos" href="/requirements" active={pathname === "/requirements" || pathname.startsWith("/requirements/")} />
                   <NavItem icon={<Building2 size={14} />} label="Presupuesto" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
                   <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers" || pathname.startsWith("/suppliers/")} />
-                  {['DIRECTOR', 'COORDINATOR'].includes(user?.role || '') && (
+                  {mounted && ['DIRECTOR', 'COORDINATOR'].includes(user?.role || '') && (
                     <NavItem
                       icon={<CheckCircle size={14} />}
                       label="Aprobaciones"
@@ -184,8 +187,8 @@ export default function RootLayout({
                     />
                   )}
                   <NavItem icon={<FileText size={14} />} label="Facturas" href="/invoices" active={pathname === "/invoices" || pathname.startsWith("/invoices/")} />
-                  {/* Reports - only for privileged roles */}
-                  {['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(user?.role || '') && (
+                  {/* Reports - visible for all authorized roles including USER */}
+                  {mounted && ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR', 'USER'].includes(user?.role || '') && (
                     <NavItem icon={<Briefcase size={14} />} label="Informes" href="/reports" active={pathname === "/reports" || pathname.startsWith("/reports/")} />
                   )}
                 </nav>

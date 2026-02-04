@@ -89,19 +89,27 @@ app.get('/api/projects', authMiddleware, async (req, res) => {
         // Build where clause based on role
         let where: any = {};
 
-        // Only filter for USER role - other roles see all projects
+        // Only filter for USER role - DIRECTOR/ADMIN/COORDINATOR see all projects
         if (userRole === 'USER' && userId) {
-            // USER can only see projects that have approved budgets where they are manager or subleader
+            // USER can see projects where:
+            // 1. They are project leader or sub-leader
+            // 2. They have approved budgets where they are manager or sub-leader of the budget
             where = {
-                budgets: {
-                    some: {
-                        status: 'APPROVED',
-                        OR: [
-                            { managerId: userId },
-                            { subLeaders: { some: { userId } } }
-                        ]
+                OR: [
+                    { leaderId: userId },
+                    { subLeaderId: userId },
+                    {
+                        budgets: {
+                            some: {
+                                status: 'APPROVED',
+                                OR: [
+                                    { managerId: userId },
+                                    { subLeaders: { some: { userId } } }
+                                ]
+                            }
+                        }
                     }
-                }
+                ]
             };
         }
 
@@ -128,7 +136,34 @@ app.get('/api/projects', authMiddleware, async (req, res) => {
 
 app.get('/api/categories', authMiddleware, async (req, res) => {
     try {
-        const categories = await prisma.category.findMany({ orderBy: { code: 'asc' } });
+        const userId = (req as any).user?.id;
+        const userRole = (req as any).user?.role;
+
+        let where: any = {};
+
+        // Only filter for USER role - DIRECTOR/ADMIN/COORDINATOR see all categories
+        if (userRole === 'USER' && userId) {
+            // USER can see categories from budgets where:
+            // 1. They are manager or sub-leader of the budget
+            // 2. They are leader or sub-leader of the project that owns the budget
+            where = {
+                budgets: {
+                    some: {
+                        status: 'APPROVED',
+                        OR: [
+                            { managerId: userId },
+                            { subLeaders: { some: { userId } } },
+                            { project: { OR: [{ leaderId: userId }, { subLeaderId: userId }] } }
+                        ]
+                    }
+                }
+            };
+        }
+
+        const categories = await prisma.category.findMany({
+            where,
+            orderBy: { code: 'asc' }
+        });
         res.json(categories);
     } catch (e) {
         console.error('Error fetching categories:', e);
