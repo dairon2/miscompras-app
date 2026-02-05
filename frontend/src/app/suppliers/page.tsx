@@ -194,9 +194,15 @@ export default function SuppliersPage() {
             setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "" });
             fetchSuppliers();
             showAlert("Registrado", "Proveedor registrado exitosamente", "success");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error creating supplier", error);
-            showAlert("Error", "Error al registrar proveedor", "error");
+            const errorMessage = error.response?.data?.error || "Error al registrar proveedor";
+            const errorDetails = error.response?.data?.details || "";
+
+            // Si hay detalles, mostrarlos en el mensaje
+            const fullMessage = errorDetails ? `${errorMessage}. ${errorDetails}` : errorMessage;
+
+            showAlert("Error", fullMessage, "error");
         }
     };
 

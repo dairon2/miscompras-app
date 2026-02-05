@@ -282,7 +282,9 @@ function NewRequirementContent() {
             router.push("/requirements");
         } catch (err: any) {
             console.error("Error creating requirements:", err);
-            addToast("Error al crear la solicitud: " + (err.response?.data?.error || err.message), 'error');
+            // Prioritize the detailed 'message' from backend if available (e.g. for submission rules)
+            const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+            addToast(errorMsg, 'error', 8000); // Longer duration for detailed messages
         } finally {
             setLoading(false);
         }

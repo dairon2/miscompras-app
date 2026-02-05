@@ -668,6 +668,37 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                         </p>
                     </div>
 
+                    {/* Observaciones de Aprobación */}
+                    {(requirement.directorComment || requirement.coordinatorComment) && (
+                        <div className="mt-8">
+                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Observaciones de Aprobación</label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {requirement.coordinatorComment && (
+                                    <div className="bg-amber-50 dark:bg-amber-900/20 p-6 rounded-3xl border border-amber-100 dark:border-amber-800">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-600">
+                                                <User size={14} />
+                                            </div>
+                                            <span className="text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-500">Coordinación</span>
+                                        </div>
+                                        <p className="text-gray-700 dark:text-gray-300 font-medium text-sm italic">"{requirement.coordinatorComment}"</p>
+                                    </div>
+                                )}
+                                {requirement.directorComment && (
+                                    <div className="bg-purple-50 dark:bg-purple-900/20 p-6 rounded-3xl border border-purple-100 dark:border-purple-800">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-600">
+                                                <User size={14} />
+                                            </div>
+                                            <span className="text-xs font-black uppercase tracking-widest text-purple-700 dark:text-purple-500">Dirección</span>
+                                        </div>
+                                        <p className="text-gray-700 dark:text-gray-300 font-medium text-sm italic">"{requirement.directorComment}"</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {requirement.attachments?.length > 0 && (
                         <div className="mt-8">
                             <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Archivos Adjuntos ({requirement.attachments.length})</label>

@@ -338,13 +338,29 @@ export const updateRequirementStatus = async (req: AuthRequest, res: Response) =
     } = req.body;
 
     try {
+        // Logic to update specific comment fields based on role
+        let additionalData: any = {};
+        const userRole = req.user?.role;
+
+        // If a remark is provided during status change, save it to the corresponding role field
+        if (remarks) {
+            if (userRole === 'DIRECTOR') {
+                additionalData.directorComment = remarks;
+                additionalData.directorApproval = status === 'APPROVED' ? true : (status === 'REJECTED' ? false : undefined);
+            } else if (userRole === 'COORDINATOR') {
+                additionalData.coordinatorComment = remarks;
+                additionalData.coordinatorApproval = status === 'APPROVED' || status === 'PENDING_FINANCE' ? true : (status === 'REJECTED' ? false : undefined);
+            }
+        }
+
         const requirement = await prisma.requirement.update({
             where: { id },
             data: {
                 status: status || undefined,
                 procurementStatus: procurementStatus || undefined,
                 receivedAtSatisfaction: receivedAtSatisfaction !== undefined ? receivedAtSatisfaction : undefined,
-                satisfactionComments: satisfactionComments || undefined
+                satisfactionComments: satisfactionComments || undefined,
+                ...additionalData
             },
             include: { supplier: true }
         });
@@ -1178,6 +1194,15 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
                         requesterName: creator.name || creator.email,
                         approverName: 'Aprobador' // Ideally fetch user name
                     });
+
+                    // Log Rejection per requirement
+                    await prisma.historyLog.create({
+                        data: {
+                            action: 'GROUP_REJECTED',
+                            details: `Requerimiento #${req.id} rechazado por ${userRole === 'DIRECTOR' ? 'Dirección' : userRole === 'COORDINATOR' ? 'Coordinación' : userRole}. ${comments || ''}`,
+                            requirementId: req.id
+                        }
+                    });
                 }
             }
 
@@ -1212,6 +1237,15 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
                 });
             }
         }
+
+        // Log Rejection
+        await prisma.historyLog.create({
+            data: {
+                action: 'GROUP_REJECTED',
+                details: `Requerimiento #${id} rechazado por ${userRole === 'DIRECTOR' ? 'Dirección' : userRole === 'COORDINATOR' ? 'Coordinación' : userRole} (${req.user?.email}). ${comments || ''}`,
+                requirementId: groupInfo?.requirements[0]?.id || '' // Link to first for reference
+            }
+        });
 
         res.json({ message: 'Solicitud rechazada' });
     } catch (error: any) {

@@ -178,11 +178,12 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
         userRole: userRole
     });
 
+
     // Verificar si el día anterior fue festivo
     const previousDay = getPreviousWorkday(colombiaTime);
     const wasPreviousDayHoliday = await isHoliday(previousDay);
 
-    // Obtener las reglas activas
+    // Obtener todas las reglas activas para informar al usuario si es necesario
     const rules = await prisma.submissionRule.findMany({
         where: { isActive: true },
         orderBy: { priority: 'desc' }
@@ -196,38 +197,63 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
         isHolidayRule: r.isHolidayRule
     })));
 
+    // 1. Verificar si HOY es festivo
+    const isTodayHoliday = await isHoliday(colombiaTime);
+    if (isTodayHoliday) {
+        // Buscar si hay regla especial para hoy (ej: festivo trabajado) TBD
+        // Por ahora asumimos que en festivo NO se trabaja a menos que haya regla explicita
+        // La logica actual no tiene "Holiday Rule para el mismo dia", solo "Holiday Shift"
+        // Si es festivo, bloqueamos y damos mensaje claro
+
+        // Obtener nombre del festivo para el mensaje
+        const holidayName = (await prisma.colombianHoliday.findFirst({
+            where: {
+                date: {
+                    gte: new Date(colombiaTime.getFullYear(), colombiaTime.getMonth(), colombiaTime.getDate()),
+                    lt: new Date(colombiaTime.getFullYear(), colombiaTime.getMonth(), colombiaTime.getDate() + 1)
+                }
+            }
+        }))?.name || 'Festivo';
+
+        const nextAvailable = await findNextAvailableSlot(colombiaTime, rules);
+        return {
+            canSubmit: false,
+            message: `Hoy es festivo (${holidayName}) y no se reciben solicitudes.`,
+            nextAvailable,
+            allRules: rules
+        };
+    }
+
     if (rules.length === 0) {
-        // Si no hay reglas configuradas, permitir siempre
         return {
             canSubmit: true,
             message: 'No hay restricciones de horario configuradas.'
         };
     }
 
-    // Buscar una regla que aplique
+    // 2. Buscar si hay servicio HOY y en qué horario
+    let ruleForToday = null;
+
     for (const rule of rules) {
-        // Verificar si es una regla de festivo y si aplica
+        // Verificar lógica de Holiday Shift
         if (rule.isHolidayRule) {
-            // Esta regla solo aplica si el día anterior fue festivo
             if (!wasPreviousDayHoliday) continue;
         } else {
-            // Las reglas normales no aplican si el día anterior fue festivo
-            // y hay reglas de festivo para este día
             if (wasPreviousDayHoliday) {
-                const hasHolidayRuleForToday = rules.some(r =>
-                    r.isHolidayRule && r.dayOfWeek === currentDay
-                );
+                const hasHolidayRuleForToday = rules.some(r => r.isHolidayRule && r.dayOfWeek === currentDay);
                 if (hasHolidayRuleForToday) continue;
             }
         }
 
-        // Verificar si aplica al día actual
         if (rule.dayOfWeek !== currentDay) continue;
 
-        // Verificar horario
+        // Encontramos la regla que aplica para HOY
+        ruleForToday = rule;
+
         const startMinutes = timeToMinutes(rule.startTime);
         const endMinutes = timeToMinutes(rule.endTime);
 
+        // Verificar si estamos DENTRO del horario
         if (currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes) {
             return {
                 canSubmit: true,
@@ -238,13 +264,26 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
         }
     }
 
-    // No se encontró ninguna regla que permita enviar
-    // Buscar el próximo horario disponible
+    // 3. Generar mensaje de rechazo específico
     const nextAvailable = await findNextAvailableSlot(colombiaTime, rules);
+    let failMessage = '';
+
+    if (ruleForToday) {
+        // Había servicio hoy, pero estamos fuera de hora
+        const startMinutes = timeToMinutes(ruleForToday.startTime);
+        if (currentTimeMinutes < startMinutes) {
+            failMessage = `El servicio hoy inicia a las ${ruleForToday.startTime}.`; // Aún no abre
+        } else {
+            failMessage = `El servicio hoy finalizó a las ${ruleForToday.endTime}.`; // Ya cerró
+        }
+    } else {
+        // No hubo regla para hoy (ej: Domingo)
+        failMessage = `Hoy ${dayNames[currentDay]} no hay servicio de recepción de solicitudes.`;
+    }
 
     return {
         canSubmit: false,
-        message: 'No puedes enviar requerimientos en este momento.',
+        message: failMessage,
         nextAvailable,
         allRules: rules
     };

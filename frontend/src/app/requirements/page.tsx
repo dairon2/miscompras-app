@@ -273,6 +273,9 @@ export default function RequirementsPage() {
                     (r.description && r.description.toLowerCase().includes(searchText));
             }
         }
+
+        // FIX: Add Status Filter Logic
+        const matchesStatus = !filters.status || r.status === filters.status;
         const matchesProc = !filters.procurementStatus || r.procurementStatus === filters.procurementStatus;
         const matchesArea = !filters.areaId || r.areaId === filters.areaId;
         const matchesUser = !filters.createdById || r.createdById === filters.createdById;
@@ -288,7 +291,7 @@ export default function RequirementsPage() {
 
         const matchesDate = (!start || createdAt >= start) && (!end || createdAt <= end);
 
-        return matchesSearch && matchesProc && matchesArea && matchesUser && matchesProject && matchesCategory && matchesDate;
+        return matchesSearch && matchesStatus && matchesProc && matchesArea && matchesUser && matchesProject && matchesCategory && matchesDate;
     }).sort((a, b) => {
         const dateA = new Date(a.createdAt).getTime();
         const dateB = new Date(b.createdAt).getTime();
@@ -431,11 +434,12 @@ export default function RequirementsPage() {
                                 <option value="">Todos los Líderes</option>
                                 {users
                                     .filter((u: any) => {
-                                        // Area directors only see users from their area
-                                        if (user?.isAreaDirector && userRole !== 'ADMIN' && userRole !== 'DEVELOPER') {
+                                        // FIX: Allow COORDINATOR, ADMIN, DEVELOPER to see all users. 
+                                        // DIRECTORS who are Area Directors MUST remain restricted (reverting previous change for DIRECTOR).
+                                        if (user?.isAreaDirector && !['ADMIN', 'COORDINATOR', 'DEVELOPER'].includes(userRole)) {
                                             return u.areaId === user?.areaId;
                                         }
-                                        return true; // Admins, Directors, Coordinators see all
+                                        return true; // Admins, Coordinators see all. Directors without flag see all.
                                     })
                                     .map((u: any) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)
                                 }

@@ -264,15 +264,15 @@ export default function RootLayout({
                       className="flex items-center gap-3 group p-1 pr-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-all"
                     >
                       <div className="w-10 h-10 rounded-xl bg-premium-gradient flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform overflow-hidden">
-                        {user?.profilePhoto ? (
+                        {mounted && user?.profilePhoto ? (
                           <img src={user.profilePhoto} alt={user.name || 'Foto'} className="w-full h-full object-cover" />
                         ) : (
                           <UserIcon className="w-5 h-5 text-white" />
                         )}
                       </div>
                       <div className="text-left hidden sm:block">
-                        <p className="text-xs font-black text-gray-800 dark:text-gray-100 leading-none mb-0.5">{user?.name || "Usuario"}</p>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{user?.role || "Personal"}</p>
+                        <p className="text-xs font-black text-gray-800 dark:text-gray-100 leading-none mb-0.5">{mounted ? (user?.name || "Usuario") : "Usuario"}</p>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{mounted ? (user?.role || "Personal") : "Personal"}</p>
                       </div>
                     </button>
 

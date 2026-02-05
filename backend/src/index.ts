@@ -51,8 +51,12 @@ const allowedOrigins = [
     process.env.CORS_ORIGIN,
     'https://miscompras-front-prod-g4akhtbsagfpefbk.canadacentral-01.azurewebsites.net',
     'https://miscompras-api-prod.azurewebsites.net',
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001'
 ].filter(Boolean) as string[];
+
+console.log('configured allowed origins:', allowedOrigins);
 
 app.use(cors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : '*',

@@ -490,15 +490,33 @@ export const getSupplierById = async (req: AuthRequest, res: Response) => {
 export const createSupplier = async (req: AuthRequest, res: Response) => {
     const { name, nit, contactName, email, phone, address, activity, supplierType, criticality } = req.body;
 
+    console.log('[DEBUG] Intento de creación de proveedor:', { name, nit, supplierType });
+
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
     }
 
     try {
+        // Validation: NIT/TaxID uniqueness check
+        // In Colombia, NIT and TaxID are often used interchangeably in systems. 
+        // We must ensure the new NIT doesn't exist as 'nit' OR 'taxId' in the database.
         if (nit) {
-            const existing = await prisma.supplier.findFirst({ where: { nit: nit.trim() } });
+            const cleanNit = nit.trim();
+            const existing = await prisma.supplier.findFirst({
+                where: {
+                    OR: [
+                        { nit: cleanNit },
+                        { taxId: cleanNit }
+                    ]
+                }
+            });
+
             if (existing) {
-                return res.status(400).json({ error: 'Ya existe un proveedor con ese NIT' });
+                console.warn(`[WARN] Intento de duplicado de proveedor. NIT proporcionado: ${cleanNit} - Coincide con ID: ${existing.id}`);
+                return res.status(400).json({
+                    error: `Ya existe un proveedor registrado con ese documento (NIT/RUT)`,
+                    details: `Coincidencia encontrada con el proveedor: ${existing.name}`
+                });
             }
         }
 
@@ -506,6 +524,8 @@ export const createSupplier = async (req: AuthRequest, res: Response) => {
             data: {
                 name: name.trim(),
                 nit: nit?.trim() || null,
+                // If nit is provided, also save it as taxId to maintain consistency if the schema dictates usage of taxId
+                taxId: nit?.trim() || null,
                 contactName: contactName?.trim() || null,
                 email: email?.trim() || null,
                 phone: phone?.trim() || null,
@@ -515,10 +535,22 @@ export const createSupplier = async (req: AuthRequest, res: Response) => {
                 criticality: criticality || 'LOW'
             }
         });
+
+        console.log(`[SUCCESS] Proveedor creado exitosamente: ${supplier.id} - ${supplier.name}`);
         res.status(201).json(supplier);
     } catch (error: any) {
-        console.error('Error creating supplier:', error);
-        res.status(500).json({ error: 'Error al crear proveedor' });
+        console.error('[ERROR] Error crítico al crear proveedor:', error);
+
+        // Handle Prisma unique constraint errors specific codes
+        if (error.code === 'P2002') {
+            const target = error.meta?.target || 'campo único';
+            return res.status(400).json({ error: `Violación de restricción única en: ${target}` });
+        }
+
+        res.status(500).json({
+            error: 'Error interno al crear proveedor',
+            message: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 
