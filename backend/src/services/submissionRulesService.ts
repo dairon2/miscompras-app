@@ -4,7 +4,7 @@ import axios from 'axios';
 const prisma = new PrismaClient();
 
 // Roles que pueden enviar sin restricciones
-const UNRESTRICTED_ROLES = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR'];
+const UNRESTRICTED_ROLES = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'];
 
 interface SubmissionCheckResult {
     canSubmit: boolean;

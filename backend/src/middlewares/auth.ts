@@ -34,7 +34,8 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
 export const roleCheck = (roles: string[]) => {
     return (req: AuthRequest, res: Response, next: NextFunction) => {
         if (!req.user || !roles.includes(req.user.role)) {
-            return res.status(403).json({ error: 'Unauthorized access' });
+            console.log(`[RoleCheck] Access Denied. User Role: '${req.user?.role}'. Required: ${JSON.stringify(roles)}`);
+            return res.status(403).json({ error: `Acceso no autorizado. Tu rol es: '${req.user?.role || 'Ninguno'}'. Roles requeridos: ${roles.join(', ')}` });
         }
         next();
     };

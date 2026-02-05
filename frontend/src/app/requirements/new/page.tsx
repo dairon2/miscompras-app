@@ -79,6 +79,48 @@ function NewRequirementContent() {
     const [aiPrompt, setAiPrompt] = useState('');
     const [aiLoading, setAiLoading] = useState(false);
 
+    // Conditional Submission State
+    const [submissionStatus, setSubmissionStatus] = useState<{
+        allowed: boolean;
+        message: string;
+        nextAvailable?: { day: string; startTime: string; endTime: string };
+    }>({ allowed: false, message: 'Verificando horario...' });
+
+    // Check submission status on mount
+    useEffect(() => {
+        api.get('/requirements/submission-status')
+            .then(res => setSubmissionStatus(res.data))
+            .catch(err => console.error("Error checking submission status:", err));
+    }, []);
+
+    // Load Items from LocalStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('draft_requirements');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setItems(parsed);
+                    addToast('Borrador recuperado automáticamente', 'info');
+                }
+            } catch (e) {
+                console.error("Error loading draft:", e);
+            }
+        }
+    }, [addToast]);
+
+    // Save Items to LocalStorage when changed
+    useEffect(() => {
+        if (items.length > 0) {
+            localStorage.setItem('draft_requirements', JSON.stringify(items));
+        } else {
+            // Only clear if we explicitly decide to (handled in submit), 
+            // but if user deletes all items manually, we should reflect that?
+            // Yes, if items is empty array, we clear draft.
+            localStorage.removeItem('draft_requirements');
+        }
+    }, [items]);
+
     // Role-based permissions - Users with role USER only see their assigned area
     const userRole = user?.role || 'USER';
     const isAdminRole = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
@@ -279,6 +321,10 @@ function NewRequirementContent() {
             const result = await api.post('/requirements/mass-create', formData);
 
             addToast(`Solicitud #${result.data.group.id} creada con ${items.length} ítem(s)`, 'success');
+
+            // Clear draft after success
+            localStorage.removeItem('draft_requirements');
+
             router.push("/requirements");
         } catch (err: any) {
             console.error("Error creating requirements:", err);
@@ -472,12 +518,37 @@ function NewRequirementContent() {
                     <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-700 h-full flex flex-col">
                         <div className="flex items-center justify-between mb-8 border-b border-gray-50 dark:border-gray-700 pb-6">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center text-amber-600">
-                                    <List size={20} />
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center text-amber-600">
+                                            <List size={20} />
+                                        </div>
+                                        <h3 className="text-xl font-black tracking-tight">Ítems Agregados</h3>
+                                    </div>
+                                    {!submissionStatus.allowed && (
+                                        <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-xl flex items-start gap-3">
+                                            <AlertTriangle className="text-orange-500 shrink-0 mt-0.5" size={16} />
+                                            <div>
+                                                <p className="text-xs font-bold text-orange-700 dark:text-orange-300">
+                                                    Envío restringido temporalmente
+                                                </p>
+                                                <p className="text-[10px] text-orange-600 dark:text-orange-400 mt-1">
+                                                    {submissionStatus.message}
+                                                </p>
+                                                {submissionStatus.nextAvailable && (
+                                                    <p className="text-[10px] font-black text-orange-700 dark:text-orange-300 mt-2">
+                                                        Próximo horario: {submissionStatus.nextAvailable.day} {submissionStatus.nextAvailable.startTime} - {submissionStatus.nextAvailable.endTime}
+                                                    </p>
+                                                )}
+                                                <p className="text-[10px] font-medium text-orange-600 dark:text-orange-400 mt-2 italic">
+                                                    Puedes seguir agregando ítems, el progreso se guardará automáticamente en este dispositivo.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <h3 className="text-xl font-black tracking-tight">Ítems Agregados</h3>
                             </div>
-                            <span className="bg-gray-100 dark:bg-slate-700 px-3 py-1 rounded-full text-[10px] font-black text-gray-500">{items.length} ítems</span>
+                            <span className="bg-gray-100 dark:bg-slate-700 px-3 py-1 rounded-full text-[10px] font-black text-gray-500 shrink-0 self-start">{items.length} ítems</span>
                         </div>
 
                         <div className="flex-1 overflow-y-auto max-h-[500px] space-y-4 pr-2 custom-scrollbar">
@@ -486,6 +557,7 @@ function NewRequirementContent() {
                                     <div className="text-center py-20">
                                         <Package className="mx-auto text-gray-200 dark:text-gray-700 mb-4" size={48} />
                                         <p className="text-gray-400 font-bold text-sm">No has agregado ítems todavía.</p>
+                                        <p className="text-gray-300 text-xs mt-2">Tu progreso se guardará automáticamente.</p>
                                     </div>
                                 ) : (
                                     items.map((item) => (
@@ -519,14 +591,22 @@ function NewRequirementContent() {
                         </div>
 
                         <div className="pt-8 border-t border-gray-50 dark:border-gray-700 mt-auto">
-                            <button
-                                onClick={handleSubmit}
-                                disabled={loading || items.length === 0}
-                                className="w-full bg-premium-gradient text-white py-6 rounded-[1.8rem] font-black text-lg shadow-2xl hover:shadow-primary-500/30 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                            >
-                                <Save size={20} />
-                                {loading ? "Procesando..." : "Enviar Requerimiento"}
-                            </button>
+                            {submissionStatus.allowed ? (
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={loading || items.length === 0}
+                                    className="w-full bg-premium-gradient text-white py-6 rounded-[1.8rem] font-black text-lg shadow-2xl hover:shadow-primary-500/30 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                                >
+                                    <Save size={20} />
+                                    {loading ? "Procesando..." : "Enviar Requerimiento"}
+                                </button>
+                            ) : (
+                                <div className="text-center p-4 bg-gray-50 dark:bg-slate-700/30 rounded-2xl border border-gray-100 dark:border-gray-700">
+                                    <p className="text-xs font-bold text-gray-500">
+                                        Botón de envío deshabilitado por horario.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

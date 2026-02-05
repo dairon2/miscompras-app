@@ -17,7 +17,8 @@ import {
     getAvailableYears,
     getDashboardStats,
     updateMassRequirements,
-    getPendingApprovalCount
+    getPendingApprovalCount,
+    checkSubmissionStatus
 } from '../controllers/requirementController';
 import { authMiddleware, roleCheck } from '../middlewares/auth';
 import multer from 'multer';
@@ -45,6 +46,7 @@ router.get('/asientos', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR',
 router.post('/asientos', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), createAsiento);
 
 // Requirements Routes
+router.get('/submission-status', roleCheck(['USER', 'ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), checkSubmissionStatus);
 router.get('/pending-count', roleCheck(['DIRECTOR', 'COORDINATOR']), getPendingApprovalCount);
 router.put('/mass-update', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), updateMassRequirements);
 router.post('/', roleCheck(['USER', 'ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), createRequirement);
@@ -55,7 +57,7 @@ router.get('/dashboard-stats', getDashboardStats);
 router.get('/all', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getAllRequirements);
 router.get('/groups', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getRequirementGroups);
 router.get('/:id', getRequirementById);
-router.put('/:id', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), upload.array('attachments'), updateRequirement);
+router.put('/:id', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER', 'USER', 'LEADER']), upload.array('attachments'), updateRequirement);
 router.patch('/:id/status', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER', 'USER']), updateRequirementStatus); // LEADER removed
 router.post('/group/:id/approve', roleCheck(['COORDINATOR', 'DIRECTOR', 'DEVELOPER']), approveRequirementGroup);
 router.post('/group/:id/reject', roleCheck(['COORDINATOR', 'DIRECTOR', 'DEVELOPER']), rejectRequirementGroup);

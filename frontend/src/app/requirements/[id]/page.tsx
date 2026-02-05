@@ -290,9 +290,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
             showAlert("Guardado", "Cambios guardados correctamente", "success");
         } catch (err: any) {
             console.error("Save error:", err);
-            const msg = err.response?.data?.error === 'Unauthorized access'
-                ? 'No tienes permiso para editar este requerimiento.'
-                : (err.response?.data?.error || "Error al guardar los cambios");
+            const msg = err.response?.data?.error || "Error al guardar los cambios";
             showAlert("Error", msg, "error");
         } finally {
             setActionLoading(false);
@@ -409,9 +407,11 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
     const canManage = userRole === 'ADMIN';
 
-    // Full edit: ADMIN/DIRECTOR/LEADER can edit ONLY after approval
+    // Full edit: ADMIN/DIRECTOR/LEADER can edit ONLY after approval or if REJECTED (to resubmit)
     // Regular users can ONLY mark received at satisfaction on their own requests
-    const canFullEdit = isAdmin && requirement.status === 'APPROVED';
+    // Can edit if: Admin OR (isCreator/Leader AND Rejected) OR (Approved and Admin)
+    const isCreatorOrLeader = isCreator || ['LEADER'].includes(userRole);
+    const canFullEdit = isAdmin || (isCreatorOrLeader && requirement.status === 'REJECTED');
     const canEditObservationsOnly = !isAdmin && isCreator;
 
     // User who created can only see their request status and mark satisfaction
@@ -839,6 +839,13 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                         </motion.div>
                     )}
 
+                    <AlertModal
+                        isOpen={alertState.open}
+                        onClose={() => setAlertState({ ...alertState, open: false })}
+                        title={alertState.title}
+                        message={alertState.message}
+                        type={alertState.type}
+                    />
                 </div>
 
                 {/* Timeline / Logs */}
@@ -905,85 +912,92 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                         <input
                                             type="text"
                                             value={editForm.title}
-                                            readOnly
-                                            className="w-full bg-gray-100 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-medium text-gray-500 cursor-not-allowed outline-none"
+                                            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Cantidad / Unidades</label>
-                                            <input
-                                                type="text"
-                                                value={editForm.quantity}
-                                                onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
-                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Valor Real de Compra</label>
-                                            <input
-                                                type="number"
-                                                value={editForm.actualAmount}
-                                                onChange={(e) => setEditForm({ ...editForm, actualAmount: e.target.value })}
-                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none text-green-600"
-                                            />
-                                        </div>
+                                    {/* Quantity - Visible to all */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Cantidad / Unidades</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.quantity}
+                                            onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                        />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Factura</label>
-                                            <input
-                                                type="text"
-                                                value={editForm.invoiceNumber}
-                                                onChange={(e) => setEditForm({ ...editForm, invoiceNumber: e.target.value })}
-                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Orden de Compra</label>
-                                            <input
-                                                type="text"
-                                                value={editForm.purchaseOrderNumber}
-                                                onChange={(e) => setEditForm({ ...editForm, purchaseOrderNumber: e.target.value })}
-                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                            />
-                                        </div>
-                                    </div>
+                                    {/* Admin-Only Fields */}
+                                    {['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole) && (
+                                        <>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Valor Real de Compra</label>
+                                                    <input
+                                                        type="number"
+                                                        value={editForm.actualAmount}
+                                                        onChange={(e) => setEditForm({ ...editForm, actualAmount: e.target.value })}
+                                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none text-green-600"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Factura</label>
+                                                    <input
+                                                        type="text"
+                                                        value={editForm.invoiceNumber}
+                                                        onChange={(e) => setEditForm({ ...editForm, invoiceNumber: e.target.value })}
+                                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Orden de Compra</label>
+                                                <input
+                                                    type="text"
+                                                    value={editForm.purchaseOrderNumber}
+                                                    onChange={(e) => setEditForm({ ...editForm, purchaseOrderNumber: e.target.value })}
+                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
 
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Proveedor Sugerido</label>
                                         <input
                                             type="text"
                                             value={editForm.suggestedSupplier || ''}
-                                            readOnly
-                                            className="w-full bg-gray-100 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-medium text-gray-500 cursor-not-allowed outline-none"
+                                            onChange={(e) => setEditForm({ ...editForm, suggestedSupplier: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
                                         />
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Proveedor Asignado</label>
-                                        <select
-                                            value={editForm.supplierId}
-                                            onChange={(e) => setEditForm({ ...editForm, supplierId: e.target.value, manualSupplierName: '' })}
-                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                        >
-                                            <option value="">(Sin asignar)</option>
-                                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Estado del Trámite</label>
-                                        <select
-                                            value={editForm.procurementStatus}
-                                            onChange={(e) => setEditForm({ ...editForm, procurementStatus: e.target.value })}
-                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                        >
-                                            {procurementStatusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                        </select>
-                                    </div>
+                                    {['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole) && (
+                                        <>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Proveedor Asignado</label>
+                                                <select
+                                                    value={editForm.supplierId}
+                                                    onChange={(e) => setEditForm({ ...editForm, supplierId: e.target.value, manualSupplierName: '' })}
+                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                >
+                                                    <option value="">(Sin asignar)</option>
+                                                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Estado del Trámite</label>
+                                                <select
+                                                    value={editForm.procurementStatus}
+                                                    onChange={(e) => setEditForm({ ...editForm, procurementStatus: e.target.value })}
+                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                >
+                                                    {procurementStatusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                                </select>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
 
                                 {/* Right Column */}
@@ -999,26 +1013,28 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                         </select>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Fecha Acordada</label>
-                                            <input
-                                                type="date"
-                                                value={editForm.deliveryDate}
-                                                onChange={(e) => setEditForm({ ...editForm, deliveryDate: e.target.value })}
-                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                            />
+                                    {['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole) && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Fecha Acordada</label>
+                                                <input
+                                                    type="date"
+                                                    value={editForm.deliveryDate}
+                                                    onChange={(e) => setEditForm({ ...editForm, deliveryDate: e.target.value })}
+                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Fecha Recibido</label>
+                                                <input
+                                                    type="date"
+                                                    value={editForm.receivedDate}
+                                                    onChange={(e) => setEditForm({ ...editForm, receivedDate: e.target.value })}
+                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Fecha Recibido</label>
-                                            <input
-                                                type="date"
-                                                value={editForm.receivedDate}
-                                                onChange={(e) => setEditForm({ ...editForm, receivedDate: e.target.value })}
-                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                            />
-                                        </div>
-                                    </div>
+                                    )}
 
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Descripción</label>
@@ -1029,6 +1045,22 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                             className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none resize-none"
                                         />
                                     </div>
+
+                                    {/* Status Change - Only for Admin/Director/Coordinator AND NOT RESUBMITTING (rejected by creator) */}
+                                    {['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole) && requirement.status !== 'REJECTED' && (
+                                        <div className="space-y-2 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-800">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-blue-600 ml-2">Estado de la Solicitud (Aprobación)</label>
+                                            <select
+                                                value={editForm.status}
+                                                onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                                                className="w-full bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-700 p-4 rounded-2xl font-bold focus:ring-2 ring-blue-500 outline-none text-blue-700"
+                                            >
+                                                {requestStatusOptions.map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
 
                                     {/* Comment Fields Section - Role-based */}
                                     {['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole) && (
@@ -1082,30 +1114,32 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                     )}
 
                                     {/* Multiple Payments Toggle */}
-                                    <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/20">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
-                                                    <DollarSign size={18} />
+                                    {['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole) && (
+                                        <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/20">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
+                                                        <DollarSign size={18} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-black text-sm">Pagos en Cuotas</h4>
+                                                        <p className="text-[10px] text-gray-500 font-medium">
+                                                            {editForm.hasMultiplePayments
+                                                                ? 'Múltiples pagos habilitados'
+                                                                : 'Pago único'}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <h4 className="font-black text-sm">Pagos en Cuotas</h4>
-                                                    <p className="text-[10px] text-gray-500 font-medium">
-                                                        {editForm.hasMultiplePayments
-                                                            ? 'Múltiples pagos habilitados'
-                                                            : 'Pago único'}
-                                                    </p>
-                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditForm({ ...editForm, hasMultiplePayments: !editForm.hasMultiplePayments })}
+                                                    className={`w-12 h-7 rounded-full transition-all relative ${editForm.hasMultiplePayments ? 'bg-amber-500' : 'bg-gray-300 dark:bg-slate-600'}`}
+                                                >
+                                                    <div className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${editForm.hasMultiplePayments ? 'left-6' : 'left-1'}`} />
+                                                </button>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setEditForm({ ...editForm, hasMultiplePayments: !editForm.hasMultiplePayments })}
-                                                className={`w-12 h-7 rounded-full transition-all relative ${editForm.hasMultiplePayments ? 'bg-amber-500' : 'bg-gray-300 dark:bg-slate-600'}`}
-                                            >
-                                                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${editForm.hasMultiplePayments ? 'left-6' : 'left-1'}`} />
-                                            </button>
                                         </div>
-                                    </div>
+                                    )}
 
                                     <div className="space-y-4">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Archivos Adjuntos</label>
@@ -1180,251 +1214,261 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                 disabled={actionLoading}
                                 className="flex-[2] bg-primary-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-primary-700 transition-all flex items-center justify-center gap-2 tracking-widest uppercase text-xs disabled:opacity-50"
                             >
-                                {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Guardar Cambios</>}
+                                {actionLoading ? <Loader2 className="animate-spin" size={18} /> :
+                                    (requirement.status === 'REJECTED' && !['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole)) ?
+                                        <><CheckCircle size={18} /> Actualizar y Reenviar</> :
+                                        <><Save size={18} /> Guardar Cambios</>}
                             </button>
                         </div>
                     </motion.div>
-                </div>
-            )}
+                </div >
+            )
+            }
 
             {/* Status Change Modal */}
-            {showStatusModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
-                    >
-                        <div className="p-8 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/50">
-                            <h3 className="text-xl font-black tracking-tight uppercase">Actualizar Estado</h3>
-                            <button onClick={() => setShowStatusModal(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors">
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div className="p-10 space-y-6">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Estado Solicitud</label>
-                                    <select
-                                        disabled={!canManage}
-                                        value={statusForm.status}
-                                        onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-5 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                    >
-                                        {requestStatusOptions.map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Estado Trámite</label>
-                                    <select
-                                        value={statusForm.procurementStatus}
-                                        onChange={(e) => setStatusForm({ ...statusForm, procurementStatus: e.target.value })}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-5 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                    >
-                                        {procurementStatusOptions.map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Comentarios / Justificación</label>
-                                {formError && <p className="text-[10px] font-bold text-red-500 ml-2 animate-pulse">{formError}</p>}
-                                <textarea
-                                    rows={4}
-                                    value={statusForm.remarks}
-                                    onChange={(e) => {
-                                        setStatusForm({ ...statusForm, remarks: e.target.value });
-                                        if (e.target.value) setFormError('');
-                                    }}
-                                    placeholder="Explica el motivo del cambio..."
-                                    className={`w-full bg-gray-50 dark:bg-slate-900 border ${formError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-100 dark:border-gray-700'} p-5 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none resize-none transition-all`}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="p-8 bg-gray-50 dark:bg-slate-900/50 flex gap-4">
-                            <button
-                                onClick={() => setShowStatusModal(false)}
-                                className="flex-1 py-4 rounded-2xl font-black text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all tracking-widest uppercase text-[10px]"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleStatusUpdate}
-                                disabled={actionLoading}
-                                className="flex-[2] bg-slate-900 dark:bg-primary-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-slate-800 dark:hover:bg-primary-500 transition-all flex items-center justify-center gap-2 tracking-widest uppercase text-[10px]"
-                            >
-                                {actionLoading ? "Actualizando..." : "Confirmar Cambio"}
-                            </button>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-
-            {/* Problem Report Modal */}
-            {showProblemModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
-                    >
-                        <div className="p-8 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-red-50 dark:bg-red-900/20">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center text-red-500">
-                                    <XCircle size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-black tracking-tight text-red-700 dark:text-red-400">Reportar Problema</h3>
-                                    <p className="text-xs text-red-500 font-medium">La entrega no fue satisfactoria</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setShowProblemModal(false)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition-colors text-red-500">
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div className="p-10 space-y-6">
-                            <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-2xl border border-amber-100 dark:border-amber-800">
-                                <p className="text-sm text-amber-700 dark:text-amber-400 font-bold">
-                                    ⚠️ Al reportar un problema, el requerimiento volverá a estado <strong>"Pendiente"</strong> para que se tome acción correctiva.
-                                </p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Describe el problema (Requerido)</label>
-                                {formError && <p className="text-[10px] font-bold text-red-500 ml-2 animate-pulse">{formError}</p>}
-                                <textarea
-                                    rows={4}
-                                    value={statusForm.remarks}
-                                    onChange={(e) => {
-                                        setStatusForm({ ...statusForm, remarks: e.target.value });
-                                        if (e.target.value) setFormError('');
-                                    }}
-                                    placeholder="Describe qué problema hubo con la entrega: producto incorrecto, cantidad diferente, daños, retrasos, etc..."
-                                    className={`w-full bg-gray-50 dark:bg-slate-900 border ${formError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-100 dark:border-gray-700'} p-5 rounded-2xl font-bold focus:ring-2 ring-red-500 outline-none resize-none transition-all`}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="p-8 bg-gray-50 dark:bg-slate-900/50 flex gap-4">
-                            <button
-                                onClick={() => setShowProblemModal(false)}
-                                className="flex-1 py-4 rounded-2xl font-black text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all tracking-widest uppercase text-[10px]"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={async () => {
-                                    if (!statusForm.remarks.trim()) {
-                                        setFormError('Debes describir el problema');
-                                        return;
-                                    }
-                                    setActionLoading(true);
-                                    try {
-                                        await api.put(`/requirements/${id}`, {
-                                            procurementStatus: 'PENDIENTE',
-                                            receivedAtSatisfaction: false,
-                                            remarks: `PROBLEMA REPORTADO: ${statusForm.remarks}`
-                                        });
-                                        showAlert('Problema Reportado', 'El problema ha sido registrado y el requerimiento vuelve a estado pendiente.', 'info');
-                                        setShowProblemModal(false);
-                                        fetchRequirement();
-                                    } catch (err: any) {
-                                        showAlert('Error', err.response?.data?.error || 'Error al reportar problema', 'error');
-                                    } finally {
-                                        setActionLoading(false);
-                                    }
-                                }}
-                                disabled={actionLoading}
-                                className="flex-[2] bg-red-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-red-600 transition-all flex items-center justify-center gap-2 tracking-widest uppercase text-[10px]"
-                            >
-                                {actionLoading ? "Enviando..." : "Confirmar Problema"}
-                            </button>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-            {selectedFile && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-                    <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        onClick={() => setSelectedFile(null)}
-                        className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-                        className="relative w-full max-w-5xl h-[80vh] bg-white dark:bg-slate-800 rounded-[3rem] shadow-3xl overflow-hidden"
-                    >
-                        {/* Header */}
-                        <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-slate-900/80 to-transparent z-10 p-8 flex justify-between items-start">
-                            <div>
-                                <h3 className="text-white font-black text-xl mb-1">{selectedFile.fileName}</h3>
-                                <p className="text-white/60 text-xs font-medium">Archivo adjunto</p>
-                            </div>
-                            <div className="flex gap-2">
-                                <a
-                                    href={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
-                                    download
-                                    className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-all backdrop-blur-sm"
-                                    title="Descargar"
-                                >
-                                    <Download size={20} />
-                                </a>
-                                <button
-                                    onClick={() => setSelectedFile(null)}
-                                    className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-all backdrop-blur-sm"
-                                >
+            {
+                showStatusModal && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
+                        >
+                            <div className="p-8 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/50">
+                                <h3 className="text-xl font-black tracking-tight uppercase">Actualizar Estado</h3>
+                                <button onClick={() => setShowStatusModal(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors">
                                     <X size={20} />
                                 </button>
                             </div>
-                        </div>
 
-                        {/* Content */}
-                        <div className="w-full h-full flex items-center justify-center p-4">
-                            {selectedFile.fileName.toLowerCase().endsWith('.pdf') ? (
-                                <iframe
-                                    src={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
-                                    className="w-full h-full rounded-2xl"
-                                    title={selectedFile.fileName}
-                                />
-                            ) : selectedFile.fileName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) ? (
-                                <div className="relative w-full h-full">
-                                    <Image
-                                        src={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
-                                        alt={selectedFile.fileName}
-                                        fill
-                                        className="object-contain rounded-2xl"
+                            <div className="p-10 space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Estado Solicitud</label>
+                                        <select
+                                            disabled={!canManage}
+                                            value={statusForm.status}
+                                            onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-5 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
+                                        >
+                                            {requestStatusOptions.map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Estado Trámite</label>
+                                        <select
+                                            value={statusForm.procurementStatus}
+                                            onChange={(e) => setStatusForm({ ...statusForm, procurementStatus: e.target.value })}
+                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-5 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
+                                        >
+                                            {procurementStatusOptions.map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Comentarios / Justificación</label>
+                                    {formError && <p className="text-[10px] font-bold text-red-500 ml-2 animate-pulse">{formError}</p>}
+                                    <textarea
+                                        rows={4}
+                                        value={statusForm.remarks}
+                                        onChange={(e) => {
+                                            setStatusForm({ ...statusForm, remarks: e.target.value });
+                                            if (e.target.value) setFormError('');
+                                        }}
+                                        placeholder="Explica el motivo del cambio..."
+                                        className={`w-full bg-gray-50 dark:bg-slate-900 border ${formError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-100 dark:border-gray-700'} p-5 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none resize-none transition-all`}
                                     />
                                 </div>
-                            ) : (
-                                <div className="text-center p-12">
-                                    <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-6">
-                                        <Paperclip className="w-10 h-10 text-gray-400" />
+                            </div>
+
+                            <div className="p-8 bg-gray-50 dark:bg-slate-900/50 flex gap-4">
+                                <button
+                                    onClick={() => setShowStatusModal(false)}
+                                    className="flex-1 py-4 rounded-2xl font-black text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all tracking-widest uppercase text-[10px]"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleStatusUpdate}
+                                    disabled={actionLoading}
+                                    className="flex-[2] bg-slate-900 dark:bg-primary-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-slate-800 dark:hover:bg-primary-500 transition-all flex items-center justify-center gap-2 tracking-widest uppercase text-[10px]"
+                                >
+                                    {actionLoading ? "Actualizando..." : "Confirmar Cambio"}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )
+            }
+
+            {/* Problem Report Modal */}
+            {
+                showProblemModal && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
+                        >
+                            <div className="p-8 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-red-50 dark:bg-red-900/20">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center text-red-500">
+                                        <XCircle size={24} />
                                     </div>
-                                    <h4 className="text-2xl font-black mb-2">Vista previa no disponible</h4>
-                                    <p className="text-gray-500 mb-6">Este tipo de archivo no se puede visualizar en el navegador</p>
+                                    <div>
+                                        <h3 className="text-xl font-black tracking-tight text-red-700 dark:text-red-400">Reportar Problema</h3>
+                                        <p className="text-xs text-red-500 font-medium">La entrega no fue satisfactoria</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowProblemModal(false)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition-colors text-red-500">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-10 space-y-6">
+                                <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-2xl border border-amber-100 dark:border-amber-800">
+                                    <p className="text-sm text-amber-700 dark:text-amber-400 font-bold">
+                                        ⚠️ Al reportar un problema, el requerimiento volverá a estado <strong>"Pendiente"</strong> para que se tome acción correctiva.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Describe el problema (Requerido)</label>
+                                    {formError && <p className="text-[10px] font-bold text-red-500 ml-2 animate-pulse">{formError}</p>}
+                                    <textarea
+                                        rows={4}
+                                        value={statusForm.remarks}
+                                        onChange={(e) => {
+                                            setStatusForm({ ...statusForm, remarks: e.target.value });
+                                            if (e.target.value) setFormError('');
+                                        }}
+                                        placeholder="Describe qué problema hubo con la entrega: producto incorrecto, cantidad diferente, daños, retrasos, etc..."
+                                        className={`w-full bg-gray-50 dark:bg-slate-900 border ${formError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-100 dark:border-gray-700'} p-5 rounded-2xl font-bold focus:ring-2 ring-red-500 outline-none resize-none transition-all`}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-8 bg-gray-50 dark:bg-slate-900/50 flex gap-4">
+                                <button
+                                    onClick={() => setShowProblemModal(false)}
+                                    className="flex-1 py-4 rounded-2xl font-black text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all tracking-widest uppercase text-[10px]"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (!statusForm.remarks.trim()) {
+                                            setFormError('Debes describir el problema');
+                                            return;
+                                        }
+                                        setActionLoading(true);
+                                        try {
+                                            await api.put(`/requirements/${id}`, {
+                                                procurementStatus: 'PENDIENTE',
+                                                receivedAtSatisfaction: false,
+                                                remarks: `PROBLEMA REPORTADO: ${statusForm.remarks}`
+                                            });
+                                            showAlert('Problema Reportado', 'El problema ha sido registrado y el requerimiento vuelve a estado pendiente.', 'info');
+                                            setShowProblemModal(false);
+                                            fetchRequirement();
+                                        } catch (err: any) {
+                                            showAlert('Error', err.response?.data?.error || 'Error al reportar problema', 'error');
+                                        } finally {
+                                            setActionLoading(false);
+                                        }
+                                    }}
+                                    disabled={actionLoading}
+                                    className="flex-[2] bg-red-500 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-red-600 transition-all flex items-center justify-center gap-2 tracking-widest uppercase text-[10px]"
+                                >
+                                    {actionLoading ? "Enviando..." : "Confirmar Problema"}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )
+            }
+            {
+                selectedFile && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setSelectedFile(null)}
+                            className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                            className="relative w-full max-w-5xl h-[80vh] bg-white dark:bg-slate-800 rounded-[3rem] shadow-3xl overflow-hidden"
+                        >
+                            {/* Header */}
+                            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-slate-900/80 to-transparent z-10 p-8 flex justify-between items-start">
+                                <div>
+                                    <h3 className="text-white font-black text-xl mb-1">{selectedFile.fileName}</h3>
+                                    <p className="text-white/60 text-xs font-medium">Archivo adjunto</p>
+                                </div>
+                                <div className="flex gap-2">
                                     <a
                                         href={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
                                         download
-                                        className="inline-flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-primary-700 transition-all"
+                                        className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-all backdrop-blur-sm"
+                                        title="Descargar"
                                     >
-                                        <Download size={18} />
-                                        Descargar archivo
+                                        <Download size={20} />
                                     </a>
+                                    <button
+                                        onClick={() => setSelectedFile(null)}
+                                        className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-all backdrop-blur-sm"
+                                    >
+                                        <X size={20} />
+                                    </button>
                                 </div>
-                            )}
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-        </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="w-full h-full flex items-center justify-center p-4">
+                                {selectedFile.fileName.toLowerCase().endsWith('.pdf') ? (
+                                    <iframe
+                                        src={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
+                                        className="w-full h-full rounded-2xl"
+                                        title={selectedFile.fileName}
+                                    />
+                                ) : selectedFile.fileName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) ? (
+                                    <div className="relative w-full h-full">
+                                        <Image
+                                            src={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
+                                            alt={selectedFile.fileName}
+                                            fill
+                                            className="object-contain rounded-2xl"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="text-center p-12">
+                                        <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-6">
+                                            <Paperclip className="w-10 h-10 text-gray-400" />
+                                        </div>
+                                        <h4 className="text-2xl font-black mb-2">Vista previa no disponible</h4>
+                                        <p className="text-gray-500 mb-6">Este tipo de archivo no se puede visualizar en el navegador</p>
+                                        <a
+                                            href={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
+                                            download
+                                            className="inline-flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-primary-700 transition-all"
+                                        >
+                                            <Download size={18} />
+                                            Descargar archivo
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )
+            }
+        </div >
     );
 }
 

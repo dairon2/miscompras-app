@@ -8,6 +8,7 @@ import { createRequirementGroup } from '../services/requirementGroupService';
 import { uploadToBlobStorage, processFileUploads } from '../services/blobStorageService';
 import { checkSubmissionAllowed } from '../services/submissionRulesService';
 import { sendRequirementNotificationEmail } from '../services/emailService';
+import { sendEmail } from "../services/emailService";
 
 // Helper function to translate status to Spanish
 const translateStatus = (status: string): string => {
@@ -445,12 +446,16 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
         receivedDate, reqCategory, procurementStatus,
         receivedAtSatisfaction, satisfactionComments,
         deleteAttachmentIds, hasMultiplePayments, suggestedSupplier,
-        purchaseComments, directorComment, coordinatorComment
+        purchaseComments, directorComment, coordinatorComment,
+        status // Add status here
     } = req.body;
     const files = req.files as Express.Multer.File[];
     const userRole = req.user?.role;
 
     try {
+        console.log(`[UpdateReq] User: ${req.user?.email} (${userRole}), ID: ${req.user?.id}`);
+        console.log(`[UpdateReq] Updating Requirement ID: ${id}`);
+
         const currentReq = await prisma.requirement.findUnique({
             where: { id },
             include: { budget: true, attachments: true }
@@ -458,9 +463,37 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
 
         if (!currentReq) return res.status(404).json({ error: 'Requirement not found' });
 
+        console.log(`[UpdateReq] Req Owner: ${currentReq.createdById}, Status: ${currentReq.status}`);
 
 
-        // Budget Deduction Logic
+        // Determine if this is a Resubmission (Creator/Leader fixing a Rejected requirement)
+        let isResubmission = false;
+        const isApprover = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole || '');
+
+        if (!isApprover) {
+            // Security Check for standard Users/Leaders
+            // 1. Must be the owner
+            if (currentReq.createdById !== req.user?.id) {
+                return res.status(403).json({ error: `No tienes permiso para editar este requerimiento. UserID: ${req.user?.id}, OwnerID: ${currentReq.createdById}` });
+            }
+            // 2. Must be in REJECTED status (to allow resubmission)
+            if (currentReq.status !== 'REJECTED') {
+                return res.status(403).json({ error: 'Solo puedes editar requerimientos rechazados para su corrección' });
+            }
+
+            isResubmission = true;
+        } else if (currentReq.status === 'REJECTED' && isApprover) {
+            // Admin/Director editing a rejected req is also a resubmission technically, 
+            // but usually they just change status. Let's keep existing logic or treat as update?
+            // If they change status to PENDING, it's a resubmission.
+            // For now, let's trust the frontend intent or just leave isResubmission false for them 
+            // unless they explicitly are "fixing" it? 
+            // The original code set isResubmission ONLY if NOT approver. 
+            // Let's stick to that for now to avoid side effects.
+            isResubmission = false;
+        }
+
+        // --- Budget Deduction Logic ---
         let budgetAdjustment = 0;
         if (actualAmount !== undefined && currentReq.budgetId) {
             const newAmount = parseFloat(actualAmount) || 0;
@@ -468,17 +501,14 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
 
             if (newAmount !== oldAmount) {
                 budgetAdjustment = newAmount - oldAmount;
-
                 await prisma.budget.update({
                     where: { id: currentReq.budgetId },
-                    data: {
-                        available: { decrement: budgetAdjustment }
-                    }
+                    data: { available: { decrement: budgetAdjustment } }
                 });
             }
         }
 
-        // Handle attachment deletions
+        // --- Attachment Deletion ---
         if (deleteAttachmentIds) {
             const idsToDelete = Array.isArray(deleteAttachmentIds) ? deleteAttachmentIds : [deleteAttachmentIds];
             const attachmentsToDelete = currentReq.attachments.filter(a => idsToDelete.includes(a.id));
@@ -505,9 +535,85 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
             return (d instanceof Date && !isNaN(d.getTime())) ? d : undefined;
         };
 
-        // Prepare data based on role
+        // --- Calculate Changes for History Log ---
+        let changes: string[] = [];
 
+        // Title
+        if (title !== undefined && title !== currentReq.title) changes.push(`Título actualizado a "${title}"`);
+        // Description
+        if (description !== undefined && description !== currentReq.description) changes.push(`Descripción actualizada`);
+        // Quantity
+        if (quantity !== undefined && quantity !== currentReq.quantity) changes.push(`Cantidad actualizada a ${quantity}`);
+        // Actual Amount
+        if (actualAmount && parseFloat(actualAmount) !== parseFloat(currentReq.actualAmount?.toString() || '0')) changes.push(`Monto actualizado a $${actualAmount}`);
 
+        // Purchase Order
+        const newOC = purchaseOrderNumber === 'null' ? null : purchaseOrderNumber;
+        if (purchaseOrderNumber !== undefined && newOC !== currentReq.purchaseOrderNumber) {
+            changes.push(newOC ? `OC actualizada a ${newOC}` : `OC eliminada`);
+        }
+
+        // Invoice
+        const newInvoice = invoiceNumber === 'null' ? null : invoiceNumber;
+        if (invoiceNumber !== undefined && newInvoice !== currentReq.invoiceNumber) {
+            changes.push(newInvoice ? `Factura actualizada a ${newInvoice}` : `Factura eliminada`);
+        }
+
+        // Delivery Date
+        const newDeliveryDate = parseSafeDate(deliveryDate);
+        if (deliveryDate !== undefined && newDeliveryDate?.toISOString() !== currentReq.deliveryDate?.toISOString()) {
+            changes.push(newDeliveryDate ? `Fecha acordada actualizada a ${newDeliveryDate.toLocaleDateString('es-CO')}` : `Fecha acordada eliminada`);
+        }
+
+        // Received Date
+        const newReceivedDate = parseSafeDate(receivedDate);
+        if (receivedDate !== undefined && newReceivedDate?.toISOString() !== currentReq.receivedDate?.toISOString()) {
+            changes.push(newReceivedDate ? `Fecha de recepción actualizada a ${newReceivedDate.toLocaleDateString('es-CO')}` : `Fecha de recepción eliminada`);
+        }
+
+        // Supplier
+        const newSupplierId = (supplierId === 'null' || !supplierId) ? null : supplierId;
+        if (supplierId !== undefined && newSupplierId !== currentReq.supplierId) {
+            changes.push(newSupplierId ? `Proveedor asignado` : `Proveedor removido`);
+        }
+
+        // Manual Supplier
+        const newManualSupplier = manualSupplierName === 'null' ? null : manualSupplierName;
+        if (manualSupplierName !== undefined && newManualSupplier !== currentReq.manualSupplierName) {
+            changes.push(newManualSupplier ? `Proveedor manual actualizado a ${newManualSupplier}` : `Proveedor manual eliminado`);
+        }
+
+        // Category
+        if (reqCategory !== undefined && reqCategory !== 'null' && reqCategory !== currentReq.reqCategory) {
+            changes.push(`Categoría actualizada a ${reqCategory}`);
+        }
+
+        // Status (Admin/Director/Coordinator)
+        if (status !== undefined && status !== currentReq.status && ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole || '')) {
+            changes.push(`Estado actualizado a ${status}`);
+        }
+
+        // Procurement Status
+        if (procurementStatus !== undefined && procurementStatus !== 'null' && procurementStatus !== currentReq.procurementStatus) {
+            changes.push(`Estado del trámite actualizado a ${procurementStatus}`);
+        }
+
+        // Multiple Payments
+        const newHasMultiple = hasMultiplePayments === 'true' || hasMultiplePayments === true;
+        if (hasMultiplePayments !== undefined && newHasMultiple !== currentReq.hasMultiplePayments) {
+            changes.push(`Pagos múltiples ${newHasMultiple ? 'habilitados' : 'deshabilitados'}`);
+        }
+
+        // Attachments
+        if (files?.length > 0) changes.push(`${files.length} nuevos adjuntos añadidos`);
+        if (deleteAttachmentIds) changes.push(`Adjuntos eliminados`);
+
+        // Resubmission Message
+        if (isResubmission) {
+            changes.push('Requerimiento corregido y reenviado para aprobación');
+        }
+
+        // --- Perform Single DB Update ---
         const updatedRequirement = await prisma.requirement.update({
             where: { id },
             data: {
@@ -526,20 +632,24 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 deliveryDate: parseSafeDate(deliveryDate),
                 receivedDate: parseSafeDate(receivedDate),
                 reqCategory: (reqCategory && reqCategory !== 'null') ? reqCategory : undefined,
+
+                // Status Logic: If Resubmission -> PENDING. Else if Admin -> Custom Status. Else undefined (no change).
+                status: isResubmission ? 'PENDING_APPROVAL' : ((['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole || '') && status) ? status : undefined),
+
+                // Reset approvals if resubmitting
+                directorApproval: isResubmission ? false : undefined,
+                coordinatorApproval: isResubmission ? false : undefined,
+
                 procurementStatus: (procurementStatus && procurementStatus !== 'null') ? procurementStatus : undefined,
                 receivedAtSatisfaction: receivedAtSatisfaction !== undefined ? (receivedAtSatisfaction === 'true' || receivedAtSatisfaction === true) : undefined,
                 satisfactionComments: satisfactionComments === 'null' ? null : satisfactionComments,
                 hasMultiplePayments: hasMultiplePayments !== undefined ? (hasMultiplePayments === 'true' || hasMultiplePayments === true) : undefined,
-                // Role-based comment fields
-                purchaseComments: ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole || '')
-                    ? (purchaseComments === 'null' ? null : purchaseComments)
-                    : undefined,
-                directorComment: userRole === 'DIRECTOR' || userRole === 'ADMIN'
-                    ? (directorComment === 'null' ? null : directorComment)
-                    : undefined,
-                coordinatorComment: userRole === 'COORDINATOR' || userRole === 'ADMIN'
-                    ? (coordinatorComment === 'null' ? null : coordinatorComment)
-                    : undefined,
+
+                // Role-based comments
+                purchaseComments: ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole || '') ? (purchaseComments === 'null' ? null : purchaseComments) : undefined,
+                directorComment: userRole === 'DIRECTOR' || userRole === 'ADMIN' ? (directorComment === 'null' ? null : directorComment) : undefined,
+                coordinatorComment: userRole === 'COORDINATOR' || userRole === 'ADMIN' ? (coordinatorComment === 'null' ? null : coordinatorComment) : undefined,
+
                 attachments: {
                     create: await processFileUploads(files, 'requirements')
                 }
@@ -552,120 +662,43 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
             }
         });
 
-        // Log significant changes - track all editable fields
-        let changes: string[] = [];
-
-        // Title
-        if (title !== undefined && title !== currentReq.title) {
-            changes.push(`Título actualizado a "${title}"`);
-        }
-
-        // Description
-        if (description !== undefined && description !== currentReq.description) {
-            changes.push(`Descripción actualizada`);
-        }
-
-        // Quantity
-        if (quantity !== undefined && quantity !== currentReq.quantity) {
-            changes.push(`Cantidad actualizada a ${quantity}`);
-        }
-
-        // Actual Amount
-        if (actualAmount && parseFloat(actualAmount) !== parseFloat(currentReq.actualAmount?.toString() || '0')) {
-            changes.push(`Monto actualizado a $${actualAmount}`);
-        }
-
-        // Purchase Order Number (OC)
-        const newOC = purchaseOrderNumber === 'null' ? null : purchaseOrderNumber;
-        if (purchaseOrderNumber !== undefined && newOC !== currentReq.purchaseOrderNumber) {
-            if (newOC) {
-                changes.push(`OC actualizada a ${newOC}`);
-            } else if (currentReq.purchaseOrderNumber) {
-                changes.push(`OC eliminada (era: ${currentReq.purchaseOrderNumber})`);
-            }
-        }
-
-        // Invoice Number
-        const newInvoice = invoiceNumber === 'null' ? null : invoiceNumber;
-        if (invoiceNumber !== undefined && newInvoice !== currentReq.invoiceNumber) {
-            if (newInvoice) {
-                changes.push(`Factura actualizada a ${newInvoice}`);
-            } else if (currentReq.invoiceNumber) {
-                changes.push(`Factura eliminada (era: ${currentReq.invoiceNumber})`);
-            }
-        }
-
-        // Delivery Date
-        const newDeliveryDate = parseSafeDate(deliveryDate);
-        if (deliveryDate !== undefined && newDeliveryDate?.toISOString() !== currentReq.deliveryDate?.toISOString()) {
-            if (newDeliveryDate) {
-                changes.push(`Fecha acordada actualizada a ${newDeliveryDate.toLocaleDateString('es-CO')}`);
-            } else if (currentReq.deliveryDate) {
-                changes.push(`Fecha acordada eliminada`);
-            }
-        }
-
-        // Received Date
-        const newReceivedDate = parseSafeDate(receivedDate);
-        if (receivedDate !== undefined && newReceivedDate?.toISOString() !== currentReq.receivedDate?.toISOString()) {
-            if (newReceivedDate) {
-                changes.push(`Fecha de recepción actualizada a ${newReceivedDate.toLocaleDateString('es-CO')}`);
-            } else if (currentReq.receivedDate) {
-                changes.push(`Fecha de recepción eliminada`);
-            }
-        }
-
-        // Supplier
-        const newSupplierId = (supplierId === 'null' || !supplierId) ? null : supplierId;
-        if (supplierId !== undefined && newSupplierId !== currentReq.supplierId) {
-            if (newSupplierId) {
-                changes.push(`Proveedor asignado`);
-            } else if (currentReq.supplierId) {
-                changes.push(`Proveedor removido`);
-            }
-        }
-
-        // Manual Supplier Name
-        const newManualSupplier = manualSupplierName === 'null' ? null : manualSupplierName;
-        if (manualSupplierName !== undefined && newManualSupplier !== currentReq.manualSupplierName) {
-            if (newManualSupplier) {
-                changes.push(`Proveedor manual actualizado a ${newManualSupplier}`);
-            } else if (currentReq.manualSupplierName) {
-                changes.push(`Proveedor manual eliminado`);
-            }
-        }
-
-        // Category
-        if (reqCategory !== undefined && reqCategory !== 'null' && reqCategory !== currentReq.reqCategory) {
-            changes.push(`Categoría actualizada a ${reqCategory}`);
-        }
-
-        // Procurement Status
-        if (procurementStatus !== undefined && procurementStatus !== 'null' && procurementStatus !== currentReq.procurementStatus) {
-            changes.push(`Estado del trámite actualizado a ${procurementStatus}`);
-        }
-
-        // Has Multiple Payments
-        const newHasMultiple = hasMultiplePayments === 'true' || hasMultiplePayments === true;
-        if (hasMultiplePayments !== undefined && newHasMultiple !== currentReq.hasMultiplePayments) {
-            changes.push(`Pagos múltiples ${newHasMultiple ? 'habilitados' : 'deshabilitados'}`);
-        }
-
-        // Attachments
-        if (files?.length > 0) changes.push(`${files.length} nuevos adjuntos añadidos`);
-        if (deleteAttachmentIds) changes.push(`Adjuntos eliminados`);
-
+        // --- Log History ---
         if (changes.length > 0) {
+            const actionType = isResubmission ? 'RESUBMITTED' : 'UPDATED'; // Use UPDATED for standard edits, RESUBMITTED for fixes
+
             await prisma.historyLog.create({
                 data: {
-                    action: 'EDITED',
+                    action: actionType,
                     requirementId: id,
-                    details: `Detalles actualizados por ${req.user?.email}: ${changes.join(', ')}`
+                    details: isResubmission
+                        ? `Requerimiento corregido y reenviado por ${req.user?.email}. Cambios: ${changes.join(', ')}`
+                        : `Actualización de detalles por ${req.user?.email}: ${changes.join(', ')}`
                 }
             });
         }
 
-        // Special handling for Problem Reports (receivedAtSatisfaction = false with remarks)
+        // --- Notifications for Resubmission ---
+        if (isResubmission) {
+            const approvers = await prisma.user.findMany({
+                where: { role: { in: ['DIRECTOR', 'COORDINATOR'] } }
+            });
+
+            for (const approver of approvers) {
+                await sendEmail(
+                    approver.email,
+                    `Requerimiento Corregido: ${currentReq.title}`,
+                    `
+                    <h1>Requerimiento Reenviado</h1>
+                    <p>El requerimiento "${currentReq.title}" ha sido corregido y enviado nuevamente para su revisión.</p>
+                    <p><strong>Solicitante:</strong> ${req.user?.email}</p>
+                    <p><strong>Cambios:</strong> ${changes.join(', ')}</p>
+                    <a href="${process.env.FRONTEND_URL}/requirements/${id}">Ver Requerimiento</a>
+                    `
+                );
+            }
+        }
+
+        // --- Special handling for Problem Reports ---
         const isProblemReport = receivedAtSatisfaction === false || receivedAtSatisfaction === 'false';
         const hasRemarks = req.body.remarks && String(req.body.remarks).includes('PROBLEMA REPORTADO');
 
@@ -1820,5 +1853,21 @@ export const updateMassRequirements = async (req: AuthRequest, res: Response) =>
     } catch (error: any) {
         console.error("Mass update error:", error);
         res.status(500).json({ error: 'Failed to update requirements', details: error.message });
+    }
+};
+
+export const checkSubmissionStatus = async (req: AuthRequest, res: Response) => {
+    const userRole = req.user?.role || 'USER';
+
+    try {
+        const result = await checkSubmissionAllowed(userRole);
+        res.json({
+            allowed: result.canSubmit,
+            message: result.message,
+            nextAvailable: result.nextAvailable
+        });
+    } catch (error: any) {
+        console.error("Error checking submission status:", error);
+        res.status(500).json({ error: 'Error al verificar estado de envío' });
     }
 };
