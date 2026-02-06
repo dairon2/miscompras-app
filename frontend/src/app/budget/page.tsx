@@ -53,8 +53,6 @@ export default function BudgetsPage() {
 
     useEffect(() => {
         setMounted(true);
-        // Rehydrate filter store from localStorage after mount
-        useFilterStore.persist.rehydrate();
     }, []);
 
     const userRole = user?.role?.toUpperCase() || 'USER';

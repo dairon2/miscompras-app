@@ -32,10 +32,6 @@ export default function UsersPage() {
     // Filters from store for persistence
     const { users: storedFilters, setUsersFilter, clearUsersFilters } = useFilterStore();
 
-    // Rehydrate filter store on mount (fixes SSR hydration mismatch)
-    useEffect(() => {
-        useFilterStore.persist.rehydrate();
-    }, []);
 
     const searchTerm = storedFilters.searchTerm;
     const setSearchTerm = (value: string) => setUsersFilter({ searchTerm: value });
