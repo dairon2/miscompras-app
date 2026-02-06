@@ -88,6 +88,12 @@ export default function RequirementsPage() {
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
     // Use filter store for persistent filters
     const { requirements: storedFilters, setRequirementsFilter, clearRequirementsFilters } = useFilterStore();
+
+    // Rehydrate filter store on mount (fixes SSR hydration mismatch)
+    useEffect(() => {
+        useFilterStore.persist.rehydrate();
+    }, []);
+
     const searchTerm = storedFilters.searchTerm;
     const setSearchTerm = (value: string) => setRequirementsFilter({ searchTerm: value });
     const [projects, setProjects] = useState([]);

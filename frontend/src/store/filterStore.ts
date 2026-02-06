@@ -169,6 +169,7 @@ export const useFilterStore = create<FilterState>()(
         }),
         {
             name: 'miscompras-filters',
+            skipHydration: true, // Prevent hydration mismatch on SSR - will rehydrate on client
         }
     )
 );

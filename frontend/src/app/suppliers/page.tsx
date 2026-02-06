@@ -138,6 +138,12 @@ export default function SuppliersPage() {
 
     // Search and Filter State from store
     const { suppliers: storedFilters, setSuppliersFilter, clearSuppliersFilters } = useFilterStore();
+
+    // Rehydrate filter store on mount (fixes SSR hydration mismatch)
+    useEffect(() => {
+        useFilterStore.persist.rehydrate();
+    }, []);
+
     const searchTerm = storedFilters.searchTerm;
     const setSearchTerm = (value: string) => setSuppliersFilter({ searchTerm: value });
     const typeFilter = storedFilters.typeFilter;

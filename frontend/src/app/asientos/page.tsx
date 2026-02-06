@@ -56,6 +56,11 @@ export default function AsientosPage() {
 
     // Filter store for persistence
     const { asientos: storedFilters, setAsientosFilter, clearAsientosFilters } = useFilterStore();
+
+    // Rehydrate filter store on mount (fixes SSR hydration mismatch)
+    useEffect(() => {
+        useFilterStore.persist.rehydrate();
+    }, []);
     const searchTerm = storedFilters.searchTerm;
     const setSearchTerm = (value: string) => setAsientosFilter({ searchTerm: value });
 
