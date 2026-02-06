@@ -1753,7 +1753,10 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
                     description,
                     quantity,
                     totalAmount: (totalAmount && totalAmount !== 'null' && !isNaN(parseFloat(totalAmount))) ? parseFloat(totalAmount) : null,
-                    actualAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount))) ? parseFloat(actualAmount) : null,
+                    // Use actualAmount if provided, otherwise fallback to totalAmount
+                    actualAmount: (actualAmount && actualAmount !== 'null' && !isNaN(parseFloat(actualAmount)))
+                        ? parseFloat(actualAmount)
+                        : ((totalAmount && totalAmount !== 'null' && !isNaN(parseFloat(totalAmount))) ? parseFloat(totalAmount) : null),
                     projectId: (projectId && projectId !== 'null') ? projectId : undefined,
                     areaId: (areaId && areaId !== 'null') ? areaId : undefined,
                     supplierId: (supplierId && supplierId !== 'null') ? supplierId : null,

@@ -175,7 +175,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                 description: response.data.description,
                 quantity: response.data.quantity || '',
                 estimatedAmount: response.data.estimatedAmount || '',
-                actualAmount: response.data.actualAmount || '',
+                actualAmount: response.data.actualAmount || response.data.totalAmount || '',
                 projectId: response.data.projectId,
                 areaId: response.data.areaId,
                 supplierId: response.data.supplierId || '',
