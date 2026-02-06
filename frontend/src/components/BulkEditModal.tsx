@@ -158,7 +158,7 @@ export default function BulkEditModal({ isOpen, onClose, selectedIds, onSuccess 
                                 >
                                     <option value="">-- No cambiar --</option>
                                     <option value="PENDIENTE">Pendiente</option>
-                                    <option value="EN_TRAMITE">En Trámite</option>
+                                    <option value="EN_TRAMITE">En trámite</option>
                                     <option value="ENTREGADO">Entregado</option>
                                     <option value="FINALIZADO">Finalizado</option>
                                     <option value="ANULADO">Anulado</option>

@@ -274,7 +274,7 @@ export const getRequirementsByStatus = async (req: AuthRequest, res: Response) =
 const getStatusLabel = (status: string): string => {
     const labels: Record<string, string> = {
         'PENDIENTE': 'Pendiente',
-        'EN_TRAMITE': 'En Trámite',
+        'EN_TRAMITE': 'En trámite',
         'FINALIZADO': 'Finalizado',
         'ENTREGADO': 'Entregado',
         'ANULADO': 'Anulado',

@@ -22,7 +22,7 @@ const translateStatus = (status: string): string => {
         'CANCELLED': 'Cancelado',
         'FINALIZADO': 'Finalizado',
         'ENTREGADO': 'Entregado',
-        'EN_TRAMITE': 'En Trámite',
+        'EN_TRAMITE': 'En trámite',
         'PENDIENTE': 'Pendiente',
         'POSTERGADO': 'Postergado',
         'ANULADO': 'Anulado'
@@ -1126,14 +1126,16 @@ export const approveRequirementGroup = async (req: AuthRequest, res: Response) =
             });
         }
 
-        // Log and Notify
-        await prisma.historyLog.create({
-            data: {
-                action: 'GROUP_APPROVED',
-                details: `Requerimiento #${id} aprobado por ${actionLabel} (${req.user?.email}). ${comments || ''}`,
-                requirementId: group.requirements[0]?.id || '' // Link to first for reference
-            }
-        });
+        // Log and Notify - Create log for each requirement in the group
+        for (const requirement of group.requirements) {
+            await prisma.historyLog.create({
+                data: {
+                    action: 'GROUP_APPROVED',
+                    details: `Requerimiento aprobado por ${actionLabel} (${req.user?.email}). ${comments || ''}`,
+                    requirementId: requirement.id
+                }
+            });
+        }
 
         // Notify Creator via Email
         const creator = await prisma.user.findUnique({
@@ -1254,7 +1256,7 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
         // Notify Creator of Rejection
         const groupInfo = await prisma.requirementGroup.findUnique({
             where: { id: parseInt(id) },
-            select: { creatorId: true, requirements: { select: { id: true, title: true }, take: 1 } }
+            include: { requirements: { select: { id: true, title: true } } }
         });
 
         if (groupInfo) {
@@ -1269,16 +1271,19 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
                     rejectReason: comments
                 });
             }
-        }
 
-        // Log Rejection
-        await prisma.historyLog.create({
-            data: {
-                action: 'GROUP_REJECTED',
-                details: `Requerimiento #${id} rechazado por ${userRole === 'DIRECTOR' ? 'Dirección' : userRole === 'COORDINATOR' ? 'Coordinación' : userRole} (${req.user?.email}). ${comments || ''}`,
-                requirementId: groupInfo?.requirements[0]?.id || '' // Link to first for reference
+            // Create a log for each requirement in the group
+            const rejecterName = req.user?.role === 'DIRECTOR' ? 'Dirección' : req.user?.role === 'COORDINATOR' ? 'Coordinación' : req.user?.role;
+            for (const requirement of groupInfo.requirements) {
+                await prisma.historyLog.create({
+                    data: {
+                        action: 'GROUP_REJECTED',
+                        details: `Requerimiento rechazado por ${rejecterName} (${req.user?.email}). Motivo: ${comments || 'Sin comentarios'}`,
+                        requirementId: requirement.id
+                    }
+                });
             }
-        });
+        }
 
         res.json({ message: 'Solicitud rechazada' });
     } catch (error: any) {

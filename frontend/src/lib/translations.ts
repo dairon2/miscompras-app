@@ -77,6 +77,7 @@ export const translateAction = (action: string): string => {
         'LEADER_APPROVED': 'Aprobado por Líder',
         'LEADER_REJECTED': 'Rechazado por Líder',
         'PROBLEM_REPORTED': '⚠️ Problema Reportado',
+        'RESUBMITTED': 'Reenviado',
     };
 
     return actionMap[action] || action.replace(/_/g, ' ');

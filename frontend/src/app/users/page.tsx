@@ -44,7 +44,7 @@ export default function UsersPage() {
     useEffect(() => {
         fetchUsers();
         fetchAreas();
-    }, [filters]);
+    }, [filters, searchTerm]);
 
     const fetchUsers = async () => {
         setLoading(true);

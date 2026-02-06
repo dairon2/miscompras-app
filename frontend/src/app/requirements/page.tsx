@@ -663,7 +663,7 @@ export default function RequirementsPage() {
                                                                 return (
                                                                     <div className="flex flex-wrap gap-1">
                                                                         <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${colorClass}`}>
-                                                                            {req.procurementStatus || 'PENDIENTE'}
+                                                                            {translateStatus(req.procurementStatus) || 'PENDIENTE'}
                                                                         </span>
                                                                         {req.receivedAtSatisfaction && (
                                                                             <span className="px-2 py-0.5 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 text-[10px] font-bold flex items-center gap-0.5">
