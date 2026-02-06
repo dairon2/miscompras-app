@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -93,13 +93,13 @@ export default function BudgetsPage() {
     const selectedYear = storedFilters.selectedYear;
     const setSelectedYear = (year: number) => setBudgetFilter({ selectedYear: year });
 
-    // Filters from store
-    const filters = {
+    // Filters from store - memoized to prevent infinite loops
+    const filters = useMemo(() => ({
         projectId: storedFilters.projectId,
         categoryId: storedFilters.categoryId,
         areaId: storedFilters.areaId,
         status: storedFilters.status
-    };
+    }), [storedFilters.projectId, storedFilters.categoryId, storedFilters.areaId, storedFilters.status]);
     const setFilters = (newFilters: Partial<typeof filters>) => setBudgetFilter(newFilters);
 
     // Catalogs
@@ -141,16 +141,21 @@ export default function BudgetsPage() {
     const [savingAdjustment, setSavingAdjustment] = useState(false);
 
     const fetchBudgets = useCallback(async () => {
+        // Ensure selectedYear has a valid value before fetching
+        const yearToFetch = selectedYear || new Date().getFullYear();
+        console.log('[BudgetPage] Fetching budgets for year:', yearToFetch);
+
         setLoading(true);
         try {
             const params = new URLSearchParams();
-            params.append('year', selectedYear.toString());
+            params.append('year', yearToFetch.toString());
             if (filters.projectId) params.append('projectId', filters.projectId);
             if (filters.categoryId) params.append('categoryId', filters.categoryId);
             if (filters.areaId) params.append('areaId', filters.areaId);
             if (filters.status) params.append('status', filters.status);
 
             const res = await api.get(`/budgets?${params.toString()}`);
+            console.log('[BudgetPage] Received budgets:', res.data?.length || 0);
             setBudgets(res.data);
         } catch (err) {
             console.error("Error fetching budgets:", err);
@@ -161,8 +166,10 @@ export default function BudgetsPage() {
     }, [selectedYear, filters, addToast]);
 
     useEffect(() => {
-        fetchBudgets();
-    }, [selectedYear, filters, fetchBudgets]);
+        if (mounted) {
+            fetchBudgets();
+        }
+    }, [mounted, selectedYear, filters, fetchBudgets]);
 
     const fetchYears = async () => {
         try {
