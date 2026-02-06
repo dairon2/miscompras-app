@@ -20,6 +20,7 @@ import {
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import { useFilterStore } from "@/store/filterStore";
 
 export default function UsersPage() {
     const router = useRouter();
@@ -27,14 +28,20 @@ export default function UsersPage() {
     const [users, setUsers] = useState([]);
     const [areas, setAreas] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
+
+    // Filters from store for persistence
+    const { users: storedFilters, setUsersFilter, clearUsersFilters } = useFilterStore();
+    const searchTerm = storedFilters.searchTerm;
+    const setSearchTerm = (value: string) => setUsersFilter({ searchTerm: value });
+
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<any>(null);
-    const [filters, setFilters] = useState({
-        role: '',
-        areaId: '',
-        isActive: ''
-    });
+    const filters = {
+        role: storedFilters.role,
+        areaId: storedFilters.areaId,
+        isActive: storedFilters.isActive
+    };
+    const setFilters = (newFilters: Partial<typeof filters>) => setUsersFilter(newFilters);
 
     // Role-based permissions
     const userRole = user?.role || 'USER';

@@ -34,6 +34,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { exportRequirements } from "@/lib/excelExport";
 import { useAuthStore } from "@/store/authStore";
+import { useFilterStore } from "@/store/filterStore";
 import YearSelector from "@/components/YearSelector";
 import { translateStatus } from "@/lib/translations";
 import AlertModal from "@/components/AlertModal";
@@ -85,7 +86,10 @@ export default function RequirementsPage() {
     const [requirements, setRequirements] = useState<Requirement[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
-    const [searchTerm, setSearchTerm] = useState('');
+    // Use filter store for persistent filters
+    const { requirements: storedFilters, setRequirementsFilter, clearRequirementsFilters } = useFilterStore();
+    const searchTerm = storedFilters.searchTerm;
+    const setSearchTerm = (value: string) => setRequirementsFilter({ searchTerm: value });
     const [projects, setProjects] = useState([]);
     const [areas, setAreas] = useState([]);
     const [users, setUsers] = useState([]);
@@ -115,11 +119,13 @@ export default function RequirementsPage() {
         }
     };
 
-    // Year filter - default to current year
+    // Year filter - from store
     const currentYear = new Date().getFullYear();
-    const [selectedYear, setSelectedYear] = useState(currentYear);
+    const selectedYear = storedFilters.selectedYear;
+    const setSelectedYear = (year: number) => setRequirementsFilter({ selectedYear: year });
     const [availableYears, setAvailableYears] = useState<number[]>([currentYear]);
-    const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // desc = más nuevo primero
+    const sortOrder = storedFilters.sortOrder;
+    const setSortOrder = (order: 'desc' | 'asc') => setRequirementsFilter({ sortOrder: order });
 
     useEffect(() => {
         api.get('/requirements/years')
@@ -127,16 +133,18 @@ export default function RequirementsPage() {
             .catch(err => console.error("Error loading years:", err));
     }, []);
 
-    const [filters, setFilters] = useState({
-        status: '',
-        procurementStatus: '',
-        areaId: '',
-        createdById: '',
-        projectId: '',
-        reqCategory: '',
-        startDate: '',
-        endDate: ''
-    });
+    // Filters from store
+    const filters = {
+        status: storedFilters.status,
+        procurementStatus: storedFilters.procurementStatus,
+        areaId: storedFilters.areaId,
+        createdById: storedFilters.createdById,
+        projectId: storedFilters.projectId,
+        reqCategory: storedFilters.reqCategory,
+        startDate: storedFilters.startDate,
+        endDate: storedFilters.endDate
+    };
+    const setFilters = (newFilters: Partial<typeof filters>) => setRequirementsFilter(newFilters);
 
     // Role-based permissions
     const userRole = user?.role || 'USER';
@@ -499,7 +507,7 @@ export default function RequirementsPage() {
                         )}
                     </div>
                     <button
-                        onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                        onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                     >
                         {sortOrder === 'desc' ? (

@@ -19,6 +19,7 @@ import {
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import { useFilterStore } from "@/store/filterStore";
 import YearSelector from "@/components/YearSelector";
 
 interface Asiento {
@@ -50,13 +51,18 @@ export default function AsientosPage() {
     const { user } = useAuthStore();
     const [asientos, setAsientos] = useState<Asiento[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [asientoToDelete, setAsientoToDelete] = useState<Asiento | null>(null);
 
-    // Year filter
+    // Filter store for persistence
+    const { asientos: storedFilters, setAsientosFilter, clearAsientosFilters } = useFilterStore();
+    const searchTerm = storedFilters.searchTerm;
+    const setSearchTerm = (value: string) => setAsientosFilter({ searchTerm: value });
+
+    // Year filter from store
     const currentYear = new Date().getFullYear();
-    const [selectedYear, setSelectedYear] = useState(currentYear);
+    const selectedYear = storedFilters.selectedYear;
+    const setSelectedYear = (year: number) => setAsientosFilter({ selectedYear: year });
     const [availableYears, setAvailableYears] = useState<number[]>([currentYear]);
 
     useEffect(() => {
@@ -105,11 +111,15 @@ export default function AsientosPage() {
         }
     };
 
-    // Filters
-    const [selectedSupplier, setSelectedSupplier] = useState('');
-    const [selectedProject, setSelectedProject] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    // Filters from store
+    const selectedSupplier = storedFilters.selectedSupplier;
+    const setSelectedSupplier = (value: string) => setAsientosFilter({ selectedSupplier: value });
+    const selectedProject = storedFilters.selectedProject;
+    const setSelectedProject = (value: string) => setAsientosFilter({ selectedProject: value });
+    const selectedCategory = storedFilters.selectedCategory;
+    const setSelectedCategory = (value: string) => setAsientosFilter({ selectedCategory: value });
+    const sortOrder = storedFilters.sortOrder;
+    const setSortOrder = (value: 'asc' | 'desc') => setAsientosFilter({ sortOrder: value });
     const [projects, setProjects] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
 
@@ -280,7 +290,7 @@ export default function AsientosPage() {
 
                         {/* Sort Toggle */}
                         <button
-                            onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                            onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
                             className="flex items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-slate-900 rounded-2xl font-bold text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                         >
                             <Calendar size={14} />

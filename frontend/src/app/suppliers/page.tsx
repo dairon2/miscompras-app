@@ -12,6 +12,7 @@ import {
 import api from "@/lib/api";
 import { exportSuppliers } from "@/lib/excelExport";
 import { useAuthStore } from "@/store/authStore";
+import { useFilterStore } from "@/store/filterStore";
 
 import { StarRatingDisplay } from "@/components/StarRating";
 import AlertModal from "@/components/AlertModal";
@@ -135,9 +136,12 @@ export default function SuppliersPage() {
     const canManageSuppliers = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
 
 
-    // Search and Filter State
-    const [searchTerm, setSearchTerm] = useState("");
-    const [typeFilter, setTypeFilter] = useState<'ALL' | 'SUPPLIER' | 'SERVICE_PROVIDER'>('ALL');
+    // Search and Filter State from store
+    const { suppliers: storedFilters, setSuppliersFilter, clearSuppliersFilters } = useFilterStore();
+    const searchTerm = storedFilters.searchTerm;
+    const setSearchTerm = (value: string) => setSuppliersFilter({ searchTerm: value });
+    const typeFilter = storedFilters.typeFilter;
+    const setTypeFilter = (value: 'ALL' | 'SUPPLIER' | 'SERVICE_PROVIDER') => setSuppliersFilter({ typeFilter: value });
 
     // Debounce search term for better performance (150ms delay - faster response)
     const debouncedSearchTerm = useDebounce(searchTerm, 150);

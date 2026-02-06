@@ -13,6 +13,7 @@ import {
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
+import { useFilterStore } from "@/store/filterStore";
 import VisualDashboard from "./VisualDashboard";
 import YearSelector from "@/components/YearSelector";
 import * as XLSX from 'xlsx';
@@ -81,19 +82,25 @@ export default function BudgetsPage() {
         }
     }, [viewMode, mounted]);
 
-    const [searchTerm, setSearchTerm] = useState('');
+    // Filter store for persistence
+    const { budget: storedFilters, setBudgetFilter, clearBudgetFilters } = useFilterStore();
+    // SearchTerm from store
+    const searchTerm = storedFilters.searchTerm;
+    const setSearchTerm = (value: string) => setBudgetFilter({ searchTerm: value });
 
-    // Year filter
+    // Year filter from store
     const [years, setYears] = useState<number[]>([]);
-    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+    const selectedYear = storedFilters.selectedYear;
+    const setSelectedYear = (year: number) => setBudgetFilter({ selectedYear: year });
 
-    // Filters
-    const [filters, setFilters] = useState({
-        projectId: '',
-        areaId: '',
-        categoryId: '',
-        status: ''
-    });
+    // Filters from store
+    const filters = {
+        projectId: storedFilters.projectId,
+        categoryId: storedFilters.categoryId,
+        areaId: storedFilters.areaId,
+        status: storedFilters.status
+    };
+    const setFilters = (newFilters: Partial<typeof filters>) => setBudgetFilter(newFilters);
 
     // Catalogs
     const [projects, setProjects] = useState<Project[]>([]);

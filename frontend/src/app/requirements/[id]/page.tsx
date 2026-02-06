@@ -857,7 +857,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                 requirementId={requirement.id}
                                 hasMultiplePayments={requirement.hasMultiplePayments}
                                 totalAmount={parseFloat(requirement.totalAmount?.toString() || requirement.actualAmount?.toString() || '0')}
-                                canEdit={['ADMIN', 'DIRECTOR', 'LEADER', 'FINANCE'].includes(currentUser?.role || '')}
+                                canEdit={['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'FINANCE'].includes(currentUser?.role || '')}
                                 onPaymentsChange={() => fetchRequirement()}
                             />
                         </div>
