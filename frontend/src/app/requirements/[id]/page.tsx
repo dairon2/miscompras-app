@@ -81,6 +81,10 @@ interface Requirement {
     directorComment?: string;
     purchaseComments?: string;
     groupId?: number;
+    budget?: {
+        title: string;
+        category?: { name: string }
+    };
 }
 
 export default function RequirementDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -624,6 +628,14 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
                         <div className="space-y-6">
                             <InfoItem icon={<Building />} label="Proyecto" value={requirement.project.name} />
+                            {requirement.budget && (
+                                <>
+                                    <InfoItem icon={<DollarSign className="text-green-500" />} label="Presupuesto" value={requirement.budget.title} />
+                                    {requirement.budget.category && (
+                                        <InfoItem icon={<Tag className="text-purple-500" />} label="Categoría Presupuestal" value={requirement.budget.category.name} />
+                                    )}
+                                </>
+                            )}
                             <InfoItem icon={<Package />} label="Área" value={requirement.area.name} />
                             <InfoItem icon={<User />} label="Solicitado por" value={requirement.createdBy.name || requirement.createdBy.email} />
                             <InfoItem

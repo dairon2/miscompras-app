@@ -1799,7 +1799,7 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
                 data: {
                     action: 'CREATED_ASIENTO',
                     requirementId: asiento.id,
-                    details: `Asiento contable creado por ${req.user?.email}`
+                    details: `Asiento de compra creado por ${req.user?.email}`
                 }
             });
 

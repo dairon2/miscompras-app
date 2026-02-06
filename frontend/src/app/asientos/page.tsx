@@ -198,7 +198,7 @@ export default function AsientosPage() {
             >
                 <div className="flex items-center gap-6">
                     <div>
-                        <h2 className="text-4xl font-black tracking-tight mb-2">Asientos Contables</h2>
+                        <h2 className="text-4xl font-black tracking-tight mb-2">Asientos de Compras</h2>
                         <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.2em]">Registros Pre-aprobados de Compras</p>
                     </div>
 
