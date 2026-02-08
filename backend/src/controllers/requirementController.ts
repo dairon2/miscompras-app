@@ -317,7 +317,12 @@ export const getRequirementById = async (req: AuthRequest, res: Response) => {
                 logs: {
                     orderBy: { createdAt: 'desc' }
                 },
-                group: true
+                group: true,
+                budget: {
+                    include: {
+                        category: true
+                    }
+                }
             }
         });
 
