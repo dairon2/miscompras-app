@@ -58,7 +58,8 @@ interface Requirement {
         title: string;
         category?: { id: string; name: string }
     };
-    supplier?: { name: string };
+    supplierId?: string;
+    supplier?: { id: string; name: string };
     manualSupplierName?: string;
     reqCategory: string;
     isAsiento?: boolean;
@@ -95,6 +96,7 @@ export default function RequirementsPage() {
     const [projects, setProjects] = useState([]);
     const [areas, setAreas] = useState([]);
     const [users, setUsers] = useState([]);
+    const [suppliersList, setSuppliersList] = useState<{ id: string; name: string }[]>([]);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [requirementToDelete, setRequirementToDelete] = useState<any>(null);
 
@@ -143,6 +145,7 @@ export default function RequirementsPage() {
         createdById: storedFilters.createdById,
         projectId: storedFilters.projectId,
         reqCategory: storedFilters.reqCategory,
+        supplierId: storedFilters.supplierId,
         startDate: storedFilters.startDate,
         endDate: storedFilters.endDate
     };
@@ -182,14 +185,16 @@ export default function RequirementsPage() {
 
     const fetchCatalogs = async () => {
         try {
-            const [p, a, u] = await Promise.all([
+            const [p, a, u, s] = await Promise.all([
                 api.get('/projects'),
                 api.get('/areas'),
-                api.get('/users')
+                api.get('/users'),
+                api.get('/suppliers')
             ]);
             setProjects(p.data);
             setAreas(a.data);
             setUsers(u.data);
+            setSuppliersList(s.data);
         } catch (err) {
             console.error("Error fetching catalogs", err);
         }
@@ -291,6 +296,7 @@ export default function RequirementsPage() {
         const matchesUser = !filters.createdById || r.createdById === filters.createdById;
         const matchesProject = !filters.projectId || r.projectId === filters.projectId;
         const matchesCategory = !filters.reqCategory || r.reqCategory === filters.reqCategory;
+        const matchesSupplier = !filters.supplierId || r.supplierId === filters.supplierId;
 
         // Date range filter
         const createdAt = new Date(r.createdAt);
@@ -301,7 +307,7 @@ export default function RequirementsPage() {
 
         const matchesDate = (!start || createdAt >= start) && (!end || createdAt <= end);
 
-        return matchesSearch && matchesStatus && matchesProc && matchesArea && matchesUser && matchesProject && matchesCategory && matchesDate;
+        return matchesSearch && matchesStatus && matchesProc && matchesArea && matchesUser && matchesProject && matchesCategory && matchesSupplier && matchesDate;
     }).sort((a, b) => {
         const dateA = new Date(a.createdAt).getTime();
         const dateB = new Date(b.createdAt).getTime();
@@ -463,6 +469,15 @@ export default function RequirementsPage() {
                         >
                             <option value="">Todos los Presupuestos (Proyectos)</option>
                             {projects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+
+                        <select
+                            value={filters.supplierId}
+                            onChange={(e) => setFilters({ ...filters, supplierId: e.target.value })}
+                            className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-xl py-2 px-4 outline-none focus:ring-2 focus:ring-primary-500 font-bold text-xs"
+                        >
+                            <option value="">Todos los Proveedores</option>
+                            {suppliersList.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
 

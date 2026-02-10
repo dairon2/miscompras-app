@@ -10,6 +10,7 @@ interface RequirementsFilters {
     createdById: string;
     projectId: string;
     reqCategory: string;
+    supplierId: string;
     startDate: string;
     endDate: string;
     sortOrder: 'asc' | 'desc';
@@ -82,6 +83,7 @@ const defaultRequirementsFilters: RequirementsFilters = {
     createdById: '',
     projectId: '',
     reqCategory: '',
+    supplierId: '',
     startDate: '',
     endDate: '',
     sortOrder: 'desc',
