@@ -203,7 +203,7 @@ model AdjustmentSource {
 model Requirement {
   id                     String              @id @default(uuid())
   title                  String
-  description            String
+  description            String?
   quantity               String?
   estimatedAmount        Decimal?            @db.Decimal(15, 2)
   actualAmount           Decimal?            @db.Decimal(15, 2)
