@@ -568,6 +568,7 @@ export const updateSupplier = async (req: AuthRequest, res: Response) => {
             data: {
                 name: name.trim(),
                 nit: nit?.trim() || null,
+                taxId: nit?.trim() || null, // Sincronizamos con taxId para que se refleje en la interfaz
                 contactName: contactName?.trim() || null,
                 email: email?.trim() || null,
                 phone: phone?.trim() || null,
