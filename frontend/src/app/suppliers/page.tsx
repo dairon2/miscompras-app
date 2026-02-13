@@ -976,11 +976,11 @@ function SupplierCard({ supplier, index, onClick, canManage, onEdit, onDelete }:
             <div className={`space-y-4 mb-8 ${!supplier.activity ? 'mt-6' : ''}`}>
                 <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                     <Mail size={16} className="text-primary-400" />
-                    <span className="truncate">{supplier.contactEmail || "Sin correo"}</span>
+                    <span className="truncate">{supplier.email || supplier.contactEmail || "Sin correo"}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                     <Phone size={16} className="text-primary-400" />
-                    <span>{supplier.contactPhone || "Sin teléfono"}</span>
+                    <span>{supplier.phone || supplier.contactPhone || "Sin teléfono"}</span>
                 </div>
             </div>
 
