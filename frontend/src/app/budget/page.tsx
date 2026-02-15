@@ -63,6 +63,7 @@ export default function BudgetsPage() {
 
     const [budgets, setBudgets] = useState<Budget[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showCriticalOnly, setShowCriticalOnly] = useState(false);
 
     // Persist viewMode in localStorage
     const [viewMode, setViewMode] = useState<'grid' | 'table' | 'visual'>(() => {
@@ -260,14 +261,26 @@ export default function BudgetsPage() {
     };
 
     const filteredBudgets = budgets.filter(b => {
-        if (!searchTerm) return true;
-        const term = searchTerm.toLowerCase();
-        return (
-            b.title?.toLowerCase().includes(term) ||
-            b.code?.toLowerCase().includes(term) ||
-            b.project?.name?.toLowerCase().includes(term) ||
-            b.category?.name?.toLowerCase().includes(term)
-        );
+        // Search filter
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            const matchesSearch = (
+                b.title?.toLowerCase().includes(term) ||
+                b.code?.toLowerCase().includes(term) ||
+                b.project?.name?.toLowerCase().includes(term) ||
+                b.category?.name?.toLowerCase().includes(term)
+            );
+            if (!matchesSearch) return false;
+        }
+        // Critical filter
+        if (showCriticalOnly) {
+            const amount = safeNumber(b.amount);
+            const available = safeNumber(b.available);
+            if (amount === 0) return false;
+            const pct = (available / amount) * 100;
+            return pct < 10;
+        }
+        return true;
     });
 
     // Calculate stats based on filtered budgets (respects search term)
@@ -512,12 +525,25 @@ export default function BudgetsPage() {
                     </div>
                     <p className="text-sm md:text-2xl font-black text-amber-600 truncate">{formatCurrency(stats.totalExecuted)}</p>
                 </div>
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+                <div
+                    onClick={() => {
+                        setShowCriticalOnly(!showCriticalOnly);
+                        if (!showCriticalOnly) setViewMode('table');
+                    }}
+                    className={`rounded-2xl p-4 md:p-6 border shadow-sm cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md ${showCriticalOnly
+                            ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 ring-2 ring-red-400'
+                            : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-gray-700'
+                        }`}
+                    title={showCriticalOnly ? 'Mostrar todos los presupuestos' : 'Filtrar solo presupuestos críticos'}
+                >
                     <div className="flex items-center justify-between mb-2 md:mb-3">
-                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-400">Críticos</span>
+                        <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ${showCriticalOnly ? 'text-red-500' : 'text-gray-400'}`}>Críticos</span>
                         <AlertTriangle className="text-red-500" size={16} />
                     </div>
                     <p className="text-sm md:text-2xl font-black text-red-600 truncate">{stats.criticalCount}</p>
+                    {showCriticalOnly && (
+                        <p className="text-[8px] font-bold text-red-400 mt-1 uppercase tracking-widest">Filtro activo · Clic para quitar</p>
+                    )}
                 </div>
             </motion.div>
 
