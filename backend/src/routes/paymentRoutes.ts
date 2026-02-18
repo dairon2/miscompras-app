@@ -16,7 +16,7 @@ router.use(authMiddleware);
 router.post('/:requirementId', createPayment);
 router.get('/:requirementId', getPaymentsByRequirement);
 router.put('/update/:paymentId', updatePayment);
-router.delete('/delete/:paymentId', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER']), deletePayment);
+router.delete('/delete/:paymentId', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR']), deletePayment);
 router.patch('/:requirementId/toggle-multiple', toggleMultiplePayments);
 
 export default router;

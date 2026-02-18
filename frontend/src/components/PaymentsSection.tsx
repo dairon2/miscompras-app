@@ -13,7 +13,8 @@ import {
     Save,
     Loader2,
     Receipt,
-    CheckCircle
+    CheckCircle,
+    Pencil
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useToastStore } from '@/store/toastStore';
@@ -49,6 +50,7 @@ export default function PaymentsSection({
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [editingPayment, setEditingPayment] = useState<string | null>(null);
 
     const [form, setForm] = useState({
         amount: '',
@@ -82,30 +84,50 @@ export default function PaymentsSection({
 
         setSaving(true);
         try {
-            await api.post(`/payments/${requirementId}`, {
+            const payload = {
                 amount: parseFloat(form.amount),
                 invoiceNumber: form.invoiceNumber || null,
                 purchaseOrder: form.purchaseOrder || null,
                 paymentDate: form.paymentDate || null,
                 observations: form.observations || null
-            });
-            addToast('Pago registrado exitosamente', 'success');
+            };
+
+            if (editingPayment) {
+                await api.put(`/payments/update/${editingPayment}`, payload);
+                addToast('Abono actualizado exitosamente', 'success');
+            } else {
+                await api.post(`/payments/${requirementId}`, payload);
+                addToast('Pago registrado exitosamente', 'success');
+            }
             setShowModal(false);
+            setEditingPayment(null);
             setForm({ amount: '', invoiceNumber: '', purchaseOrder: '', paymentDate: new Date().toISOString().split('T')[0], observations: '' });
             fetchPayments();
             onPaymentsChange?.();
         } catch (error: any) {
-            addToast(error.response?.data?.error || 'Error al registrar pago', 'error');
+            addToast(error.response?.data?.error || (editingPayment ? 'Error al actualizar abono' : 'Error al registrar pago'), 'error');
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleEdit = (payment: Payment) => {
+        setForm({
+            amount: payment.amount.toString(),
+            invoiceNumber: payment.invoiceNumber || '',
+            purchaseOrder: payment.purchaseOrder || '',
+            paymentDate: payment.paymentDate ? new Date(payment.paymentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            observations: payment.observations || ''
+        });
+        setEditingPayment(payment.id);
+        setShowModal(true);
     };
 
     const handleDelete = async (paymentId: string) => {
         if (!confirm('¿Estás seguro de eliminar este pago?')) return;
 
         try {
-            await api.delete(`/payments/${paymentId}`);
+            await api.delete(`/payments/delete/${paymentId}`);
             addToast('Pago eliminado', 'success');
             fetchPayments();
             onPaymentsChange?.();
@@ -223,13 +245,22 @@ export default function PaymentsSection({
                                             ) : <span></span>}
 
                                             {canEdit && (
-                                                <button
-                                                    onClick={() => handleDelete(payment.id)}
-                                                    className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 transition-colors font-medium px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                                                >
-                                                    <Trash2 size={14} />
-                                                    <span>Eliminar</span>
-                                                </button>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        onClick={() => handleEdit(payment)}
+                                                        className="flex items-center gap-1 text-xs text-primary-500 hover:text-primary-600 transition-colors font-medium px-2 py-1 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg"
+                                                    >
+                                                        <Pencil size={14} />
+                                                        <span>Editar</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(payment.id)}
+                                                        className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 transition-colors font-medium px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                        <span>Eliminar</span>
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
 
@@ -286,7 +317,7 @@ export default function PaymentsSection({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                        onClick={() => setShowModal(false)}
+                        onClick={() => { setShowModal(false); setEditingPayment(null); setForm({ amount: '', invoiceNumber: '', purchaseOrder: '', paymentDate: new Date().toISOString().split('T')[0], observations: '' }); }}
                     >
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
@@ -300,10 +331,10 @@ export default function PaymentsSection({
                                     <div className="p-2 bg-amber-500 rounded-xl text-white">
                                         <Plus size={20} />
                                     </div>
-                                    <h3 className="text-xl font-black">Registrar Abono #{payments.length + 1}</h3>
+                                    <h3 className="text-xl font-black">{editingPayment ? 'Editar Abono' : `Registrar Abono #${payments.length + 1}`}</h3>
                                 </div>
                                 <button
-                                    onClick={() => setShowModal(false)}
+                                    onClick={() => { setShowModal(false); setEditingPayment(null); setForm({ amount: '', invoiceNumber: '', purchaseOrder: '', paymentDate: new Date().toISOString().split('T')[0], observations: '' }); }}
                                     className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full"
                                 >
                                     <X size={20} />
@@ -393,7 +424,7 @@ export default function PaymentsSection({
                                         ) : (
                                             <Save size={18} />
                                         )}
-                                        Registrar Abono
+                                        {editingPayment ? 'Actualizar Abono' : 'Registrar Abono'}
                                     </button>
                                 </div>
                             </form>

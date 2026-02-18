@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Save, X, Info, Package, DollarSign, Building, Truck, Paperclip, FileText, AlertTriangle, PieChart, Plus, Trash2, List, Sparkles, Wand2 } from "lucide-react";
+import { Save, X, Info, Package, DollarSign, Building, Truck, Paperclip, FileText, AlertTriangle, PieChart, Plus, Trash2, List, Sparkles, Wand2, Pencil } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
@@ -243,6 +243,23 @@ function NewRequirementContent() {
 
     const removeItem = (id: string) => {
         setItems(prev => prev.filter(item => item.id !== id));
+    };
+
+    const editItem = (id: string) => {
+        const item = items.find(i => i.id === id);
+        if (!item) return;
+        setFormData({
+            title: item.title,
+            description: item.description,
+            quantity: item.quantity,
+            projectId: item.projectId,
+            areaId: item.areaId,
+            budgetId: item.budgetId,
+            suggestedSupplier: item.suggestedSupplier || ''
+        });
+        setCurrentAttachments(item.attachments || []);
+        setItems(prev => prev.filter(i => i.id !== id));
+        addToast('Ítem cargado en el formulario para edición', 'info');
     };
 
     const handleAIParse = async () => {
@@ -577,12 +594,22 @@ function NewRequirementContent() {
                                                         <span className="bg-white dark:bg-slate-800 px-2 py-1 rounded-lg text-[9px] font-bold text-gray-500 border border-gray-100 dark:border-gray-700">{item.areaName}</span>
                                                     </div>
                                                 </div>
-                                                <button
-                                                    onClick={() => removeItem(item.id)}
-                                                    className="p-2 text-gray-300 hover:text-red-500 transition-colors"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        onClick={() => editItem(item.id)}
+                                                        className="p-2 text-gray-300 hover:text-primary-500 transition-colors"
+                                                        title="Editar ítem"
+                                                    >
+                                                        <Pencil size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => removeItem(item.id)}
+                                                        className="p-2 text-gray-300 hover:text-red-500 transition-colors"
+                                                        title="Eliminar ítem"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </motion.div>
                                     ))
