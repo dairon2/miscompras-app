@@ -128,7 +128,7 @@ export default function HomePage() {
       </motion.section>
 
       {/* Stats Grid - Enhanced with mini charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-5 mb-10">
         <StatCard
           title="Pendientes"
           value={stats.pendiente.toString()}
@@ -146,6 +146,15 @@ export default function HomePage() {
           color="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
           trend={[20, 35, 45, 55, 70, stats.enTramite]}
           trendColor="text-blue-500"
+        />
+        <StatCard
+          title="Entregados"
+          value={stats.entregado.toString()}
+          sub="Recibidos"
+          icon={<Package />}
+          color="bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400"
+          trend={[15, 20, 25, 30, 40, stats.entregado]}
+          trendColor="text-purple-500"
         />
         <StatCard
           title="Finalizados"

@@ -356,10 +356,13 @@ export default function NewAsientoPage() {
                                 <div className="relative">
                                     <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500" size={18} />
                                     <input
-                                        type="number"
+                                        type="text"
                                         name="totalAmount"
-                                        value={form.totalAmount}
-                                        onChange={handleChange}
+                                        value={form.totalAmount ? Number(form.totalAmount).toLocaleString('es-CO') : ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            setForm(prev => ({ ...prev, totalAmount: val }));
+                                        }}
                                         placeholder="0"
                                         className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 pl-12 rounded-2xl font-black text-green-600 focus:ring-2 ring-primary-500 outline-none"
                                     />

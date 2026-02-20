@@ -947,9 +947,12 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                                 <div className="space-y-2">
                                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Valor Real de Compra</label>
                                                     <input
-                                                        type="number"
-                                                        value={editForm.actualAmount}
-                                                        onChange={(e) => setEditForm({ ...editForm, actualAmount: e.target.value })}
+                                                        type="text"
+                                                        value={editForm.actualAmount ? `$ ${Number(editForm.actualAmount).toLocaleString('es-CO')}` : ''}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value.replace(/\D/g, '');
+                                                            setEditForm({ ...editForm, actualAmount: val });
+                                                        }}
                                                         className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none text-green-600"
                                                     />
                                                 </div>

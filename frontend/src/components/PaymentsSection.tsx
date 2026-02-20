@@ -347,10 +347,12 @@ export default function PaymentsSection({
                                     <div className="relative">
                                         <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500" size={18} />
                                         <input
-                                            type="number"
-                                            step="0.01"
-                                            value={form.amount}
-                                            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                                            type="text"
+                                            value={form.amount ? Number(form.amount).toLocaleString('es-CO') : ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                setForm({ ...form, amount: val });
+                                            }}
                                             placeholder="0.00"
                                             className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 pl-12 rounded-2xl font-black text-green-600 text-lg focus:ring-2 ring-amber-500 outline-none"
                                             required

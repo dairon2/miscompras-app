@@ -451,11 +451,11 @@ export default function RequirementsPage() {
                                 {users
                                     .filter((u: any) => {
                                         // FIX: Allow COORDINATOR, ADMIN, DEVELOPER to see all users. 
-                                        // DIRECTORS who are Area Directors MUST remain restricted (reverting previous change for DIRECTOR).
-                                        if (user?.isAreaDirector && !['ADMIN', 'COORDINATOR', 'DEVELOPER'].includes(userRole)) {
+                                        // Update: Allow DIRECTOR to also see all users regardless of area.
+                                        if (user?.isAreaDirector && !['ADMIN', 'COORDINATOR', 'DEVELOPER', 'DIRECTOR'].includes(userRole)) {
                                             return u.areaId === user?.areaId;
                                         }
-                                        return true; // Admins, Coordinators see all. Directors without flag see all.
+                                        return true; // Admins, Coordinators, Directors see all.
                                     })
                                     .map((u: any) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)
                                 }
