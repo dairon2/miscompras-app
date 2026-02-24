@@ -934,16 +934,35 @@ export const deleteRequirement = async (req: AuthRequest, res: Response) => {
             }
         }
 
-        // Delete related records first (cascade)
-        await prisma.historyLog.deleteMany({ where: { requirementId: id } });
-        await prisma.attachment.deleteMany({ where: { requirementId: id } });
-        await prisma.notification.deleteMany({ where: { requirementId: id } });
+        // Calculate amount to restore to budget
+        const amountToRestore = requirement.actualAmount
+            ? parseFloat(requirement.actualAmount.toString())
+            : (requirement.totalAmount ? parseFloat(requirement.totalAmount.toString()) : 0);
 
-        // Delete the requirement
-        await prisma.requirement.delete({ where: { id } });
+        // Execute deletions and budget restoration in a transaction
+        await prisma.$transaction(async (tx) => {
+            // Delete related records first
+            await tx.historyLog.deleteMany({ where: { requirementId: id } });
+            await tx.attachment.deleteMany({ where: { requirementId: id } });
+            await tx.notification.deleteMany({ where: { requirementId: id } });
+            await tx.payment.deleteMany({ where: { requirementId: id } });
+
+            // Delete the requirement
+            await tx.requirement.delete({ where: { id } });
+
+            // Restore budget if applicable
+            if (requirement.budgetId && amountToRestore > 0) {
+                await tx.budget.update({
+                    where: { id: requirement.budgetId },
+                    data: {
+                        available: { increment: amountToRestore }
+                    }
+                });
+            }
+        });
 
         // Log deletion
-        console.log(`Requirement ${id} deleted by ${req.user?.email}`);
+        console.log(`Requirement ${id} deleted by ${req.user?.email}. Restored $${amountToRestore} to budget ${requirement.budgetId || 'None'}`);
 
         res.json({ message: 'Requerimiento eliminado exitosamente' });
     } catch (error: any) {
