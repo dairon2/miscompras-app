@@ -70,6 +70,9 @@ export const login = async (req: Request, res: Response) => {
             include: {
                 areasDirected: {
                     select: { id: true, name: true }
+                },
+                area: {
+                    select: { id: true, name: true }
                 }
             }
         });
@@ -130,6 +133,7 @@ export const login = async (req: Request, res: Response) => {
                 role: user.role,
                 name: user.name,
                 areaId: user.areaId,
+                area: (user as any).area,
                 isAreaDirector: (user as any).areasDirected?.length > 0,
                 directedAreas: (user as any).areasDirected || [],
                 mustChangePassword: user.mustChangePassword,
@@ -244,6 +248,9 @@ export const refreshToken = async (req: Request, res: Response) => {
             include: {
                 areasDirected: {
                     select: { id: true, name: true }
+                },
+                area: {
+                    select: { id: true, name: true }
                 }
             }
         });
@@ -266,7 +273,8 @@ export const refreshToken = async (req: Request, res: Response) => {
                 email: user.email,
                 role: user.role,
                 name: user.name,
-                areaId: user.areaId
+                areaId: user.areaId,
+                area: (user as any).area
             }
         });
     } catch (error: any) {

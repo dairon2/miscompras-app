@@ -32,19 +32,19 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'Se ha alcanzado el máximo de 12 pagos' });
         }
 
-        // Calculate payment number
-        const paymentNumber = requirement.payments.length + 1;
+        // Calculate payment number based on highest existing number
+        const maxPayment = await prisma.payment.findFirst({
+            where: { requirementId },
+            orderBy: { paymentNumber: 'desc' }
+        });
+        const paymentNumber = (maxPayment?.paymentNumber || 0) + 1;
 
         // Validate total doesn't exceed requirement amount
         const totalPaid = requirement.payments.reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0);
         const newTotal = totalPaid + parseFloat(amount);
         const requirementTotal = parseFloat(requirement.totalAmount?.toString() || requirement.actualAmount?.toString() || '0');
 
-        if (requirementTotal > 0 && newTotal > requirementTotal) {
-            return res.status(400).json({
-                error: `El total de pagos ($${newTotal.toLocaleString()}) excede el monto del requerimiento ($${requirementTotal.toLocaleString()})`
-            });
-        }
+        // Requirement total validation removed to allow overpayment
 
         // Create the payment
         const payment = await prisma.payment.create({
@@ -136,11 +136,7 @@ export const updatePayment = async (req: AuthRequest, res: Response) => {
             const newTotal = otherPaymentsTotal + parseFloat(amount);
             const requirementTotal = parseFloat(payment.requirement.totalAmount?.toString() || payment.requirement.actualAmount?.toString() || '0');
 
-            if (requirementTotal > 0 && newTotal > requirementTotal) {
-                return res.status(400).json({
-                    error: `El total de pagos ($${newTotal.toLocaleString()}) excede el monto del requerimiento ($${requirementTotal.toLocaleString()})`
-                });
-            }
+            // Requirement total validation removed to allow overpayment
         }
 
         const updatedPayment = await prisma.payment.update({
