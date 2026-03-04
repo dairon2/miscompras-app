@@ -20,6 +20,7 @@ import {
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import SearchableSelect from "@/components/SearchableSelect";
 
 export default function NewUserPage() {
     const router = useRouter();
@@ -215,35 +216,35 @@ export default function NewUserPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-gray-600">Rol del Sistema *</label>
-                                <select
-                                    name="role"
+                                <SearchableSelect
                                     value={form.role}
-                                    onChange={handleChange}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                >
-                                    <option value="USER">Usuario</option>
-                                    <option value="LEADER">Sublíder</option>
-                                    <option value="COORDINATOR">Coordinador</option>
-                                    <option value="DIRECTOR">Director</option>
-                                    <option value="ADMIN">Administrador / Auxiliar de Compra</option>
-                                    <option value="AUDITOR">Auditor</option>
-                                    <option value="DEVELOPER">Desarrollador</option>
-                                </select>
+                                    onChange={(val) => setForm({ ...form, role: val })}
+                                    className="w-full"
+                                    options={[
+                                        { value: 'USER', label: 'Usuario' },
+                                        { value: 'LEADER', label: 'Sublíder' },
+                                        { value: 'COORDINATOR', label: 'Coordinador' },
+                                        { value: 'DIRECTOR', label: 'Director' },
+                                        { value: 'ADMIN', label: 'Administrador / Auxiliar de Compra' },
+                                        { value: 'AUDITOR', label: 'Auditor' },
+                                        { value: 'DEVELOPER', label: 'Desarrollador' }
+                                    ]}
+                                    placeholder="Seleccionar rol"
+                                />
                             </div>
 
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-gray-600">Área</label>
-                                <select
-                                    name="areaId"
-                                    value={form.areaId}
-                                    onChange={handleChange}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                >
-                                    <option value="">Seleccionar área</option>
-                                    {areas.map((a: any) => (
-                                        <option key={a.id} value={a.id}>{a.name}</option>
-                                    ))}
-                                </select>
+                                <SearchableSelect
+                                    value={form.areaId || ''}
+                                    onChange={(val) => setForm({ ...form, areaId: val })}
+                                    className="w-full"
+                                    options={[
+                                        { value: '', label: 'Seleccionar área' },
+                                        ...areas.map((a: any) => ({ value: a.id, label: a.name }))
+                                    ]}
+                                    placeholder="Seleccionar área"
+                                />
                             </div>
                         </div>
                     </div>

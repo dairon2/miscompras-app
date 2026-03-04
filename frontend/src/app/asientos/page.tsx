@@ -21,6 +21,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useFilterStore } from "@/store/filterStore";
 import YearSelector from "@/components/YearSelector";
+import SearchableSelect from "@/components/SearchableSelect";
 
 interface Asiento {
     id: string;
@@ -244,48 +245,39 @@ export default function AsientosPage() {
                     {/* Filters Row */}
                     <div className="flex flex-wrap items-center gap-4">
                         {/* Supplier Filter */}
-                        <div className="relative min-w-[200px]">
-                            <select
+                        <div className="z-30 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden min-w-[200px]">
+                            <SearchableSelect
                                 value={selectedSupplier}
-                                onChange={(e) => setSelectedSupplier(e.target.value)}
-                                className="w-full appearance-none bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-3 px-4 pr-10 font-bold text-xs text-gray-600 dark:text-gray-300 focus:ring-2 ring-primary-500 outline-none"
-                            >
-                                <option value="">Todos los Proveedores</option>
-                                {suppliers.map((s: any) => (
-                                    <option key={s.id} value={s.name}>{s.name}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                                onChange={(val) => setSelectedSupplier(val)}
+                                options={[
+                                    { value: "", label: "Todos los Proveedores" },
+                                    ...suppliers.map((s: any) => ({ value: s.name, label: s.name }))
+                                ]}
+                            />
                         </div>
 
                         {/* Project Filter */}
-                        <div className="relative min-w-[200px]">
-                            <select
+                        <div className="z-20 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden min-w-[200px]">
+                            <SearchableSelect
                                 value={selectedProject}
-                                onChange={(e) => setSelectedProject(e.target.value)}
-                                className="w-full appearance-none bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-3 px-4 pr-10 font-bold text-xs text-gray-600 dark:text-gray-300 focus:ring-2 ring-primary-500 outline-none"
-                            >
-                                <option value="">Todos los Proyectos</option>
-                                {projects.map((p: any) => (
-                                    <option key={p.id} value={p.name}>{p.name}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                                onChange={(val) => setSelectedProject(val)}
+                                options={[
+                                    { value: "", label: "Todos los Proyectos" },
+                                    ...projects.map((p: any) => ({ value: p.name, label: p.name }))
+                                ]}
+                            />
                         </div>
 
                         {/* Category Filter */}
-                        <div className="relative min-w-[200px]">
-                            <select
+                        <div className="z-10 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden min-w-[200px]">
+                            <SearchableSelect
                                 value={selectedCategory}
-                                onChange={(e) => setSelectedCategory(e.target.value)}
-                                className="w-full appearance-none bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-3 px-4 pr-10 font-bold text-xs text-gray-600 dark:text-gray-300 focus:ring-2 ring-primary-500 outline-none"
-                            >
-                                <option value="">Todas las Categorías</option>
-                                {['ANTICIPO', 'COMPRA', 'COMPRA_ONLINE', 'CONTRATO', 'ORDEN_COMPRA', 'ORDEN_SERVICIO', 'ORDEN_PRODUCCION', 'SERVICIO'].map((cat) => (
-                                    <option key={cat} value={cat}>{getCategoryLabel(cat)}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                                onChange={(val) => setSelectedCategory(val)}
+                                options={[
+                                    { value: "", label: "Todas las Categorías" },
+                                    ...['ANTICIPO', 'COMPRA', 'COMPRA_ONLINE', 'CONTRATO', 'ORDEN_COMPRA', 'ORDEN_SERVICIO', 'ORDEN_PRODUCCION', 'SERVICIO'].map((cat) => ({ value: cat, label: getCategoryLabel(cat) }))
+                                ]}
+                            />
                         </div>
 
                         <div className="flex-1"></div>

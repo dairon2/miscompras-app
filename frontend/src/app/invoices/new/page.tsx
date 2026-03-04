@@ -8,6 +8,7 @@ import LoadingButton from '@/components/LoadingButton';
 import { ChevronLeft, Upload, FileText } from 'lucide-react';
 import axios from 'axios';
 import { useToastStore } from '@/store/toastStore';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export default function NewInvoicePage() {
     const { token } = useAuthStore();
@@ -88,19 +89,18 @@ export default function NewInvoicePage() {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-2 gap-6">
-                        <div className="col-span-2">
+                        <div className="z-10 col-span-2">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proveedor</label>
-                            <select
-                                required
-                                value={formData.supplierId}
-                                onChange={e => setFormData({ ...formData, supplierId: e.target.value })}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            >
-                                <option value="">Selecciona un proveedor</option>
-                                {suppliers.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name} ({s.nit})</option>
-                                ))}
-                            </select>
+                            <div className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                                <SearchableSelect
+                                    value={formData.supplierId}
+                                    onChange={(val) => setFormData({ ...formData, supplierId: val })}
+                                    options={[
+                                        { value: "", label: "Selecciona un proveedor" },
+                                        ...suppliers.map(s => ({ value: s.id, label: `${s.name} (${s.nit})` }))
+                                    ]}
+                                />
+                            </div>
                         </div>
 
                         <div>

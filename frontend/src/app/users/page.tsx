@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useFilterStore } from "@/store/filterStore";
+import SearchableSelect from "@/components/SearchableSelect";
 
 export default function UsersPage() {
     const router = useRouter();
@@ -182,49 +183,47 @@ export default function UsersPage() {
                         />
                     </form>
 
-                    <div className="relative">
-                        <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                        <select
-                            value={filters.role}
-                            onChange={(e) => setFilters({ ...filters, role: e.target.value })}
-                            className="bg-gray-50 dark:bg-slate-900 border-none p-4 pl-12 rounded-2xl font-bold min-w-[170px] appearance-none outline-none focus:ring-2 ring-primary-500"
-                        >
-                            <option value="">Todos los roles</option>
-                            <option value="ADMIN">Administrador</option>
-                            <option value="DIRECTOR">Director</option>
-                            <option value="LEADER">Líder</option>
-                            <option value="COORDINATOR">Coordinador</option>
-                            <option value="AUDITOR">Auditor</option>
-                            <option value="DEVELOPER">Desarrollador</option>
-                            <option value="USER">Usuario</option>
-                        </select>
+                    <div className="relative min-w-[170px] z-30">
+                        <SearchableSelect
+                            value={filters.role || ''}
+                            onChange={(val) => setFilters({ ...filters, role: val })}
+                            options={[
+                                { value: '', label: 'Todos los roles' },
+                                { value: 'ADMIN', label: 'Administrador' },
+                                { value: 'DIRECTOR', label: 'Director' },
+                                { value: 'LEADER', label: 'Líder' },
+                                { value: 'COORDINATOR', label: 'Coordinador' },
+                                { value: 'AUDITOR', label: 'Auditor' },
+                                { value: 'DEVELOPER', label: 'Desarrollador' },
+                                { value: 'USER', label: 'Usuario' }
+                            ]}
+                            placeholder="Todos los roles"
+                        />
                     </div>
 
-                    <div className="relative">
-                        <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                        <select
-                            value={filters.areaId}
-                            onChange={(e) => setFilters({ ...filters, areaId: e.target.value })}
-                            className="bg-gray-50 dark:bg-slate-900 border-none p-4 pl-12 rounded-2xl font-bold min-w-[170px] appearance-none outline-none focus:ring-2 ring-primary-500"
-                        >
-                            <option value="">Todas las áreas</option>
-                            {areas.map((a: any) => (
-                                <option key={a.id} value={a.id}>{a.name}</option>
-                            ))}
-                        </select>
+                    <div className="relative min-w-[170px] z-20">
+                        <SearchableSelect
+                            value={filters.areaId || ''}
+                            onChange={(val) => setFilters({ ...filters, areaId: val })}
+                            options={[
+                                { value: '', label: 'Todas las áreas' },
+                                ...areas.map((a: any) => ({ value: a.id, label: a.name }))
+                            ]}
+                            placeholder="Todas las áreas"
+                        />
                     </div>
 
-                    <div className="relative">
-                        <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                        <select
-                            value={filters.isActive}
-                            onChange={(e) => setFilters({ ...filters, isActive: e.target.value })}
-                            className="bg-gray-50 dark:bg-slate-900 border-none p-4 pl-12 rounded-2xl font-bold min-w-[140px] appearance-none outline-none focus:ring-2 ring-primary-500"
-                        >
-                            <option value="">Todos</option>
-                            <option value="true">Activos</option>
-                            <option value="false">Inactivos</option>
-                        </select>
+                    <div className="relative min-w-[140px] z-10">
+                        <SearchableSelect
+                            value={filters.isActive || ''}
+                            onChange={(val) => setFilters({ ...filters, isActive: val })}
+                            options={[
+                                { value: '', label: 'Todos' },
+                                { value: 'true', label: 'Activos' },
+                                { value: 'false', label: 'Inactivos' }
+                            ]}
+                            placeholder="Estado"
+                        />
                     </div>
                 </div>
 

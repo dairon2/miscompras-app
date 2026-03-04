@@ -182,7 +182,7 @@ export default function PaymentsSection({
                             initial={{ width: 0 }}
                             animate={{ width: `${Math.min(progress, 100)}%` }}
                             transition={{ duration: 0.5 }}
-                            className={`h-full rounded-full ${progress >= 100 ? 'bg-green-500' : 'bg-amber-500'}`}
+                            className={`h-full rounded-full ${progress > 100 ? 'bg-red-500' : progress === 100 ? 'bg-green-500' : 'bg-amber-500'}`}
                         />
                     </div>
                     <div className="flex justify-between mt-2 text-xs">
@@ -190,9 +190,18 @@ export default function PaymentsSection({
                             Pagado: <span className="font-bold text-green-600">${totalPaid.toLocaleString()}</span>
                         </span>
                         <span className="text-gray-500">
-                            Pendiente: <span className="font-bold text-red-600">${remaining.toLocaleString()}</span>
+                            {totalPaid > totalAmount ? (
+                                <span className="font-bold text-red-600">Excede total por: ${(totalPaid - totalAmount).toLocaleString()}</span>
+                            ) : (
+                                <span>Pendiente: <span className="font-bold text-red-600">${remaining.toLocaleString()}</span></span>
+                            )}
                         </span>
                     </div>
+                    {totalPaid > totalAmount && (
+                        <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-bold text-center">
+                            ⚠️ El valor de los abonos supera el valor total de la compra. Por favor, actualiza el valor de la compra.
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -210,7 +219,7 @@ export default function PaymentsSection({
                 <div className="space-y-3">
                     {/* Scrollable container - max 4 items visible (approx 340px) */}
                     <div className="max-h-[340px] overflow-y-auto space-y-3 pr-2">
-                        {payments.map((payment) => (
+                        {payments.map((payment, index) => (
                             <motion.div
                                 key={payment.id}
                                 initial={{ opacity: 0, y: 10 }}
@@ -220,7 +229,7 @@ export default function PaymentsSection({
                                 <div className="flex items-start gap-4">
                                     {/* Column 1: Badge */}
                                     <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 font-black text-sm flex-shrink-0">
-                                        #{payment.paymentNumber}
+                                        #{index + 1}
                                     </div>
 
                                     {/* Column 2: Content Stack */}

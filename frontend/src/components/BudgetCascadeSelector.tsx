@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Building, FolderOpen, FileText, ChevronDown } from 'lucide-react';
+import { Building, FolderOpen, FileText } from 'lucide-react';
+import SearchableSelect from './SearchableSelect';
 
 interface Project {
     id: string;
@@ -129,18 +130,15 @@ export default function BudgetCascadeSelector({
                     1. Proyecto
                 </label>
                 <div className="relative">
-                    <select
+                    <SearchableSelect
                         value={selectedProjectId}
-                        onChange={(e) => handleProjectChange(e.target.value)}
-                        className={selectClass}
+                        onChange={(val) => handleProjectChange(val)}
+                        options={[
+                            { value: "", label: "Selecciona un proyecto..." },
+                            ...projects.map(p => ({ value: p.id, label: p.name }))
+                        ]}
                         disabled={disabled}
-                    >
-                        <option value="">Selecciona un proyecto...</option>
-                        {projects.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                    </select>
-                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    />
                 </div>
             </div>
 
@@ -152,18 +150,15 @@ export default function BudgetCascadeSelector({
                         2. Categoría / Rubro
                     </label>
                     <div className="relative">
-                        <select
+                        <SearchableSelect
                             value={selectedCategoryId}
-                            onChange={(e) => handleCategoryChange(e.target.value)}
-                            className={selectClass}
+                            onChange={(val) => handleCategoryChange(val)}
+                            options={[
+                                { value: "", label: "Todas las categorías" },
+                                ...availableCategories.map(c => ({ value: c.id, label: `${c.code} - ${c.name}` }))
+                            ]}
                             disabled={disabled || availableCategories.length === 0}
-                        >
-                            <option value="">Todas las categorías</option>
-                            {availableCategories.map(c => (
-                                <option key={c.id} value={c.id}>{c.code} - {c.name}</option>
-                            ))}
-                        </select>
-                        <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        />
                     </div>
                     {availableCategories.length === 0 && (
                         <p className="text-xs text-amber-500 mt-1 ml-1">No hay categorías con presupuesto disponible</p>
@@ -179,20 +174,18 @@ export default function BudgetCascadeSelector({
                         3. Actividad
                     </label>
                     <div className="relative">
-                        <select
+                        <SearchableSelect
                             value={selectedBudgetId}
-                            onChange={(e) => handleBudgetChange(e.target.value)}
-                            className={selectClass}
+                            onChange={(val) => handleBudgetChange(val)}
+                            options={[
+                                { value: "", label: "Selecciona presupuesto..." },
+                                ...filteredBudgets.map(b => ({
+                                    value: b.id,
+                                    label: `${b.title} - $${b.available.toLocaleString()} disponible`
+                                }))
+                            ]}
                             disabled={disabled || filteredBudgets.length === 0}
-                        >
-                            <option value="">Selecciona presupuesto...</option>
-                            {filteredBudgets.map(b => (
-                                <option key={b.id} value={b.id}>
-                                    {b.title} - ${b.available.toLocaleString()} disponible
-                                </option>
-                            ))}
-                        </select>
-                        <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        />
                     </div>
                     {filteredBudgets.length === 0 && selectedProjectId && (
                         <p className="text-xs text-amber-500 mt-1 ml-1">No hay presupuestos disponibles para esta selección</p>

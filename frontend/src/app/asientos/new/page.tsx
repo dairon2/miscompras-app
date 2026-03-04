@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { BudgetCascadeSelector } from "@/components";
+import SearchableSelect from "@/components/SearchableSelect";
 import { useToastStore } from "@/store/toastStore";
 
 // Forced recompile
@@ -263,18 +264,15 @@ export default function NewAsientoPage() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="z-30 space-y-2">
                                 <label className="text-xs font-black text-gray-600">Categoría</label>
-                                <select
-                                    name="reqCategory"
-                                    value={form.reqCategory}
-                                    onChange={handleChange}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                >
-                                    {categories.map(cat => (
-                                        <option key={cat.value} value={cat.value}>{cat.label}</option>
-                                    ))}
-                                </select>
+                                <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                    <SearchableSelect
+                                        value={form.reqCategory}
+                                        onChange={(val) => setForm(prev => ({ ...prev, reqCategory: val }))}
+                                        options={categories}
+                                    />
+                                </div>
                             </div>
 
                             <div className="space-y-2">
@@ -289,18 +287,15 @@ export default function NewAsientoPage() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="z-20 space-y-2">
                                 <label className="text-xs font-black text-gray-600">Estado del Trámite</label>
-                                <select
-                                    name="processStatus"
-                                    value={form.processStatus}
-                                    onChange={handleChange}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                >
-                                    {processStatuses.map(status => (
-                                        <option key={status.value} value={status.value}>{status.label}</option>
-                                    ))}
-                                </select>
+                                <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                    <SearchableSelect
+                                        value={form.processStatus}
+                                        onChange={(val) => setForm(prev => ({ ...prev, processStatus: val }))}
+                                        options={processStatuses}
+                                    />
+                                </div>
                             </div>
 
                             <div className="space-y-2">
@@ -327,19 +322,18 @@ export default function NewAsientoPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Supplier Selector Only */}
-                            <div className="md:col-span-2 space-y-2">
+                            <div className="z-10 md:col-span-2 space-y-2">
                                 <label className="text-xs font-black text-gray-600">Proveedor</label>
-                                <select
-                                    name="supplierId"
-                                    value={form.supplierId}
-                                    onChange={handleChange}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                >
-                                    <option value="">Seleccionar proveedor</option>
-                                    {suppliers.map((s: any) => (
-                                        <option key={s.id} value={s.id}>{s.name}</option>
-                                    ))}
-                                </select>
+                                <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                    <SearchableSelect
+                                        value={form.supplierId}
+                                        onChange={(val) => setForm(prev => ({ ...prev, supplierId: val }))}
+                                        options={[
+                                            { value: "", label: "Seleccionar proveedor" },
+                                            ...suppliers.map((s: any) => ({ value: s.id, label: s.name }))
+                                        ]}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Save, AlertTriangle, CheckCircle } from "lucide-react";
 import api from "@/lib/api";
+import SearchableSelect from "./SearchableSelect";
 
 interface BulkEditModalProps {
     isOpen: boolean;
@@ -101,16 +102,15 @@ export default function BulkEditModal({ isOpen, onClose, selectedIds, onSuccess 
                             {/* Proovedor */}
                             <div className="space-y-2">
                                 <label className="text-xs font-black uppercase text-gray-400 tracking-wider">Proveedor Registrado</label>
-                                <select
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 font-bold text-sm outline-none focus:ring-2 focus:ring-primary-500"
+                                <SearchableSelect
                                     value={formData.supplierId}
-                                    onChange={(e) => setFormData({ ...formData, supplierId: e.target.value, manualSupplierName: '' })}
-                                >
-                                    <option value="">-- No cambiar --</option>
-                                    {suppliers.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name} - {s.nit}</option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setFormData({ ...formData, supplierId: val, manualSupplierName: '' })}
+                                    options={[
+                                        { value: "", label: "-- No cambiar --" },
+                                        ...suppliers.map(s => ({ value: s.id, label: `${s.name} - ${s.nit}` }))
+                                    ]}
+                                    placeholder="Seleccionar proveedor"
+                                />
                             </div>
 
                             <div className="space-y-2">
@@ -151,33 +151,35 @@ export default function BulkEditModal({ isOpen, onClose, selectedIds, onSuccess 
                             {/* Estados */}
                             <div className="space-y-2">
                                 <label className="text-xs font-black uppercase text-gray-400 tracking-wider">Estado de Trámite</label>
-                                <select
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 font-bold text-sm outline-none focus:ring-2 focus:ring-primary-500"
+                                <SearchableSelect
                                     value={formData.procurementStatus}
-                                    onChange={(e) => setFormData({ ...formData, procurementStatus: e.target.value })}
-                                >
-                                    <option value="">-- No cambiar --</option>
-                                    <option value="PENDIENTE">Pendiente</option>
-                                    <option value="EN_TRAMITE">En trámite</option>
-                                    <option value="ENTREGADO">Entregado</option>
-                                    <option value="FINALIZADO">Finalizado</option>
-                                    <option value="ANULADO">Anulado</option>
-                                    <option value="POSTERGADO">Postergado</option>
-                                </select>
+                                    onChange={(val) => setFormData({ ...formData, procurementStatus: val })}
+                                    options={[
+                                        { value: "", label: "-- No cambiar --" },
+                                        { value: "PENDIENTE", label: "Pendiente" },
+                                        { value: "EN_TRAMITE", label: "En trámite" },
+                                        { value: "ENTREGADO", label: "Entregado" },
+                                        { value: "FINALIZADO", label: "Finalizado" },
+                                        { value: "ANULADO", label: "Anulado" },
+                                        { value: "POSTERGADO", label: "Postergado" }
+                                    ]}
+                                    placeholder="Estado de trámite"
+                                />
                             </div>
 
                             <div className="space-y-2">
                                 <label className="text-xs font-black uppercase text-gray-400 tracking-wider">Estado Solicitud</label>
-                                <select
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 font-bold text-sm outline-none focus:ring-2 focus:ring-primary-500"
+                                <SearchableSelect
                                     value={formData.status}
-                                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                >
-                                    <option value="">-- No cambiar --</option>
-                                    <option value="APPROVED">Aprobado</option>
-                                    <option value="PENDING_APPROVAL">Pendiente Aprobación</option>
-                                    <option value="REJECTED">Rechazado</option>
-                                </select>
+                                    onChange={(val) => setFormData({ ...formData, status: val })}
+                                    options={[
+                                        { value: "", label: "-- No cambiar --" },
+                                        { value: "APPROVED", label: "Aprobado" },
+                                        { value: "PENDING_APPROVAL", label: "Pendiente Aprobación" },
+                                        { value: "REJECTED", label: "Rechazado" }
+                                    ]}
+                                    placeholder="Estado solicitud"
+                                />
                             </div>
                         </div>
                     </form>

@@ -16,6 +16,7 @@ import { useToastStore } from "@/store/toastStore";
 import { useFilterStore } from "@/store/filterStore";
 import VisualDashboard from "./VisualDashboard";
 import YearSelector from "@/components/YearSelector";
+import SearchableSelect from "@/components/SearchableSelect";
 import * as XLSX from 'xlsx';
 import ConfirmModal from "@/components/ConfirmModal";
 
@@ -531,8 +532,8 @@ export default function BudgetsPage() {
                         if (!showCriticalOnly) setViewMode('table');
                     }}
                     className={`rounded-2xl p-4 md:p-6 border shadow-sm cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md ${showCriticalOnly
-                            ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 ring-2 ring-red-400'
-                            : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-gray-700'
+                        ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 ring-2 ring-red-400'
+                        : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-gray-700'
                         }`}
                     title={showCriticalOnly ? 'Mostrar todos los presupuestos' : 'Filtrar solo presupuestos críticos'}
                 >
@@ -564,26 +565,26 @@ export default function BudgetsPage() {
                         className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl font-bold outline-none focus:ring-2 ring-primary-500"
                     />
                 </div>
-                <select
-                    value={filters.projectId}
-                    onChange={(e) => setFilters({ ...filters, projectId: e.target.value })}
-                    className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 font-bold text-sm"
-                >
-                    <option value="">Todos los proyectos</option>
-                    {projects.map((p: any) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                </select>
-                <select
-                    value={filters.categoryId}
-                    onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
-                    className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 font-bold text-sm"
-                >
-                    <option value="">Todas las categorías</option>
-                    {categories.map((c: any) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                </select>
+                <div className="z-10 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden min-w-[200px]">
+                    <SearchableSelect
+                        value={filters.projectId}
+                        onChange={(val) => setFilters({ ...filters, projectId: val })}
+                        options={[
+                            { value: "", label: "Todos los proyectos" },
+                            ...projects.map((p: any) => ({ value: p.id, label: p.name }))
+                        ]}
+                    />
+                </div>
+                <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden min-w-[200px]">
+                    <SearchableSelect
+                        value={filters.categoryId}
+                        onChange={(val) => setFilters({ ...filters, categoryId: val })}
+                        options={[
+                            { value: "", label: "Todas las categorías" },
+                            ...categories.map((c: any) => ({ value: c.id, label: c.name }))
+                        ]}
+                    />
+                </div>
                 <div className="flex gap-2">
                     <button
                         onClick={() => setViewMode('visual')}
@@ -919,73 +920,42 @@ export default function BudgetsPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black text-gray-600">Proyecto *</label>
-                                    <select
-                                        value={formData.projectId}
-                                        onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        {projects.map((p: any) => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="z-40 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
+                                        <SearchableSelect
+                                            value={formData.projectId}
+                                            onChange={(val) => setFormData({ ...formData, projectId: val })}
+                                            options={[
+                                                { value: "", label: "Seleccionar..." },
+                                                ...projects.map((p: any) => ({ value: p.id, label: p.name }))
+                                            ]}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black text-gray-600">Área *</label>
-                                    <select
-                                        value={formData.areaId}
-                                        onChange={(e) => setFormData({ ...formData, areaId: e.target.value })}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        {areas.map((a: any) => (
-                                            <option key={a.id} value={a.id}>{a.name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="z-30 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
+                                        <SearchableSelect
+                                            value={formData.areaId}
+                                            onChange={(val) => setFormData({ ...formData, areaId: val })}
+                                            options={[
+                                                { value: "", label: "Seleccionar..." },
+                                                ...areas.map((a: any) => ({ value: a.id, label: a.name }))
+                                            ]}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black text-gray-600">Rubro/Categoría</label>
-                                    <select
-                                        value={formData.categoryId}
-                                        onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        {categories.map((c: any) => (
-                                            <option key={c.id} value={c.id}>{c.code} - {c.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-gray-600">Líder Gestor</label>
-                                    <select
-                                        value={formData.managerId}
-                                        onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold"
-                                        disabled={usersLoading}
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        {usersLoading ? (
-                                            <option value="" disabled>Cargando usuarios...</option>
-                                        ) : usersError ? (
-                                            <option value="" disabled>Error al cargar usuarios</option>
-                                        ) : users.length === 0 ? (
-                                            <option value="" disabled>No hay usuarios disponibles</option>
-                                        ) : (
-                                            users.map((u: UserOption) => (
-                                                <option key={u.id} value={u.id}>{u.name || u.email} ({u.role})</option>
-                                            ))
-                                        )}
-                                    </select>
-                                    {usersError && (
-                                        <button
-                                            type="button"
-                                            onClick={() => fetchCatalogs()}
-                                            className="text-xs text-primary-600 hover:underline"
-                                        >
-                                            Reintentar carga
-                                        </button>
-                                    )}
+                                    <div className="z-20 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
+                                        <SearchableSelect
+                                            value={formData.categoryId}
+                                            onChange={(val) => setFormData({ ...formData, categoryId: val })}
+                                            options={[
+                                                { value: "", label: "Seleccionar..." },
+                                                ...categories.map((c: any) => ({ value: c.id, label: `${c.code} - ${c.name}` }))
+                                            ]}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black text-gray-600">Fecha de Vigencia</label>
@@ -1122,22 +1092,23 @@ export default function BudgetsPage() {
 
                                     {adjustmentData.sources.map((source, idx) => (
                                         <div key={idx} className="flex gap-4 items-center">
-                                            <select
-                                                value={source.budgetId}
-                                                onChange={(e) => {
-                                                    const updated = [...adjustmentData.sources];
-                                                    updated[idx].budgetId = e.target.value;
-                                                    setAdjustmentData({ ...adjustmentData, sources: updated });
-                                                }}
-                                                className="flex-1 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 p-3 rounded-xl font-bold text-sm"
-                                            >
-                                                <option value="">Seleccionar presupuesto...</option>
-                                                {budgets.filter(b => b.id !== selectedBudget.id).map((b) => (
-                                                    <option key={b.id} value={b.id}>
-                                                        {b.title} (Disp: {formatCurrency(Number(b.available))})
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <div className="flex-1 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden min-w-[200px]">
+                                                <SearchableSelect
+                                                    value={source.budgetId}
+                                                    onChange={(val) => {
+                                                        const updated = [...adjustmentData.sources];
+                                                        updated[idx].budgetId = val;
+                                                        setAdjustmentData({ ...adjustmentData, sources: updated });
+                                                    }}
+                                                    options={[
+                                                        { value: "", label: "Seleccionar presupuesto..." },
+                                                        ...budgets.filter(b => b.id !== selectedBudget.id).map((b) => ({
+                                                            value: b.id,
+                                                            label: `${b.title} (Disp: ${formatCurrency(Number(b.available))})`
+                                                        }))
+                                                    ]}
+                                                />
+                                            </div>
                                             <input
                                                 type="number"
                                                 value={source.amount}

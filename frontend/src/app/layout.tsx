@@ -385,7 +385,7 @@ export default function RootLayout({
                       <InfoCard icon={<Mail size={18} />} label="Correo Electrónico" value={user?.email || 'No definido'} />
                       <div className="grid grid-cols-2 gap-6">
                         <InfoCard icon={<Shield size={18} />} label="Rol del Sistema" value={user?.role || 'No definido'} highlight />
-                        <InfoCard icon={<MapPin size={18} />} label="Área / Departamento" value={(user as any)?.areaId === 'area-1' ? 'Curaduría' : (user as any)?.areaId === 'area-3' ? 'Administración' : 'Museo'} />
+                        <InfoCard icon={<MapPin size={18} />} label="Área / Departamento" value={(user as any)?.area?.name || 'No asignada'} />
                       </div>
                     </div>
 

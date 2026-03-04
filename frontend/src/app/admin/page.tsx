@@ -35,6 +35,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
 import AlertModal from "@/components/AlertModal";
+import SearchableSelect from "@/components/SearchableSelect";
 
 type TabType = 'areas' | 'projects' | 'categories' | 'suppliers' | 'users' | 'account' | 'general';
 
@@ -546,7 +547,7 @@ export default function AdminPage() {
                                         <div className="space-y-4 pt-6 border-t border-gray-50 dark:border-gray-800">
                                             <div className="flex justify-between items-center text-xs">
                                                 <span className="text-gray-400 font-bold uppercase tracking-tighter text-[9px]">Área Institucional</span>
-                                                <span className="font-black text-gray-800 dark:text-gray-200">{(user as any)?.area?.name || 'Curaduría'}</span>
+                                                <span className="font-black text-gray-800 dark:text-gray-200">{(user as any)?.area?.name || 'No asignada'}</span>
                                             </div>
                                             <div className="flex justify-between items-center text-xs">
                                                 <span className="text-gray-400 font-bold uppercase tracking-tighter text-[9px]">Estado de Cuenta</span>
@@ -872,16 +873,16 @@ export default function AdminPage() {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-600">Director del Área</label>
-                                            <select
-                                                value={formData.directorId || ''}
-                                                onChange={(e) => setFormData({ ...formData, directorId: e.target.value })}
-                                                className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                            >
-                                                <option value="">Sin director asignado</option>
-                                                {usersList.map((u: any) => (
-                                                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                                                ))}
-                                            </select>
+                                            <div className="z-30 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                                <SearchableSelect
+                                                    value={formData.directorId || ''}
+                                                    onChange={(val) => setFormData({ ...formData, directorId: val })}
+                                                    options={[
+                                                        { value: "", label: "Sin director asignado" },
+                                                        ...usersList.map((u: any) => ({ value: u.id, label: `${u.name} (${u.email})` }))
+                                                    ]}
+                                                />
+                                            </div>
                                             <p className="text-xs text-gray-400">El director podrá ver presupuestos, requerimientos y proveedores de esta área</p>
                                         </div>
                                     </>
@@ -939,30 +940,30 @@ export default function AdminPage() {
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-gray-600">Líder del Proyecto</label>
-                                                <select
-                                                    value={formData.leaderId || ''}
-                                                    onChange={(e) => setFormData({ ...formData, leaderId: e.target.value })}
-                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                                >
-                                                    <option value="">Sin líder asignado</option>
-                                                    {usersList.map((u: any) => (
-                                                        <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                                                    ))}
-                                                </select>
+                                                <div className="z-20 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                                    <SearchableSelect
+                                                        value={formData.leaderId || ''}
+                                                        onChange={(val) => setFormData({ ...formData, leaderId: val })}
+                                                        options={[
+                                                            { value: "", label: "Sin líder asignado" },
+                                                            ...usersList.map((u: any) => ({ value: u.id, label: `${u.name} (${u.email})` }))
+                                                        ]}
+                                                    />
+                                                </div>
                                                 <p className="text-xs text-gray-400">Usuario que lidera el proyecto</p>
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-gray-600">Sublíder del Proyecto</label>
-                                                <select
-                                                    value={formData.subLeaderId || ''}
-                                                    onChange={(e) => setFormData({ ...formData, subLeaderId: e.target.value })}
-                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                                >
-                                                    <option value="">Sin sublíder asignado</option>
-                                                    {usersList.map((u: any) => (
-                                                        <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                                                    ))}
-                                                </select>
+                                                <div className="z-10 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                                    <SearchableSelect
+                                                        value={formData.subLeaderId || ''}
+                                                        onChange={(val) => setFormData({ ...formData, subLeaderId: val })}
+                                                        options={[
+                                                            { value: "", label: "Sin sublíder asignado" },
+                                                            ...usersList.map((u: any) => ({ value: u.id, label: `${u.name} (${u.email})` }))
+                                                        ]}
+                                                    />
+                                                </div>
                                                 <p className="text-xs text-gray-400">Usuario que apoya el proyecto</p>
                                             </div>
                                         </div>
@@ -1101,26 +1102,30 @@ export default function AdminPage() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-gray-600">Tipo de Proveedor</label>
-                                                <select
-                                                    value={formData.supplierType || 'SUPPLIER'}
-                                                    onChange={(e) => setFormData({ ...formData, supplierType: e.target.value })}
-                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                                >
-                                                    <option value="SUPPLIER">Proveedor</option>
-                                                    <option value="SERVICE_PROVIDER">Prestador de Servicio</option>
-                                                </select>
+                                                <div className="z-20 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                                    <SearchableSelect
+                                                        value={formData.supplierType || 'SUPPLIER'}
+                                                        onChange={(val) => setFormData({ ...formData, supplierType: val })}
+                                                        options={[
+                                                            { value: "SUPPLIER", label: "Proveedor" },
+                                                            { value: "SERVICE_PROVIDER", label: "Prestador de Servicio" }
+                                                        ]}
+                                                    />
+                                                </div>
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-gray-600">Criticidad</label>
-                                                <select
-                                                    value={formData.criticality || 'LOW'}
-                                                    onChange={(e) => setFormData({ ...formData, criticality: e.target.value })}
-                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                                >
-                                                    <option value="LOW">Baja</option>
-                                                    <option value="MEDIUM">Media</option>
-                                                    <option value="HIGH">Alta</option>
-                                                </select>
+                                                <div className="z-10 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                                    <SearchableSelect
+                                                        value={formData.criticality || 'LOW'}
+                                                        onChange={(val) => setFormData({ ...formData, criticality: val })}
+                                                        options={[
+                                                            { value: "LOW", label: "Baja" },
+                                                            { value: "MEDIUM", label: "Media" },
+                                                            { value: "HIGH", label: "Alta" }
+                                                        ]}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </>

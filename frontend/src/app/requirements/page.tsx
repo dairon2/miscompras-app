@@ -40,6 +40,7 @@ import { translateStatus } from "@/lib/translations";
 import AlertModal from "@/components/AlertModal";
 
 import BulkEditModal from "@/components/BulkEditModal";
+import SearchableSelect from "@/components/SearchableSelect";
 
 interface Requirement {
     id: string;
@@ -399,86 +400,94 @@ export default function RequirementsPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <select
-                            value={filters.status}
-                            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                            className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-xl py-2 px-4 outline-none focus:ring-2 focus:ring-primary-500 font-bold text-xs"
-                        >
-                            <option value="">Estado Solicitud (Todos)</option>
-                            <option value="PENDING_APPROVAL">En espera por aprobación</option>
-                            <option value="APPROVED">Aprobado</option>
-                            <option value="REJECTED">Rechazado</option>
-                        </select>
+                        <div className="z-50 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
+                            <SearchableSelect
+                                value={filters.status}
+                                onChange={(val) => setFilters({ ...filters, status: val })}
+                                options={[
+                                    { value: "", label: "Estado Solicitud (Todos)" },
+                                    { value: "PENDING_APPROVAL", label: "En espera por aprobación" },
+                                    { value: "APPROVED", label: "Aprobado" },
+                                    { value: "REJECTED", label: "Rechazado" }
+                                ]}
+                            />
+                        </div>
 
-                        <select
-                            value={filters.procurementStatus}
-                            onChange={(e) => setFilters({ ...filters, procurementStatus: e.target.value })}
-                            className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-xl py-2 px-4 outline-none focus:ring-2 focus:ring-primary-500 font-bold text-xs"
-                        >
-                            <option value="">Estado Trámite (Todos)</option>
-                            <option value="ANULADO">Anulado</option>
-                            <option value="ENTREGADO">Entregado</option>
-                            <option value="EN_TRAMITE">En trámite</option>
-                            <option value="PENDIENTE">Pendientes</option>
-                            <option value="FINALIZADO">Finalizado</option>
-                            <option value="POSTERGADO">Postergado</option>
-                        </select>
+                        <div className="z-40 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
+                            <SearchableSelect
+                                value={filters.procurementStatus}
+                                onChange={(val) => setFilters({ ...filters, procurementStatus: val })}
+                                options={[
+                                    { value: "", label: "Estado Trámite (Todos)" },
+                                    { value: "ANULADO", label: "Anulado" },
+                                    { value: "ENTREGADO", label: "Entregado" },
+                                    { value: "EN_TRAMITE", label: "En trámite" },
+                                    { value: "PENDIENTE", label: "Pendientes" },
+                                    { value: "FINALIZADO", label: "Finalizado" },
+                                    { value: "POSTERGADO", label: "Postergado" }
+                                ]}
+                            />
+                        </div>
 
-                        <select
-                            value={filters.reqCategory}
-                            onChange={(e) => setFilters({ ...filters, reqCategory: e.target.value })}
-                            className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-xl py-2 px-4 outline-none focus:ring-2 focus:ring-primary-500 font-bold text-xs"
-                        >
-                            <option value="">Tipo de Requerimiento (Todos)</option>
-                            <option value="ORDEN_COMPRA">Orden de Compra</option>
-                            <option value="COMPRA">Compra</option>
-                            <option value="ANTICIPO">Anticipo</option>
-                            <option value="SERVICIO">Servicio</option>
-                            <option value="ORDEN_SERVICIO">Orden de Servicio</option>
-                            <option value="CONTRATO">Contrato</option>
-                            <option value="ORDEN_PRODUCCION">Orden de Producción</option>
-                            <option value="COMPRA_ONLINE">Compra Online</option>
-                        </select>
+                        <div className="z-30 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
+                            <SearchableSelect
+                                value={filters.reqCategory}
+                                onChange={(val) => setFilters({ ...filters, reqCategory: val })}
+                                options={[
+                                    { value: "", label: "Tipo de Requerimiento (Todos)" },
+                                    { value: "ORDEN_COMPRA", label: "Orden de Compra" },
+                                    { value: "COMPRA", label: "Compra" },
+                                    { value: "ANTICIPO", label: "Anticipo" },
+                                    { value: "SERVICIO", label: "Servicio" },
+                                    { value: "ORDEN_SERVICIO", label: "Orden de Servicio" },
+                                    { value: "CONTRATO", label: "Contrato" },
+                                    { value: "ORDEN_PRODUCCION", label: "Orden de Producción" },
+                                    { value: "COMPRA_ONLINE", label: "Compra Online" }
+                                ]}
+                            />
+                        </div>
 
-                        {/* Leaders filter - hidden for USER role unless they are an area director */}
                         {(userRole !== 'USER' || user?.isAreaDirector) && (
-                            <select
-                                value={filters.createdById}
-                                onChange={(e) => setFilters({ ...filters, createdById: e.target.value })}
-                                className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-xl py-2 px-4 outline-none focus:ring-2 focus:ring-primary-500 font-bold text-xs"
-                            >
-                                <option value="">Todos los Líderes</option>
-                                {users
-                                    .filter((u: any) => {
-                                        // FIX: Allow COORDINATOR, ADMIN, DEVELOPER to see all users. 
-                                        // Update: Allow DIRECTOR to also see all users regardless of area.
-                                        if (user?.isAreaDirector && !['ADMIN', 'COORDINATOR', 'DEVELOPER', 'DIRECTOR'].includes(userRole)) {
-                                            return u.areaId === user?.areaId;
-                                        }
-                                        return true; // Admins, Coordinators, Directors see all.
-                                    })
-                                    .map((u: any) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)
-                                }
-                            </select>
+                            <div className="z-20 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
+                                <SearchableSelect
+                                    value={filters.createdById}
+                                    onChange={(val) => setFilters({ ...filters, createdById: val })}
+                                    options={[
+                                        { value: "", label: "Todos los Líderes" },
+                                        ...users
+                                            .filter((u: any) => {
+                                                if (user?.isAreaDirector && !['ADMIN', 'COORDINATOR', 'DEVELOPER', 'DIRECTOR'].includes(userRole)) {
+                                                    return u.areaId === user?.areaId;
+                                                }
+                                                return true;
+                                            })
+                                            .map((u: any) => ({ value: u.id, label: u.name || u.email }))
+                                    ]}
+                                />
+                            </div>
                         )}
 
-                        <select
-                            value={filters.projectId}
-                            onChange={(e) => setFilters({ ...filters, projectId: e.target.value })}
-                            className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-xl py-2 px-4 outline-none focus:ring-2 focus:ring-primary-500 font-bold text-xs"
-                        >
-                            <option value="">Todos los Presupuestos (Proyectos)</option>
-                            {projects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
+                        <div className="z-10 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
+                            <SearchableSelect
+                                value={filters.projectId}
+                                onChange={(val) => setFilters({ ...filters, projectId: val })}
+                                options={[
+                                    { value: "", label: "Todos los Presupuestos (Proyectos)" },
+                                    ...projects.map((p: any) => ({ value: p.id, label: p.name }))
+                                ]}
+                            />
+                        </div>
 
-                        <select
-                            value={filters.supplierId}
-                            onChange={(e) => setFilters({ ...filters, supplierId: e.target.value })}
-                            className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-xl py-2 px-4 outline-none focus:ring-2 focus:ring-primary-500 font-bold text-xs"
-                        >
-                            <option value="">Todos los Proveedores</option>
-                            {suppliersList.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
+                        <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
+                            <SearchableSelect
+                                value={filters.supplierId}
+                                onChange={(val) => setFilters({ ...filters, supplierId: val })}
+                                options={[
+                                    { value: "", label: "Todos los Proveedores" },
+                                    ...suppliersList.map((s: any) => ({ value: s.id, label: s.name }))
+                                ]}
+                            />
+                        </div>
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-center gap-4 pt-2 border-t border-gray-50 dark:border-gray-700">

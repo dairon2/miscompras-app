@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { UserPlus, Mail, Lock, User, Building2, Loader2, Check, X, Eye, EyeOff } from "lucide-react";
 import { useToastStore } from "@/store/toastStore";
 import api from "@/lib/api";
+import SearchableSelect from "@/components/SearchableSelect";
 
 export default function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -179,25 +180,19 @@ export default function RegisterPage() {
                         </div>
 
                         {/* Área */}
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">
-                                Área de Trabajo
+                        <div className="z-10 relative">
+                            <label className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1 flex items-center gap-2">
+                                <Building2 className="w-4 h-4 text-gray-400" /> Área de Trabajo
                             </label>
-                            <div className="relative">
-                                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                                <select
+                            <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                <SearchableSelect
                                     value={formData.areaId}
-                                    onChange={(e) => setFormData({ ...formData, areaId: e.target.value })}
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-primary-500 outline-none transition-all font-medium appearance-none"
-                                    required
-                                >
-                                    <option value="">Seleccionar área</option>
-                                    {areas.map((area: any) => (
-                                        <option key={area.id} value={area.id}>
-                                            {area.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setFormData({ ...formData, areaId: val })}
+                                    options={[
+                                        { value: "", label: "Seleccionar área" },
+                                        ...areas.map((area: any) => ({ value: area.id, label: area.name }))
+                                    ]}
+                                />
                             </div>
                         </div>
 

@@ -36,6 +36,7 @@ import html2canvas from 'html2canvas';
 import PaymentsSection from "@/components/PaymentsSection";
 import StarRating from "@/components/StarRating";
 import AlertModal from "@/components/AlertModal";
+import SearchableSelect from "@/components/SearchableSelect";
 
 interface Attachment {
     id: string;
@@ -269,11 +270,40 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
         setActionLoading(true);
         try {
             const formData = new FormData();
+
+            // Helper function to get the normalized original value
+            const getOriginalValue = (key: string) => {
+                if (!requirement) return '';
+                let val: any = (requirement as any)[key];
+
+                if (key === 'actualAmount') val = requirement.actualAmount || requirement.totalAmount || '';
+                else if (key === 'supplierId') val = requirement.supplierId || '';
+                else if (key === 'manualSupplierName') val = requirement.manualSupplierName || '';
+                else if (key === 'suggestedSupplier') val = requirement.suggestedSupplier || '';
+                else if (key === 'quantity') val = requirement.quantity || '';
+                else if (key === 'purchaseOrderNumber') val = requirement.purchaseOrderNumber || '';
+                else if (key === 'invoiceNumber') val = requirement.invoiceNumber || '';
+                else if (key === 'reqCategory') val = requirement.reqCategory || '';
+                else if (key === 'deliveryDate') val = requirement.deliveryDate ? requirement.deliveryDate.split('T')[0] : '';
+                else if (key === 'receivedDate') val = requirement.receivedDate ? requirement.receivedDate.split('T')[0] : '';
+                else if (key === 'purchaseComments') val = requirement.purchaseComments || '';
+                else if (key === 'directorComment') val = requirement.directorComment || '';
+                else if (key === 'coordinatorComment') val = requirement.coordinatorComment || '';
+
+                return val === null || val === undefined ? '' : String(val);
+            };
+
             Object.keys(editForm).forEach(key => {
-                if (editForm[key] !== undefined && editForm[key] !== null) {
-                    formData.append(key, editForm[key]);
-                } else if (editForm[key] === null || editForm[key] === '') {
-                    formData.append(key, 'null');
+                const formVal = editForm[key] === null || editForm[key] === undefined ? '' : String(editForm[key]);
+                const origVal = getOriginalValue(key);
+
+                // ONLY append if the field was actually modified
+                if (formVal !== origVal) {
+                    if (editForm[key] !== undefined && editForm[key] !== null) {
+                        formData.append(key, editForm[key]);
+                    } else if (editForm[key] === null || editForm[key] === '') {
+                        formData.append(key, 'null');
+                    }
                 }
             });
 
@@ -992,24 +1022,24 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                         <>
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Proveedor Asignado</label>
-                                                <select
-                                                    value={editForm.supplierId}
-                                                    onChange={(e) => setEditForm({ ...editForm, supplierId: e.target.value, manualSupplierName: '' })}
-                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                                >
-                                                    <option value="">(Sin asignar)</option>
-                                                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                </select>
+                                                <SearchableSelect
+                                                    value={editForm.supplierId || ''}
+                                                    onChange={(val) => setEditForm({ ...editForm, supplierId: val, manualSupplierName: '' })}
+                                                    className="w-full"
+                                                    options={[
+                                                        { value: '', label: '(Sin asignar)' },
+                                                        ...suppliers.map(s => ({ value: s.id, label: s.name }))
+                                                    ]}
+                                                />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Estado del Trámite</label>
-                                                <select
-                                                    value={editForm.procurementStatus}
-                                                    onChange={(e) => setEditForm({ ...editForm, procurementStatus: e.target.value })}
-                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                                >
-                                                    {procurementStatusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                                </select>
+                                                <SearchableSelect
+                                                    value={editForm.procurementStatus || ''}
+                                                    onChange={(val) => setEditForm({ ...editForm, procurementStatus: val })}
+                                                    className="w-full"
+                                                    options={procurementStatusOptions}
+                                                />
                                             </div>
                                         </>
                                     )}
@@ -1019,13 +1049,12 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                 <div className="space-y-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Categoría del Requerimiento</label>
-                                        <select
-                                            value={editForm.reqCategory}
-                                            onChange={(e) => setEditForm({ ...editForm, reqCategory: e.target.value })}
-                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                        >
-                                            {categoryOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                        </select>
+                                        <SearchableSelect
+                                            value={editForm.reqCategory || ''}
+                                            onChange={(val) => setEditForm({ ...editForm, reqCategory: val })}
+                                            className="w-full"
+                                            options={categoryOptions}
+                                        />
                                     </div>
 
                                     {['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole) && (
@@ -1065,15 +1094,12 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                     {['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole) && requirement.status !== 'REJECTED' && (
                                         <div className="space-y-2 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-800">
                                             <label className="text-[10px] font-black uppercase tracking-widest text-blue-600 ml-2">Estado de la Solicitud (Aprobación)</label>
-                                            <select
-                                                value={editForm.status}
-                                                onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                                                className="w-full bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-700 p-4 rounded-2xl font-bold focus:ring-2 ring-blue-500 outline-none text-blue-700"
-                                            >
-                                                {requestStatusOptions.map(opt => (
-                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                ))}
-                                            </select>
+                                            <SearchableSelect
+                                                value={editForm.status || ''}
+                                                onChange={(val) => setEditForm({ ...editForm, status: val })}
+                                                className="w-full"
+                                                options={requestStatusOptions}
+                                            />
                                         </div>
                                     )}
 
@@ -1260,29 +1286,23 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Estado Solicitud</label>
-                                        <select
+                                        <SearchableSelect
                                             disabled={!canManage}
-                                            value={statusForm.status}
-                                            onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
-                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-5 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                        >
-                                            {requestStatusOptions.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
+                                            value={statusForm.status || ''}
+                                            onChange={(val) => setStatusForm({ ...statusForm, status: val })}
+                                            className="w-full"
+                                            options={requestStatusOptions}
+                                        />
                                     </div>
 
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Estado Trámite</label>
-                                        <select
-                                            value={statusForm.procurementStatus}
-                                            onChange={(e) => setStatusForm({ ...statusForm, procurementStatus: e.target.value })}
-                                            className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-5 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none appearance-none"
-                                        >
-                                            {procurementStatusOptions.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
+                                        <SearchableSelect
+                                            value={statusForm.procurementStatus || ''}
+                                            onChange={(val) => setStatusForm({ ...statusForm, procurementStatus: val })}
+                                            className="w-full"
+                                            options={procurementStatusOptions}
+                                        />
                                     </div>
                                 </div>
 

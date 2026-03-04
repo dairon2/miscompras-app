@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useToastStore } from '@/store/toastStore';
+import SearchableSelect from '@/components/SearchableSelect';
 
 interface SubmissionRule {
     id: string;
@@ -327,15 +328,13 @@ export default function SubmissionRulesPage() {
                             </p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <select
-                                value={selectedYear}
-                                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                                className="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-700 text-sm font-bold"
-                            >
-                                {[currentYear - 1, currentYear, currentYear + 1].map(y => (
-                                    <option key={y} value={y}>{y}</option>
-                                ))}
-                            </select>
+                            <div className="z-10 bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden min-w-[100px]">
+                                <SearchableSelect
+                                    value={selectedYear}
+                                    onChange={(val) => setSelectedYear(Number(val))}
+                                    options={[currentYear - 1, currentYear, currentYear + 1].map(y => ({ value: y, label: y.toString() }))}
+                                />
+                            </div>
                             <button
                                 onClick={handleSyncHolidays}
                                 disabled={syncing}
@@ -418,19 +417,17 @@ export default function SubmissionRulesPage() {
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
+                                    <div className="z-10">
                                         <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">
                                             Día de la Semana
                                         </label>
-                                        <select
-                                            value={formData.dayOfWeek}
-                                            onChange={(e) => setFormData({ ...formData, dayOfWeek: parseInt(e.target.value) })}
-                                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 font-bold"
-                                        >
-                                            {dayNames.map((day, idx) => (
-                                                <option key={idx} value={idx}>{day}</option>
-                                            ))}
-                                        </select>
+                                        <div className="bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                                            <SearchableSelect
+                                                value={formData.dayOfWeek}
+                                                onChange={(val) => setFormData({ ...formData, dayOfWeek: Number(val) })}
+                                                options={dayNames.map((day, idx) => ({ value: idx, label: day }))}
+                                            />
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">

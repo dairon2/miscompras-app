@@ -15,6 +15,7 @@ import {
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import YearSelector from "@/components/YearSelector";
+import SearchableSelect from "@/components/SearchableSelect";
 
 // Color palette
 const COLORS = {
@@ -333,31 +334,31 @@ export default function ReportsPage() {
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
                                         Área
                                     </label>
-                                    <select
-                                        value={selectedArea}
-                                        onChange={(e) => setSelectedArea(e.target.value)}
-                                        className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl font-medium focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                    >
-                                        <option value="">Todas las áreas</option>
-                                        {areas.map(area => (
-                                            <option key={area.id} value={area.id}>{area.name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="z-20 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                                        <SearchableSelect
+                                            value={selectedArea}
+                                            onChange={(val) => setSelectedArea(val)}
+                                            options={[
+                                                { value: "", label: "Todas las áreas" },
+                                                ...areas.map(area => ({ value: area.id, label: area.name }))
+                                            ]}
+                                        />
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
                                         Proyecto
                                     </label>
-                                    <select
-                                        value={selectedProject}
-                                        onChange={(e) => setSelectedProject(e.target.value)}
-                                        className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl font-medium focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                    >
-                                        <option value="">Todos los proyectos</option>
-                                        {projects.map(project => (
-                                            <option key={project.id} value={project.id}>{project.name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="z-10 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                                        <SearchableSelect
+                                            value={selectedProject}
+                                            onChange={(val) => setSelectedProject(val)}
+                                            options={[
+                                                { value: "", label: "Todos los proyectos" },
+                                                ...projects.map(project => ({ value: project.id, label: project.name }))
+                                            ]}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="flex items-end">
                                     <button

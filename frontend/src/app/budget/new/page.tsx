@@ -9,6 +9,7 @@ import {
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
+import SearchableSelect from "@/components/SearchableSelect";
 
 interface Project {
     id: string;
@@ -289,17 +290,16 @@ export default function NewBudgetPage() {
                                     <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">
                                         Proyecto *
                                     </label>
-                                    <select
-                                        name="projectId"
-                                        value={formData.projectId}
-                                        onChange={handleProjectChange}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold appearance-none cursor-pointer"
-                                    >
-                                        <option value="">Selecciona proyecto</option>
-                                        {projects.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="z-30 border border-transparent dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                        <SearchableSelect
+                                            value={formData.projectId}
+                                            onChange={(val) => handleProjectChange({ target: { value: val } } as any)}
+                                            options={[
+                                                { value: "", label: "Selecciona proyecto" },
+                                                ...projects.map(p => ({ value: p.id, label: p.name }))
+                                            ]}
+                                        />
+                                    </div>
                                     {/* Auto-filled info from project */}
                                     {formData.projectId && (
                                         <div className="flex gap-4 mt-3 ml-1">
@@ -322,17 +322,16 @@ export default function NewBudgetPage() {
                                     <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">
                                         Área *
                                     </label>
-                                    <select
-                                        name="areaId"
-                                        value={formData.areaId}
-                                        onChange={handleChange}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold appearance-none cursor-pointer"
-                                    >
-                                        <option value="">Selecciona área</option>
-                                        {areas.map(a => (
-                                            <option key={a.id} value={a.id}>{a.name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="z-20 border border-transparent dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                        <SearchableSelect
+                                            value={formData.areaId}
+                                            onChange={(val) => setFormData(prev => ({ ...prev, areaId: val }))}
+                                            options={[
+                                                { value: "", label: "Selecciona área" },
+                                                ...areas.map(a => ({ value: a.id, label: a.name }))
+                                            ]}
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* 3. Categoría */}
@@ -340,17 +339,16 @@ export default function NewBudgetPage() {
                                     <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">
                                         Rubro / Categoría *
                                     </label>
-                                    <select
-                                        name="categoryId"
-                                        value={formData.categoryId}
-                                        onChange={handleChange}
-                                        className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-bold appearance-none cursor-pointer"
-                                    >
-                                        <option value="">Sin categoría</option>
-                                        {categories.map(c => (
-                                            <option key={c.id} value={c.id}>{c.code} - {c.name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="z-10 border border-transparent dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
+                                        <SearchableSelect
+                                            value={formData.categoryId}
+                                            onChange={(val) => setFormData(prev => ({ ...prev, categoryId: val }))}
+                                            options={[
+                                                { value: "", label: "Sin categoría" },
+                                                ...categories.map(c => ({ value: c.id, label: `${c.code} - ${c.name}` }))
+                                            ]}
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* 4. Actividad (título manual) */}
