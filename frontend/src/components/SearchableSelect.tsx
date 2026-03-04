@@ -49,7 +49,7 @@ export default function SearchableSelect({
                     } p-1.5 rounded-2xl font-bold outline-none transition-all cursor-pointer ${state.isDisabled ? 'opacity-50 cursor-not-allowed' : ''
                     }`,
                 menu: () =>
-                    'bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 mt-2 overflow-hidden z-[9999]',
+                    'bg-white dark:bg-slate-800 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 dark:border-gray-700 mt-2 overflow-hidden z-[9999]',
                 menuList: () => 'p-1 custom-scrollbar max-h-60',
                 option: (state) =>
                     `p-3 mx-1 my-0.5 font-medium rounded-lg cursor-pointer transition-colors ${state.isSelected
@@ -74,7 +74,7 @@ export default function SearchableSelect({
                 }),
                 menu: (base) => ({
                     ...base,
-                    backgroundColor: 'transparent',
+                    backgroundColor: 'var(--fallback-b1,oklch(var(--b1)/1))',
                     boxShadow: 'none',
                     border: 'none',
                 }),
