@@ -144,7 +144,10 @@ export default function ApprovalsPage() {
     const canAccessApprovals = ['DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(userRole);
     const canApproveBudgets = ['DIRECTOR', 'DEVELOPER'].includes(userRole);
 
+    const [mounted, setMounted] = useState(false);
+
     useEffect(() => {
+        setMounted(true);
         if (canAccessApprovals) {
             fetchData();
         }
@@ -206,6 +209,9 @@ export default function ApprovalsPage() {
         return adj.status === 'PENDING';
     });
 
+    // Return null on first render to prevent hydration mismatch for role-based UI
+    if (!mounted) return null;
+
     // Show access denied if user doesn't have permission
     if (!canAccessApprovals) {
         return (
@@ -238,10 +244,10 @@ export default function ApprovalsPage() {
                         onChange={setSelectedYear}
                     />
                 </div >
-            </header >
+            </header>
 
             {/* Tabs */}
-            < div className="flex gap-8 border-b border-gray-100 dark:border-gray-800 mb-8" >
+            <div className="flex gap-8 border-b border-gray-100 dark:border-gray-800 mb-8">
                 <button
                     onClick={() => setActiveTab('requirements')}
                     className={`pb-4 text-sm font-black tracking-widest uppercase transition-all relative ${activeTab === 'requirements' ? 'text-primary-600' : 'text-gray-400'}`}
@@ -249,18 +255,16 @@ export default function ApprovalsPage() {
                     Requerimientos ({filteredGroups.length})
                     {activeTab === 'requirements' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-1 bg-primary-600 rounded-t-full" />}
                 </button>
-                {
-                    canApproveBudgets && (
-                        <button
-                            onClick={() => setActiveTab('budgets')}
-                            className={`pb-4 text-sm font-black tracking-widest uppercase transition-all relative ${activeTab === 'budgets' ? 'text-primary-600' : 'text-gray-400'}`}
-                        >
-                            Presupuestos ({filteredAdjustments.length})
-                            {activeTab === 'budgets' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-1 bg-primary-600 rounded-t-full" />}
-                        </button>
-                    )
-                }
-            </div >
+                {canApproveBudgets && (
+                    <button
+                        onClick={() => setActiveTab('budgets')}
+                        className={`pb-4 text-sm font-black tracking-widest uppercase transition-all relative ${activeTab === 'budgets' ? 'text-primary-600' : 'text-gray-400'}`}
+                    >
+                        Presupuestos ({filteredAdjustments.length})
+                        {activeTab === 'budgets' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-1 bg-primary-600 rounded-t-full" />}
+                    </button>
+                )}
+            </div>
 
             {
                 loading ? (
@@ -386,15 +390,7 @@ export default function ApprovalsPage() {
                                                                         <div className="font-black text-gray-800 dark:text-gray-200">{req.title}</div>
                                                                     </td>
                                                                     <td className="py-6 px-4">
-                                                                        <div className="relative group">
-                                                                            <div className="text-xs text-gray-500 line-clamp-2 cursor-help">{req.description}</div>
-                                                                            {req.description && req.description.length > 100 && (
-                                                                                <div className="absolute z-50 left-0 top-full mt-2 p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-                                                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Descripción/Justificación</p>
-                                                                                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{req.description}</p>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
+                                                                        <div className="text-xs text-gray-500 whitespace-pre-wrap">{req.description}</div>
                                                                     </td>
                                                                     <td className="py-6 px-4">
                                                                         <div className="font-bold text-xs">{req.project.name}</div>
@@ -606,6 +602,6 @@ export default function ApprovalsPage() {
                     </div>
                 )}
             </AnimatePresence>
-        </div >
+        </div>
     );
 }

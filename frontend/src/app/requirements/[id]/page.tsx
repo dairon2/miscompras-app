@@ -629,7 +629,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-600 mb-2">Detalle de Requerimiento</p>
                                 <h1 className="text-3xl font-black tracking-tight">{requirement.title}</h1>
-                                <p className="text-gray-400 font-bold text-xs mt-2 uppercase tracking-tighter">Requerimiento #{requirement.groupId ? requirement.groupId : requirement.id.slice(-8).toUpperCase()}</p>
+                                <p className="text-primary-600 font-black text-2xl mt-2 uppercase tracking-tight">Requerimiento #{requirement.groupId ? requirement.groupId : requirement.id.slice(-8).toUpperCase()}</p>
                             </div>
                             <div className="flex flex-col items-end gap-2">
                                 <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Estado Solicitud</span>
