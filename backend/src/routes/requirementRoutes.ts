@@ -24,12 +24,21 @@ import { authMiddleware, roleCheck } from '../middlewares/auth';
 import multer from 'multer';
 import path from 'path';
 
+// Sanitize filename: remove accents/diacritics and replace spaces
+const sanitizeFilename = (name: string): string => {
+    return name
+        .normalize('NFD')                    // Decompose accented characters (é → e + ́)
+        .replace(/[\u0300-\u036f]/g, '')     // Remove combining diacritical marks
+        .replace(/\s+/g, '_')               // Replace spaces with underscores
+        .replace(/[^a-zA-Z0-9._-]/g, '');   // Remove any remaining special characters
+};
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'uploads/');
     },
     filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname);
+        cb(null, Date.now() + '-' + sanitizeFilename(file.originalname));
     }
 });
 

@@ -1,0 +1,93 @@
+CONTRA TO DE PREST ACIÓN DE SERVICIOS -
+SOFTWARE C OMO SERVICIO (SaaS)
+Entre los suscritos, por una parte Dairo Mor eno R entería, con NIT 1010094522, en adelante denominado EL
+PROVEEDOR , y por la otra Museo de Antioquia , con NIT 890980080-2, en adelante denominado EL CLIENTE , se ha
+convenido celebrar el presente contrato de prestación de servicios y uso de software bajo la modalidad de
+suscripción (SaaS) para la plataforma MisCompras , el cual se regirá por las siguientes cláusulas y condiciones:
+CLÁUSUL A PRIMERA: OBJE TO DEL C ONTRA TO
+EL PR OVEEDOR se obliga a prestar a EL CLIENTE el servicio de acceso, uso y mantenimiento de la plataforma de
+gestión de compras "MisCompras" bajo el modelo de suscripción mensual o SaaS (Software as a Service). Esto incluye
+la disponibilidad del sistema, provisión de la infraestructura tecnológica en la nube (Microsoft Azure), administración
+de la base de datos y el soporte técnico asociado.
+CLÁUSUL A SEGUND A: AL CANCE DE L OS SERVICIOS Y BENEFICIOS
+El servicio prestado mensual por EL PR OVEEDOR incluye estrictamente lo siguiente:
+1. Derecho de Uso (Licencia):  Licencia de acceso, no exclusiva e intransferible, para la utilización de la
+plataforma MisCompras durante toda la vigencia del contrato, sin necesidad de adquirir la propiedad del
+sistema.
+2. Infraestr uctura Cloud:  Alojamiento (hosting) profesional en los servidores de Azure, asegurando óptimo
+rendimiento.
+3. Mant enimient o y Segur idad Continua:
+Administración total del servidor y la base de datos.
+Ejecución de copias de seguridad (backups) diarios para prevenir la pérdida de información.
+Gestión de la seguridad informática y monitoreo de rendimiento 24/7.
+4. Actualizaciones sin cost o adicional:  Acceso inmediato a nuevas funcionalidades, mejoras de versión y
+corrección de bugs del software que EL PR OVEEDOR despliegue para el sistema MisCompras de manera
+global.
+5. Transfer encia de Dat os en Nube:  Los costos de infraestructura incluyen una transferencia mensual de
+hasta 50GB.
+CLÁUSUL A TER CERA: C ONDICIONES EC ONÓMICAS
+EL CLIENTE se compromete a pagar a EL PR OVEEDOR las siguientes contraprestaciones en pesos colombianos (C OP):
+1. Setup Inicial (P ago Único):  La suma de $2.500.000 C OP. Este valor se abona al 100% al inicio del
+proyecto y cubre exclusivamente el despliegue técnico del software, la parametrización de bases de datos
+iniciales y la capacitación de los administradores y usuarios de EL CLIENTE.
+2. Suscr ipción Mensual:  La suma recurrente de $250.000 C OP. Dicho valor garantiza el derecho de uso, el
+mantenimiento del servidor, la infraestructura técnica en la nube y el soporte ilimitado.
+CLÁUSUL A CU ARTA: PL AZO DE E JECUCIÓN Y PERMANENCIA MÍNIMA
+El presente acuerdo tiene un término de permanencia mínima obligat oria de doce (12) meses , contados a partir
+de la fecha de entrega y despliegue inicial de la plataforma (Setup). Al finalizar dicho período, el servicio se renovará
+automáticamente por periodos de igual duración de forma sucesiva, a menos que alguna de las partes notifique su
+intención de no renovarlo, con un preaviso formal de al menos treinta (30) días calendario de anticipación previo al
+vencimiento.
+CLÁUSUL A QUINT A: SUSPENSIÓN Y C ORTE DEL SERVICIO
+1. Suspensión por Mora:  El oportuno pago de la membresía es esencial para sostener los altos costos de
+infraestructura en la nube. El incumplimient o o no p ago de la mensualidad implicará la suspensión
+automática del ser vicio tras un acumulado de quince (15) o más días calendar io de mora.  Durante la
+suspensión por mora, el Museo de Antioquia perderá el acceso al aplicativo hasta que se ponga al día.
+2. Suspensión por Mant enimient o: EL PR OVEEDOR podrá suspender temporalmente el servicio con el
+propósito de llevar a cabo reparaciones o mantenimientos críticos del servidor Azure. Estos mantenimientos
+serán notificados y se programarán (salvo emergencias de fuerza mayor) de manera que impacten lo
+mínimo a la operación diaria de la entidad.
+CLÁUSUL A SE XTA: TITUL ARID AD DE L A DATA Y PL AN DE DE VOLUCIÓN
+(EXIT PL AN)
+1. Propiedad de los Dat os: Tanto los usuarios, como las transacciones financieras, registros, proveedores,
+procesos y toda la data  alojada de MisCompras es de exclusiv a propiedad de EL CLIENTE .
+2. Restitución e Int egridad:  En caso de no renovación o terminación por cualquier causa válida, EL
+PROVEEDOR garantiza entregar de for ma ínt egra  la información digital alojada temporalmente en sus
+servidores hasta la fecha final del contrato, exportada en formatos tradicionales de base de datos o similares
+(csv, sql o excel). Una vez entregada y finalizado el contrato, dichos datos se depurarán definitivamente del
+servidor del proveedor por privacidad.
+CLÁUSUL A SÉPTIMA: PR OPIED AD INTELECTU AL Y DERECHOS DE A UTOR
+DEL SOF TWARE
+La arquitectura, el código fuente, la lógica algorítmica y el esquema de las bases de datos funcionales subyacentes de
+MisCompras  en sí están protegidos por el Derecho de Autor y son propiedad intelectual de Dairo Mor eno R entería.
+Este contrato formaliza únicamente el usufructo del sistema como servicio temporal. Está rigurosamente prohibido y
+no autorizado para EL CLIENTE o sus delegados:
+Copiar, clonar, o modificar el código del aplicativo.
+Subarrendar, licenciar a terceros o revender parcial o totalmente la plataforma a entidades externas ajenas.
+Contratar ingeniería inversa sobre la propiedad industrial de MisCompras.
+CLÁUSUL A OCT AVA: SOPOR TE TÉCNIC O Y NIVELES DE SERVICIO (SL A)
+1. Modalidad 'Siempr e Activ o': Se brindará asistencia técnica funcional y remota permanente frente a
+incidencias. El soporte remoto estará siempre activo y este derecho a soporte continuará prolongado, es
+decir, el soporte no vence a los 2 años, sino que estará habilitado mientras la suscripción mensual exista
+ininterrumpida.
+2. Priorización de Incidencias:  Se dará completa prioridad en los tiempos de respuesta para correcciones
+urgentes de incidencias críticas o bugs paralizantes de la aplicación, procurando restituir el servicio
+rápidamente y afectar al mínimo al Museo de Antioquia.
+CLÁUSUL A NOVENA: OBLIGA CIONES Y BUENAS PRÁCTICAS DEL CLIENTE
+1. Promover el uso correcto y legal de la plataforma por todos y cada uno de los colaboradores con
+credenciales.
+2. Hacer pagos oportunos dentro del marco del punto acordado y evitar cortes que perjudiquen el negocio.
+3. El uso responsable de usuarios, claves maestras y permisos delegados en roles (como administradores o
+líderes). Cualquier pérdida o manipulación indebida de roles internos u operaciones defectuosas dentro del
+ecosistema serán de absoluta responsabilidad de la entidad.
+CLÁUSUL A DÉCIMA: C ONFIDENCIALID AD
+Las partes y todo el equipo colaborador de MisCompras guardarán la más absoluta reserva legal sobre la información
+financiera, la estructura operativa, metodologías internas o transacciones registradas del respectivo asociado a la que
+logre acceder. Ninguna parte comercializará, informará o presentará a terceros dichos datos de operación bajo
+ningún motivo particular, manteniendo vigentes estos principios aún una vez terminado el presente acuerdo
+comercial.
+Para constancia de aceptación e inicio formal de esta prestación de servicios digitales,
+Dairo Mor eno R entería
+EL PR OVEEDOR (MisCompras APP) NIT: 1010094522
+(Representante Legal o Delegado)
+MUSEO DE ANTIOQUIA  CLIENTE NIT: 890980080-2

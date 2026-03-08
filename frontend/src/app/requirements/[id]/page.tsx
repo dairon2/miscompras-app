@@ -25,7 +25,12 @@ import {
     Save,
     Info,
     Loader2,
-    Tag
+    Tag,
+    FileSpreadsheet,
+    Presentation,
+    Film,
+    Music,
+    FileCode
 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
@@ -1448,7 +1453,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                 </div>
                                 <div className="flex gap-2">
                                     <a
-                                        href={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
+                                        href={resolveApiUrl(selectedFile.fileUrl)}
                                         download
                                         className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-all backdrop-blur-sm"
                                         title="Descargar"
@@ -1466,38 +1471,134 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
                             {/* Content */}
                             <div className="w-full h-full flex items-center justify-center p-4">
-                                {selectedFile.fileName.toLowerCase().endsWith('.pdf') ? (
-                                    <iframe
-                                        src={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
-                                        className="w-full h-full rounded-2xl"
-                                        title={selectedFile.fileName}
-                                    />
-                                ) : selectedFile.fileName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) ? (
-                                    <div className="relative w-full h-full">
-                                        <Image
-                                            src={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
-                                            alt={selectedFile.fileName}
-                                            fill
-                                            className="object-contain rounded-2xl"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="text-center p-12">
-                                        <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-6">
-                                            <Paperclip className="w-10 h-10 text-gray-400" />
+                                {(() => {
+                                    const fileName = selectedFile.fileName.toLowerCase();
+                                    const fileUrl = resolveApiUrl(selectedFile.fileUrl);
+
+                                    // PDF Preview
+                                    if (fileName.endsWith('.pdf')) {
+                                        return (
+                                            <iframe
+                                                src={fileUrl}
+                                                className="w-full h-full rounded-2xl"
+                                                title={selectedFile.fileName}
+                                            />
+                                        );
+                                    }
+
+                                    // Image Preview
+                                    if (fileName.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/)) {
+                                        return (
+                                            <div className="relative w-full h-full">
+                                                <Image
+                                                    src={fileUrl}
+                                                    alt={selectedFile.fileName}
+                                                    fill
+                                                    className="object-contain rounded-2xl"
+                                                />
+                                            </div>
+                                        );
+                                    }
+
+                                    // Office Documents (Word, Excel, PowerPoint) via Microsoft Office Online Viewer
+                                    if (fileName.match(/\.(docx?|xlsx?|pptx?)$/)) {
+                                        const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`;
+                                        const isWord = fileName.match(/\.docx?$/);
+                                        const isExcel = fileName.match(/\.xlsx?$/);
+                                        const IconComponent = isWord ? FileText : isExcel ? FileSpreadsheet : Presentation;
+                                        const label = isWord ? 'Word' : isExcel ? 'Excel' : 'PowerPoint';
+                                        return (
+                                            <div className="w-full h-full flex flex-col">
+                                                <div className="flex items-center gap-2 mb-3 px-2">
+                                                    <IconComponent size={16} className="text-primary-500" />
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Vista previa de {label}</span>
+                                                </div>
+                                                <iframe
+                                                    src={officeViewerUrl}
+                                                    className="w-full flex-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white"
+                                                    title={selectedFile.fileName}
+                                                    allowFullScreen
+                                                />
+                                            </div>
+                                        );
+                                    }
+
+                                    // Video Preview
+                                    if (fileName.match(/\.(mp4|webm|ogg|mov)$/)) {
+                                        return (
+                                            <div className="w-full max-w-4xl">
+                                                <div className="flex items-center gap-2 mb-3 px-2">
+                                                    <Film size={16} className="text-primary-500" />
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Reproductor de Video</span>
+                                                </div>
+                                                <video
+                                                    src={fileUrl}
+                                                    controls
+                                                    className="w-full rounded-2xl shadow-lg bg-black"
+                                                    controlsList="nodownload"
+                                                >
+                                                    Tu navegador no soporta la reproducción de video.
+                                                </video>
+                                            </div>
+                                        );
+                                    }
+
+                                    // Audio Preview
+                                    if (fileName.match(/\.(mp3|wav|ogg|aac|flac)$/)) {
+                                        return (
+                                            <div className="text-center p-12 w-full max-w-lg">
+                                                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-100 to-indigo-100 dark:from-primary-900/30 dark:to-indigo-900/30 flex items-center justify-center mx-auto mb-6 shadow-lg">
+                                                    <Music className="w-12 h-12 text-primary-500" />
+                                                </div>
+                                                <h4 className="text-xl font-black mb-1">{selectedFile.fileName}</h4>
+                                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-6">Reproductor de Audio</p>
+                                                <audio
+                                                    src={fileUrl}
+                                                    controls
+                                                    className="w-full"
+                                                >
+                                                    Tu navegador no soporta la reproducción de audio.
+                                                </audio>
+                                            </div>
+                                        );
+                                    }
+
+                                    // Plain Text / CSV Preview
+                                    if (fileName.match(/\.(txt|csv|log|json|xml)$/)) {
+                                        return (
+                                            <div className="w-full h-full flex flex-col">
+                                                <div className="flex items-center gap-2 mb-3 px-2">
+                                                    <FileCode size={16} className="text-primary-500" />
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Vista previa de Texto</span>
+                                                </div>
+                                                <iframe
+                                                    src={fileUrl}
+                                                    className="w-full flex-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900"
+                                                    title={selectedFile.fileName}
+                                                />
+                                            </div>
+                                        );
+                                    }
+
+                                    // Fallback - No preview available
+                                    return (
+                                        <div className="text-center p-12">
+                                            <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-6">
+                                                <Paperclip className="w-10 h-10 text-gray-400" />
+                                            </div>
+                                            <h4 className="text-2xl font-black mb-2">Vista previa no disponible</h4>
+                                            <p className="text-gray-500 mb-6">Este tipo de archivo no se puede visualizar en el navegador</p>
+                                            <a
+                                                href={fileUrl}
+                                                download
+                                                className="inline-flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-primary-700 transition-all"
+                                            >
+                                                <Download size={18} />
+                                                Descargar archivo
+                                            </a>
                                         </div>
-                                        <h4 className="text-2xl font-black mb-2">Vista previa no disponible</h4>
-                                        <p className="text-gray-500 mb-6">Este tipo de archivo no se puede visualizar en el navegador</p>
-                                        <a
-                                            href={selectedFile.fileUrl.startsWith('http') ? selectedFile.fileUrl : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${selectedFile.fileUrl}`}
-                                            download
-                                            className="inline-flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-primary-700 transition-all"
-                                        >
-                                            <Download size={18} />
-                                            Descargar archivo
-                                        </a>
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </div>
                         </motion.div>
                     </div>
