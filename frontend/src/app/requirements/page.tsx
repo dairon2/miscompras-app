@@ -282,7 +282,7 @@ export default function RequirementsPage() {
         if (searchText) {
             if (isOnlyNumbers) {
                 // Only numbers: search by groupId
-                matchesSearch = r.groupId && r.groupId.toString().includes(searchText);
+                matchesSearch = r.groupId && r.groupId.toString() === searchText;
             } else {
                 // Has letters: search by title and description
                 matchesSearch = r.title.toLowerCase().includes(searchText) ||
