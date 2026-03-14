@@ -968,6 +968,19 @@ export default function BudgetsPage() {
                                     />
                                     <p className="text-[10px] text-gray-400">Después de esta fecha no se podrán cargar compras</p>
                                 </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-gray-600">Líder *</label>
+                                    <div className="z-10 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
+                                        <SearchableSelect
+                                            value={formData.managerId}
+                                            onChange={(val) => setFormData({ ...formData, managerId: val })}
+                                            options={[
+                                                { value: "", label: "Seleccionar..." },
+                                                ...users.map((u: any) => ({ value: u.id, label: u.name || u.email }))
+                                            ]}
+                                        />
+                                    </div>
+                                </div>
                                 <div className="col-span-2 space-y-2">
                                     <label className="text-xs font-black text-gray-600">Descripción</label>
                                     <textarea
