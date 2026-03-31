@@ -150,7 +150,8 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
         { value: 'EN_TRAMITE', label: 'En trámite' },
         { value: 'PENDIENTE', label: 'Pendientes' },
         { value: 'FINALIZADO', label: 'Finalizado' },
-        { value: 'POSTERGADO', label: 'Postergado' }
+        { value: 'POSTERGADO', label: 'Postergado' },
+        { value: 'RECHAZADO', label: 'Rechazado' }
     ];
 
     const categoryOptions = [

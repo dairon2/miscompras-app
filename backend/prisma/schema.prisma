@@ -403,6 +403,7 @@ enum ProcurementStatus {
   PENDIENTE
   FINALIZADO
   POSTERGADO
+  RECHAZADO
 }
 
 enum RequirementCategory {

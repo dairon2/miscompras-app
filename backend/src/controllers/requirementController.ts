@@ -25,7 +25,8 @@ const translateStatus = (status: string): string => {
         'EN_TRAMITE': 'En trámite',
         'PENDIENTE': 'Pendiente',
         'POSTERGADO': 'Postergado',
-        'ANULADO': 'Anulado'
+        'ANULADO': 'Anulado',
+        'RECHAZADO': 'Rechazado'
     };
     return translations[status] || status;
 };
@@ -359,11 +360,16 @@ export const updateRequirementStatus = async (req: AuthRequest, res: Response) =
             }
         }
 
+        let finalProcurementStatus = procurementStatus || undefined;
+        if (status === 'REJECTED') {
+            finalProcurementStatus = 'RECHAZADO' as any;
+        }
+
         const requirement = await prisma.requirement.update({
             where: { id },
             data: {
                 status: status || undefined,
-                procurementStatus: procurementStatus || undefined,
+                procurementStatus: finalProcurementStatus,
                 receivedAtSatisfaction: receivedAtSatisfaction !== undefined ? receivedAtSatisfaction : undefined,
                 satisfactionComments: satisfactionComments || undefined,
                 ...additionalData
@@ -1233,6 +1239,7 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
                 where,
                 data: {
                     status: 'REJECTED',
+                    procurementStatus: 'RECHAZADO' as any,
                     coordinatorComment: userRole === 'COORDINATOR' ? comments : undefined,
                     directorComment: (userRole === 'DIRECTOR' || userRole === 'ADMIN') ? comments : undefined
                 }
@@ -1272,6 +1279,7 @@ export const rejectRequirementGroup = async (req: AuthRequest, res: Response) =>
             where: { groupId: parseInt(id) },
             data: {
                 status: 'REJECTED',
+                procurementStatus: 'RECHAZADO' as any,
                 coordinatorComment: userRole === 'COORDINATOR' ? comments : undefined,
                 directorComment: (userRole === 'DIRECTOR' || userRole === 'ADMIN') ? comments : undefined
             }
