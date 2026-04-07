@@ -89,7 +89,8 @@ interface Requirement {
     groupId?: number;
     budget?: {
         title: string;
-        category?: { name: string }
+        category?: { name: string };
+        managerId?: string;
     };
 }
 
@@ -443,7 +444,9 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
     const canManageProcurement = requirement.status === 'APPROVED' && (requirement.procurementStatus === 'PENDIENTE' || requirement.procurementStatus === 'EN_TRAMITE' || requirement.procurementStatus === 'ENTREGADO');
     // Allow marking received satisfaction also when FINALIZADO but not yet confirmed (for cases where finalized without evaluation)
-    const canMarkReceived = (requirement.procurementStatus === 'ENTREGADO' || requirement.procurementStatus === 'FINALIZADO') && isCreator && !requirement.receivedAtSatisfaction;
+    const isBudgetManager = requirement.budget?.managerId === currentUser?.id;
+    const isCreatorOrManager = isCreator || isBudgetManager;
+    const canMarkReceived = (requirement.procurementStatus === 'ENTREGADO' || requirement.procurementStatus === 'FINALIZADO') && isCreatorOrManager && !requirement.receivedAtSatisfaction;
 
     const canManage = userRole === 'ADMIN';
 
