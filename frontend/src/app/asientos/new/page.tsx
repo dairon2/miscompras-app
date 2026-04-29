@@ -306,7 +306,7 @@ export default function NewAsientoPage() {
                                     value={form.groupId}
                                     onChange={handleChange}
                                     placeholder="Número de requerimiento"
-                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                     required
                                 />
                                 <p className="text-[10px] text-gray-400 font-medium">El asiento debe estar vinculado a un requerimiento existente</p>
