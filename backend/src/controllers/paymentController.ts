@@ -46,6 +46,9 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
 
         // Requirement total validation removed to allow overpayment
 
+        console.log(`[DEBUG] createPayment for req ${requirementId}`);
+        console.log(`[DEBUG] ProcurementStatus before: ${requirement.procurementStatus}`);
+
         // Create the payment
         const payment = await prisma.payment.create({
             data: {
@@ -58,6 +61,9 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
                 requirementId
             }
         });
+
+        const afterReq = await prisma.requirement.findUnique({ where: { id: requirementId } });
+        console.log(`[DEBUG] ProcurementStatus after creation: ${afterReq?.procurementStatus}`);
 
 
         // Log the action
