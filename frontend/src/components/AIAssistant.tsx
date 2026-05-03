@@ -9,6 +9,13 @@ import api from "@/lib/api";
 interface Message {
     role: 'user' | 'model';
     content: string;
+    actions?: AssistantAction[];
+}
+
+interface AssistantAction {
+    label: string;
+    type: 'link' | 'prompt';
+    value: string;
 }
 
 interface Attachment {
@@ -20,7 +27,15 @@ interface Attachment {
 export default function AIAssistant() {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'model', content: '🤖 **MisCompras Bot activo**\n\nConsulta proyectos, presupuestos, requerimientos o busca proveedores. Ejemplos:\n• "¿Cuánto dinero se ha ejecutado?"\n• "Busca proveedores de papelería"\n• "Dame el resumen del proyecto X"' }
+        {
+            role: 'model',
+            content: '🤖 **MisCompras Bot activo**\n\nConsulta proyectos, presupuestos, requerimientos o busca proveedores. Ejemplos:\n• "¿Cuánto dinero se ha ejecutado?"\n• "Busca proveedores de papelería"\n• "Dame el resumen del proyecto X"',
+            actions: [
+                { label: 'Generar resumen', type: 'prompt', value: 'Genera un análisis ejecutivo completo' },
+                { label: 'Alertas de presupuesto', type: 'prompt', value: 'Muéstrame presupuestos bajos' },
+                { label: 'Exportar', type: 'prompt', value: 'Exporta los requerimientos a Excel' }
+            ]
+        }
     ]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -60,28 +75,20 @@ export default function AIAssistant() {
         reader.readAsDataURL(file);
     };
 
-    const handleSubmit = async (e?: React.FormEvent) => {
-        e?.preventDefault();
-        if ((!input.trim() && !attachment) || isLoading) return;
+    const sendMessage = async (rawMessage: string, currentAttachment?: Attachment | null) => {
+        if ((!rawMessage.trim() && !currentAttachment) || isLoading) return;
 
-        const userMessage = input.trim();
-        const currentAttachment = attachment; // Capture current state
+        const userMessage = rawMessage.trim();
 
-        // Optimistic update
         let displayText = userMessage;
         if (currentAttachment) {
             displayText += `\n[Archivo adjunto: ${currentAttachment.name}]`;
         }
 
-        setInput("");
-        setAttachment(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-
         setMessages(prev => [...prev, { role: 'user', content: displayText }]);
         setIsLoading(true);
 
         try {
-            // Skip the first message (greeting) when sending history to avoid AI repeating it
             const historyToSend = messages.slice(1).map(m => ({ role: m.role, content: m.content }));
             const { data } = await api.post('/ai/chat', {
                 message: userMessage || (currentAttachment ? "Analiza este archivo" : ""),
@@ -90,7 +97,7 @@ export default function AIAssistant() {
                 mimeType: currentAttachment?.type
             });
 
-            setMessages(prev => [...prev, { role: 'model', content: data.reply }]);
+            setMessages(prev => [...prev, { role: 'model', content: data.reply, actions: data.actions || [] }]);
         } catch (error: any) {
             console.error(error);
             let errorMessage = error.response?.data?.details || error.response?.data?.error || 'Lo siento, tuve un problema conectando con mi cerebro. 🧠💥';
@@ -104,6 +111,29 @@ export default function AIAssistant() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleSubmit = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if ((!input.trim() && !attachment) || isLoading) return;
+
+        const userMessage = input.trim();
+        const currentAttachment = attachment; // Capture current state
+
+        setInput("");
+        setAttachment(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+
+        await sendMessage(userMessage, currentAttachment);
+    };
+
+    const handleActionClick = async (action: AssistantAction) => {
+        if (action.type === 'link') {
+            window.location.href = action.value;
+            return;
+        }
+
+        await sendMessage(action.value);
     };
 
     return (
@@ -184,6 +214,21 @@ export default function AIAssistant() {
                                             }
                                             return part;
                                         })}
+                                        {msg.role === 'model' && msg.actions && msg.actions.length > 0 && (
+                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                {msg.actions.map((action, actionIdx) => (
+                                                    <button
+                                                        key={`${action.label}-${actionIdx}`}
+                                                        type="button"
+                                                        disabled={isLoading}
+                                                        onClick={() => handleActionClick(action)}
+                                                        className="px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 text-xs font-black hover:bg-indigo-100 dark:hover:bg-indigo-800 disabled:opacity-50 transition-colors"
+                                                    >
+                                                        {action.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                     {msg.role === 'user' && (
                                         <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-slate-800 flex items-center justify-center text-gray-500 shrink-0 mb-1">

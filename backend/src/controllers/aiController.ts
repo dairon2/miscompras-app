@@ -27,6 +27,12 @@ const FULL_ACCESS_ROLES = ['ADMIN', 'DIRECTOR', 'COORDINATOR'];
 
 // ... (Imports and previous code)
 
+type AiActionButton = {
+    label: string;
+    type: 'link' | 'prompt';
+    value: string;
+};
+
 /**
  * Execute a generation task with model fallback strategy.
  * This wraps the entire "Get Model -> Generate" process.
@@ -122,6 +128,7 @@ async function generateWithFallback(
 }
 
 export const chatWithAI = async (req: Request, res: Response) => {
+    const startedAt = Date.now();
     try {
         const { message, history, image, mimeType } = req.body;
         const user = (req as any).user;
@@ -198,6 +205,7 @@ IMPORTANTE: La lista anterior es solo una MUESTRA. Para buscar proveedores espec
         // AI ACTIONS: Unified Intent Classification & Execution
         // =====================================================
         let actionResult = "";
+        const actionButtons: AiActionButton[] = [];
 
         try {
             // Context for classification: message and limited history
@@ -268,6 +276,7 @@ IMPORTANTE para REFERENCIAS:
             - COUNT_GLOBAL: Estadísticas generales de CONTEO (Ej: "¿cuántos requerimientos hay?", "¿total de proveedores?", "¿cuántos proyectos?"). Parámetros: entity (requirement|supplier|project|budget).
             - BUDGET_SUMMARY: Resumen financiero, gasto total, dinero ejecutado, ejecución presupuestal (Ej: "cuánto dinero se ha gastado", "cuánto se ha ejecutado", "resumen de presupuestos", "dinero gastado total"). Parámetros: projectName (opcional, nombre del proyecto específico).
             - LOW_BUDGET_ALERT: Presupuestos con poco saldo disponible, alertas de presupuesto bajo (Ej: "¿qué presupuestos están bajos?", "alertas de presupuesto", "presupuestos críticos", "presupuestos con menos del 20%"). Sin parámetros.
+            - EXECUTIVE_ANALYSIS: Análisis ejecutivo de riesgos y oportunidades (Ej: "analiza compras anómalas", "proveedores repetidos", "demoras por área", "requerimientos vencidos", "alertas ejecutivas", "dame diagnóstico ejecutivo"). Parámetros: focus (full|low_budget|repeated_suppliers|anomalies|area_delays|overdue).
             - WEEKLY_REPORT: Reporte ejecutivo semanal con resumen de actividad (Ej: "dame el resumen de la semana", "reporte semanal", "qué pasó esta semana", "resumen ejecutivo"). Sin parámetros.
             - SPENDING_TRENDS: Tendencias y comparativo de gastos por período (Ej: "cuánto gastamos este mes vs el anterior", "tendencia de gastos", "comparativo mensual", "evolución del gasto"). Parámetros: period (month|quarter|year).
             - COMPARE_SUPPLIERS: Comparar proveedores por precios/productos (Ej: "quién tiene mejores precios para X", "compara proveedores de papelería", "proveedor más barato para Y"). Parámetros: product (string).
@@ -297,6 +306,7 @@ IMPORTANTE para REFERENCIAS:
             - Si pregunta "qué requerimientos tiene ESE proveedor" o "otros requerimientos de X" -> usa REQS_BY_SUPPLIER con el supplierName del contexto de memoria.
             - Si el usuario dice "ese requerimiento", "info de ese", usa FIND_REQ con el groupId del contexto de memoria.
             - Si pregunta "presupuestos bajos", "alertas de presupuesto", "críticos" -> usa LOW_BUDGET_ALERT.
+            - Si pide análisis ejecutivo, compras anómalas, proveedores repetidos, demoras por área o requerimientos vencidos -> usa EXECUTIVE_ANALYSIS.
             - Si pregunta "resumen de la semana", "reporte semanal", "qué pasó esta semana" -> usa WEEKLY_REPORT.
             - Si pregunta "exporta", "descarga", "genera excel/pdf", "exportar a excel", "exportar a pdf" -> usa EXPORT_DATA.
             - Si pregunta "crea requerimiento", "nuevo requerimiento" -> usa CREATE_REQ.
@@ -389,6 +399,18 @@ IMPORTANTE para REFERENCIAS:
                                 actionResult += `   Teléfono: ${req.supplier.contactPhone || 'N/A'}\n`;
                             } else {
                                 actionResult += `\n⚠️ **SIN PROVEEDOR ASIGNADO**\n`;
+                            }
+                            actionButtons.push({
+                                label: 'Ver requerimiento',
+                                type: 'link',
+                                value: `/requirements/${req.id}`
+                            });
+                            if (!req.supplier) {
+                                actionButtons.push({
+                                    label: 'Asignar proveedor',
+                                    type: 'prompt',
+                                    value: `Asigna un proveedor al requerimiento #${req.groupId}`
+                                });
                             }
                         } else {
                             actionResult += `\n\n[SISTEMA]: No encontré ningún requerimiento que coincida con la búsqueda.`;
@@ -918,9 +940,123 @@ IMPORTANTE para REFERENCIAS:
                             actionResult += `${status} **${b.title || b.code}** (${b.project?.name || 'Sin proyecto'})\n`;
                             actionResult += `   Disponible: ${formatMoney(b.available)} de ${formatMoney(b.total)} (${b.percent.toFixed(1)}%)\n\n`;
                         });
+                        actionButtons.push(
+                            { label: 'Generar resumen', type: 'prompt', value: 'Genera un análisis ejecutivo completo' },
+                            { label: 'Exportar presupuestos', type: 'prompt', value: 'Exporta los presupuestos a Excel' }
+                        );
                     } else {
                         actionResult += `\n\n[SISTEMA]: ✅ No hay presupuestos${scope} con alertas. Todos tienen más del 20% disponible.`;
                     }
+                    break;
+                }
+
+                case 'EXECUTIVE_ANALYSIS': {
+                    const hasFullAccess = FULL_ACCESS_ROLES.includes(userRole);
+                    const focus = intent.params.focus || 'full';
+
+                    if (!hasFullAccess) {
+                        actionResult += `\n\n[SISTEMA]: ⛔ El análisis ejecutivo global está disponible solo para Dirección, Coordinación o Admin. Puedo revisar tus requerimientos si me preguntas por "mis requerimientos vencidos".`;
+                        break;
+                    }
+
+                    const now = new Date();
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(now.getDate() - 30);
+
+                    const includeSection = (section: string) => focus === 'full' || focus === section;
+                    const sectionResults: string[] = [];
+
+                    if (includeSection('low_budget')) {
+                        const budgets = await prisma.budget.findMany({
+                            where: { amount: { gt: 0 } },
+                            include: { project: { select: { name: true } } }
+                        });
+                        const lowBudgets = budgets
+                            .map(b => {
+                                const total = Number(b.amount || 0);
+                                const available = Number(b.available || 0);
+                                const percent = total > 0 ? (available / total) * 100 : 0;
+                                return { title: b.title || b.code || 'Presupuesto', project: b.project?.name || 'Sin proyecto', available, total, percent };
+                            })
+                            .filter(b => b.percent < 20)
+                            .sort((a, b) => a.percent - b.percent)
+                            .slice(0, 5);
+
+                        sectionResults.push(`**Presupuestos bajos:** ${lowBudgets.length ? lowBudgets.map(b => `${b.title} (${b.percent.toFixed(1)}%)`).join('; ') : 'sin alertas bajo 20%'}.`);
+                    }
+
+                    if (includeSection('repeated_suppliers')) {
+                        const grouped = await prisma.requirement.groupBy({
+                            by: ['supplierId'],
+                            where: { supplierId: { not: null } },
+                            _count: { id: true },
+                            _sum: { totalAmount: true },
+                            orderBy: { _count: { id: 'desc' } },
+                            take: 5
+                        });
+                        const supplierIds = grouped.map(g => g.supplierId).filter(Boolean) as string[];
+                        const suppliers = await prisma.supplier.findMany({
+                            where: { id: { in: supplierIds } },
+                            select: { id: true, name: true }
+                        });
+                        const supplierMap = new Map(suppliers.map(s => [s.id, s.name]));
+                        const repeated = grouped
+                            .filter(g => g._count.id > 1 && g.supplierId)
+                            .map(g => `${supplierMap.get(g.supplierId!) || 'Proveedor'}: ${g._count.id} reqs, ${formatMoney(g._sum.totalAmount || 0)}`);
+                        sectionResults.push(`**Proveedores repetidos:** ${repeated.length ? repeated.join('; ') : 'no se detectan concentraciones relevantes'}.`);
+                    }
+
+                    if (includeSection('anomalies')) {
+                        const avgResult = await prisma.requirement.aggregate({
+                            where: { totalAmount: { not: null } },
+                            _avg: { totalAmount: true }
+                        });
+                        const avgAmount = Number(avgResult._avg.totalAmount || 0);
+                        const threshold = avgAmount > 0 ? avgAmount * 2 : 0;
+                        const anomalies = threshold > 0 ? await prisma.requirement.findMany({
+                            where: { totalAmount: { gte: threshold } },
+                            orderBy: { totalAmount: 'desc' },
+                            take: 5,
+                            select: { id: true, groupId: true, title: true, totalAmount: true, project: { select: { name: true } } }
+                        }) : [];
+                        sectionResults.push(`**Compras anómalas:** ${anomalies.length ? anomalies.map(r => `#${r.groupId || r.id.slice(0, 6)} ${r.title} (${formatMoney(r.totalAmount || 0)})`).join('; ') : 'no hay compras sobre 2x el promedio histórico'}.`);
+                    }
+
+                    if (includeSection('area_delays')) {
+                        const delayed = await prisma.requirement.findMany({
+                            where: {
+                                createdAt: { lt: thirtyDaysAgo },
+                                procurementStatus: { in: ['PENDIENTE', 'EN_TRAMITE', 'ENTREGADO'] as any }
+                            },
+                            include: { area: { select: { name: true } } },
+                            take: 500
+                        });
+                        const byArea = new Map<string, number>();
+                        delayed.forEach(r => byArea.set(r.area?.name || 'Sin área', (byArea.get(r.area?.name || 'Sin área') || 0) + 1));
+                        const topAreas = Array.from(byArea.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                        sectionResults.push(`**Demoras por área:** ${topAreas.length ? topAreas.map(([area, count]) => `${area}: ${count}`).join('; ') : 'sin demoras mayores a 30 días'}.`);
+                    }
+
+                    if (includeSection('overdue')) {
+                        const overdue = await prisma.requirement.findMany({
+                            where: {
+                                deliveryDate: { lt: now },
+                                procurementStatus: { not: 'FINALIZADO' as any }
+                            },
+                            orderBy: { deliveryDate: 'asc' },
+                            take: 10,
+                            select: { id: true, groupId: true, title: true, deliveryDate: true, procurementStatus: true, project: { select: { name: true } } }
+                        });
+                        sectionResults.push(`**Requerimientos vencidos:** ${overdue.length ? overdue.map(r => `#${r.groupId || r.id.slice(0, 6)} ${r.title} (${r.deliveryDate?.toLocaleDateString('es-CO')})`).join('; ') : 'no hay entregas vencidas abiertas'}.`);
+                    }
+
+                    actionResult += `\n\n[SISTEMA - ANÁLISIS EJECUTIVO]:\n${sectionResults.map(s => `• ${s}`).join('\n')}`;
+                    actionResult += `\n\nRecomendación: prioriza vencidos y demoras por área antes de abrir nuevas compras del mismo tipo.`;
+                    actionButtons.push(
+                        { label: 'Requerimientos vencidos', type: 'prompt', value: 'Muéstrame los requerimientos vencidos' },
+                        { label: 'Proveedores repetidos', type: 'prompt', value: 'Analiza proveedores repetidos' },
+                        { label: 'Exportar requerimientos', type: 'prompt', value: 'Exporta los requerimientos a Excel' }
+                    );
                     break;
                 }
 
@@ -1171,6 +1307,11 @@ IMPORTANTE para REFERENCIAS:
                             actionResult += `📋 Tipo: ${entity === 'requirements' ? 'Requerimientos' : entity === 'suppliers' ? 'Proveedores' : 'Presupuestos'}\n`;
                             if (projectName) actionResult += `📁 Proyecto: ${projectName}\n`;
                             actionResult += `\n📥 **Descarga tu archivo:** [${filename}.xlsx](${downloadUrl})`;
+                            actionButtons.push({
+                                label: 'Descargar archivo',
+                                type: 'link',
+                                value: downloadUrl
+                            });
                         }
                     } catch (error: any) {
                         console.error('[Export Error]:', error);
@@ -1231,6 +1372,11 @@ IMPORTANTE para REFERENCIAS:
                                 actionResult += `📁 Proyecto: ${project.name}\n`;
                                 actionResult += `📝 Estado: Pendiente de aprobación\n\n`;
                                 actionResult += `El requerimiento ha sido creado y está pendiente de aprobación.`;
+                                actionButtons.push({
+                                    label: 'Ver requerimiento',
+                                    type: 'link',
+                                    value: `/requirements/${newReq.id}`
+                                });
                             }
                         }
                     }
@@ -1268,6 +1414,11 @@ IMPORTANTE para REFERENCIAS:
                                 actionResult += `\n\n[SISTEMA - ✅ PROVEEDOR ASIGNADO]:\n`;
                                 actionResult += `👤 Proveedor: **${supplier.name}**\n`;
                                 actionResult += `📋 Requerimiento: #${groupId} - ${requirement.title}\n`;
+                                actionButtons.push({
+                                    label: 'Ver requerimiento',
+                                    type: 'link',
+                                    value: `/requirements/${requirement.id}`
+                                });
                             }
                         }
                     }
@@ -1401,7 +1552,8 @@ IMPORTANTE para REFERENCIAS:
         }
 
         console.log(`[AI DEBUG] Final Reply length: ${finalReply.length}`);
-        res.json({ reply: finalReply });
+        console.log(`[AI PERF] Chat completed in ${Date.now() - startedAt}ms with ${actionButtons.length} action button(s)`);
+        res.json({ reply: finalReply, actions: actionButtons.slice(0, 4) });
 
     } catch (error: any) {
         console.error("AI Controller Error:", error);
