@@ -26,6 +26,7 @@ import {
     // Config
     getSystemConfig,
     updateSystemConfig,
+    getSystemHealth,
     // Stats
     getAdminStats
 } from '../controllers/adminController';
@@ -87,5 +88,6 @@ router.delete('/users/:id', roleCheck(['DIRECTOR', 'DEVELOPER']), deleteUser);
 // System Config
 router.get('/config', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), getSystemConfig);
 router.patch('/config', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), updateSystemConfig);
+router.get('/health', roleCheck(['DEVELOPER']), getSystemHealth);
 
 export default router;

@@ -27,7 +27,14 @@ import {
     Hash,
     Power,
     Clock,
-    ChevronRight
+    ChevronRight,
+    Activity,
+    Database,
+    HardDrive,
+    RefreshCw,
+    CheckCircle,
+    XCircle,
+    Cpu
 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
@@ -38,6 +45,25 @@ import AlertModal from "@/components/AlertModal";
 import SearchableSelect from "@/components/SearchableSelect";
 
 type TabType = 'areas' | 'projects' | 'categories' | 'suppliers' | 'users' | 'account' | 'general';
+
+type HealthStatus = 'ok' | 'warning' | 'error';
+
+interface HealthCheck {
+    key: string;
+    label: string;
+    status: HealthStatus;
+    message: string;
+    latencyMs?: number;
+}
+
+interface SystemHealth {
+    status: HealthStatus;
+    checkedAt: string;
+    uptimeSeconds: number;
+    environment: string;
+    responseTimeMs: number;
+    checks: HealthCheck[];
+}
 
 export default function AdminPage() {
     const router = useRouter();
@@ -59,6 +85,8 @@ export default function AdminPage() {
         isRegistrationEnabled: true,
         maintenanceMode: false
     });
+    const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
+    const [loadingHealth, setLoadingHealth] = useState(false);
     const [savingConfig, setSavingConfig] = useState(false);
 
     // Modal states
@@ -103,12 +131,31 @@ export default function AdminPage() {
         }
     }, [canManageCatalogs, activeTab]);
 
+    useEffect(() => {
+        if (activeTab === 'general' && user?.role === 'DEVELOPER') {
+            fetchSystemHealth();
+        }
+    }, [activeTab, user?.role]);
+
     const fetchStats = async () => {
         try {
             const res = await api.get('/admin/stats');
             setStats(res.data);
         } catch (err) {
             console.error("Error fetching stats", err);
+        }
+    };
+
+    const fetchSystemHealth = async () => {
+        setLoadingHealth(true);
+        try {
+            const res = await api.get('/admin/health');
+            setSystemHealth(res.data);
+        } catch (err) {
+            console.error("Error fetching system health", err);
+            setSystemHealth(null);
+        } finally {
+            setLoadingHealth(false);
         }
     };
 
@@ -453,6 +500,92 @@ export default function AdminPage() {
                                         Guardar Configuración
                                     </button>
                                 </div>
+                            </section>
+                        )}
+
+                        {user?.role === 'DEVELOPER' && (
+                            <section>
+                                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-2xl">
+                                            <Activity size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-black">Centro de Salud del Sistema</h3>
+                                            <p className="text-gray-500 text-sm">Estado técnico de servicios críticos</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={fetchSystemHealth}
+                                        disabled={loadingHealth}
+                                        className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 disabled:opacity-50 transition-all"
+                                    >
+                                        {loadingHealth ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+                                        Actualizar
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+                                    <div className="p-5 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-700">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Estado General</p>
+                                        <div className="flex items-center gap-2">
+                                            {systemHealth?.status === 'ok' ? (
+                                                <CheckCircle className="text-emerald-500" size={20} />
+                                            ) : systemHealth?.status === 'error' ? (
+                                                <XCircle className="text-red-500" size={20} />
+                                            ) : (
+                                                <AlertTriangle className="text-amber-500" size={20} />
+                                            )}
+                                            <span className="font-black uppercase">{systemHealth?.status || 'Sin datos'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="p-5 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-700">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Ambiente</p>
+                                        <p className="font-black">{systemHealth?.environment || 'N/A'}</p>
+                                    </div>
+                                    <div className="p-5 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-700">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Uptime API</p>
+                                        <p className="font-black">{systemHealth ? `${Math.floor(systemHealth.uptimeSeconds / 3600)}h ${Math.floor((systemHealth.uptimeSeconds % 3600) / 60)}m` : 'N/A'}</p>
+                                    </div>
+                                    <div className="p-5 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-700">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Última revisión</p>
+                                        <p className="font-black text-sm">{systemHealth?.checkedAt ? new Date(systemHealth.checkedAt).toLocaleString('es-CO') : 'N/A'}</p>
+                                    </div>
+                                </div>
+
+                                {loadingHealth ? (
+                                    <div className="p-10 text-center bg-gray-50 dark:bg-slate-900 rounded-2xl">
+                                        <Loader2 className="animate-spin mx-auto mb-3 text-emerald-600" size={28} />
+                                        <p className="text-gray-500 font-bold">Revisando servicios...</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                        {(systemHealth?.checks || []).map((check) => {
+                                            const icon = check.key === 'database' ? Database : check.key === 'storage' ? HardDrive : check.key === 'ai' ? Cpu : Activity;
+                                            const Icon = icon;
+                                            const colors = check.status === 'ok'
+                                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/10 dark:border-emerald-900/30 dark:text-emerald-300'
+                                                : check.status === 'error'
+                                                    ? 'border-red-200 bg-red-50 text-red-700 dark:bg-red-900/10 dark:border-red-900/30 dark:text-red-300'
+                                                    : 'border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-900/10 dark:border-amber-900/30 dark:text-amber-300';
+                                            return (
+                                                <div key={check.key} className={`p-5 rounded-2xl border ${colors}`}>
+                                                    <div className="flex items-start justify-between gap-4 mb-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <Icon size={20} />
+                                                            <h4 className="font-black">{check.label}</h4>
+                                                        </div>
+                                                        <span className="text-[9px] font-black uppercase tracking-widest">{check.status}</span>
+                                                    </div>
+                                                    <p className="text-sm font-bold leading-relaxed">{check.message}</p>
+                                                    {typeof check.latencyMs === 'number' && (
+                                                        <p className="text-[10px] font-black uppercase tracking-widest mt-3 opacity-70">{check.latencyMs} ms</p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </section>
                         )}
 

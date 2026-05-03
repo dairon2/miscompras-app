@@ -24,6 +24,7 @@ const FALLBACK_MODELS = [
 
 // Roles that can see ALL data (global statistics, all suppliers, all budgets, etc.)
 const FULL_ACCESS_ROLES = ['ADMIN', 'DIRECTOR', 'COORDINATOR'];
+const EXECUTIVE_AI_ROLES = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'];
 
 // ... (Imports and previous code)
 
@@ -285,6 +286,8 @@ IMPORTANTE para REFERENCIAS:
             - ASSIGN_SUPPLIER: Asignar un proveedor a un requerimiento (Ej: "asigna el proveedor X al requerimiento #5", "pon a Juan como proveedor del req #3"). Parámetros: supplierName (string), groupId (number).
             - TOP_PROJECT: Proyecto con más gastos/ejecución (Ej: "proyecto con más gastos", "cuál proyecto ha gastado más"). Sin parámetros.
             - TOP_REQUESTER: Usuario/área que más requerimientos ha creado (Ej: "quién más compra", "qué líder más compra", "área con más requerimientos"). Sin parámetros.
+            - TOP_SUPPLIER_MONTH: Proveedor con más compras del mes actual (Ej: "qué proveedor tiene más compras este mes", "proveedor con más gasto mensual"). Sin parámetros.
+            - TOP_AREA_SPEND: Área con mayor uso de presupuesto o gasto (Ej: "qué área está usando más presupuesto", "área con más gasto", "dónde se está gastando más por área"). Sin parámetros.
             - REQ_BY_STATUS: Listar requerimientos filtrados por estado de trámite (Ej: "requerimientos en trámite", "pendientes de entrega", "finalizados"). Parámetros: procurementStatus (PENDIENTE|EN_TRAMITE|ENTREGADO|FINALIZADO|ANULADO|POSTERGADO).
             - REQ_BY_CATEGORY: Contar o listar requerimientos por categoría (Ej: "cuántos son orden de servicio", "requerimientos de compra"). Parámetros: category (COMPRA|SERVICIO|ORDEN_COMPRA|ORDEN_SERVICIO|ANTICIPO|CONTRATO|ORDEN_PRODUCCION|COMPRA_ONLINE).
             - GENERATE_CONTRACT: Generar y enviar contrato al proveedor de un requerimiento (Ej: "genera contrato para req #4", "envía contrato del requerimiento X", "crea contrato para ESE requerimiento"). Parámetros: groupId (number) o title (string).
@@ -299,6 +302,9 @@ IMPORTANTE para REFERENCIAS:
             - Si el usuario pregunta por "dinero gastado", "cuánto se ha ejecutado", "gasto total" -> usa BUDGET_SUMMARY, NO COUNT_GLOBAL.
             - Si pregunta "gastos del mes", "resumen de gastos", "cuánto gastamos este mes", "gastos mensuales", "comparativo de gastos" -> usa SPENDING_TRENDS.
             - Si pregunta "cuál proyecto gastó más" -> usa TOP_PROJECT.
+            - Si pregunta "dónde se está gastando más" -> usa TOP_PROJECT si menciona proyecto, o TOP_AREA_SPEND si menciona área.
+            - Si pregunta "qué proveedor tiene más compras este mes" -> usa TOP_SUPPLIER_MONTH.
+            - Si pregunta "qué área está usando más presupuesto" -> usa TOP_AREA_SPEND.
             - Si pregunta "quién más compra" o "qué líder" -> usa TOP_REQUESTER.
             - Si pregunta "en trámite", "pendientes", "finalizados" -> usa REQ_BY_STATUS.
             - Si pregunta "orden de compra", "orden de servicio", categorías -> usa REQ_BY_CATEGORY.
@@ -817,6 +823,81 @@ IMPORTANTE para REFERENCIAS:
                     break;
                 }
 
+                case 'TOP_SUPPLIER_MONTH': {
+                    if (!EXECUTIVE_AI_ROLES.includes(userRole)) {
+                        actionResult += `\n\n[SISTEMA]: ⛔ Esta información está disponible solo para Desarrollador, Director, Coordinador o Admin.`;
+                        break;
+                    }
+
+                    const now = new Date();
+                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const grouped = await prisma.requirement.groupBy({
+                        by: ['supplierId'],
+                        where: {
+                            supplierId: { not: null },
+                            createdAt: { gte: monthStart }
+                        },
+                        _count: { id: true },
+                        _sum: { totalAmount: true },
+                        orderBy: { _count: { id: 'desc' } },
+                        take: 5
+                    });
+
+                    const supplierIds = grouped.map(g => g.supplierId).filter(Boolean) as string[];
+                    const suppliers = await prisma.supplier.findMany({
+                        where: { id: { in: supplierIds } },
+                        select: { id: true, name: true }
+                    });
+                    const supplierMap = new Map(suppliers.map(s => [s.id, s.name]));
+
+                    actionResult += `\n\n[SISTEMA - PROVEEDORES CON MÁS COMPRAS ESTE MES]:\n`;
+                    if (grouped.length > 0) {
+                        grouped.forEach((g, i) => {
+                            actionResult += `${i + 1}. **${supplierMap.get(g.supplierId || '') || 'Proveedor'}**: ${g._count.id} compras - ${formatMoney(g._sum.totalAmount || 0)}\n`;
+                        });
+                    } else {
+                        actionResult += `No hay compras con proveedor asignado en el mes actual.`;
+                    }
+                    actionButtons.push({ label: 'Exportar requerimientos', type: 'prompt', value: 'Exporta los requerimientos a Excel' });
+                    break;
+                }
+
+                case 'TOP_AREA_SPEND': {
+                    if (!EXECUTIVE_AI_ROLES.includes(userRole)) {
+                        actionResult += `\n\n[SISTEMA]: ⛔ Esta información está disponible solo para Desarrollador, Director, Coordinador o Admin.`;
+                        break;
+                    }
+
+                    const grouped = await prisma.requirement.groupBy({
+                        by: ['areaId'],
+                        _count: { id: true },
+                        _sum: { totalAmount: true },
+                        orderBy: { _sum: { totalAmount: 'desc' } },
+                        take: 5
+                    });
+
+                    const areaIds = grouped.map(g => g.areaId);
+                    const areas = await prisma.area.findMany({
+                        where: { id: { in: areaIds } },
+                        select: { id: true, name: true }
+                    });
+                    const areaMap = new Map(areas.map(a => [a.id, a.name]));
+
+                    actionResult += `\n\n[SISTEMA - ÁREAS CON MAYOR USO DE PRESUPUESTO]:\n`;
+                    if (grouped.length > 0) {
+                        grouped.forEach((g, i) => {
+                            actionResult += `${i + 1}. **${areaMap.get(g.areaId) || 'Área'}**: ${formatMoney(g._sum.totalAmount || 0)} en ${g._count.id} requerimientos\n`;
+                        });
+                    } else {
+                        actionResult += `No hay requerimientos con montos registrados para calcular gasto por área.`;
+                    }
+                    actionButtons.push(
+                        { label: 'Generar resumen', type: 'prompt', value: 'Genera un análisis ejecutivo completo' },
+                        { label: 'Exportar requerimientos', type: 'prompt', value: 'Exporta los requerimientos a Excel' }
+                    );
+                    break;
+                }
+
                 case 'REQ_BY_STATUS': {
                     const status = intent.params.procurementStatus || 'PENDIENTE';
                     const hasFullAccess = FULL_ACCESS_ROLES.includes(userRole);
@@ -951,11 +1032,11 @@ IMPORTANTE para REFERENCIAS:
                 }
 
                 case 'EXECUTIVE_ANALYSIS': {
-                    const hasFullAccess = FULL_ACCESS_ROLES.includes(userRole);
+                    const hasFullAccess = EXECUTIVE_AI_ROLES.includes(userRole);
                     const focus = intent.params.focus || 'full';
 
                     if (!hasFullAccess) {
-                        actionResult += `\n\n[SISTEMA]: ⛔ El análisis ejecutivo global está disponible solo para Dirección, Coordinación o Admin. Puedo revisar tus requerimientos si me preguntas por "mis requerimientos vencidos".`;
+                        actionResult += `\n\n[SISTEMA]: ⛔ El análisis ejecutivo global está disponible solo para Desarrollador, Dirección, Coordinación o Admin. Puedo revisar tus requerimientos si me preguntas por "mis requerimientos vencidos".`;
                         break;
                     }
 

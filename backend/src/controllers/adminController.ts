@@ -877,6 +877,95 @@ export const updateSystemConfig = async (req: AuthRequest, res: Response) => {
     }
 };
 
+export const getSystemHealth = async (req: AuthRequest, res: Response) => {
+    const startedAt = Date.now();
+    const checks: Array<{
+        key: string;
+        label: string;
+        status: 'ok' | 'warning' | 'error';
+        message: string;
+        latencyMs?: number;
+    }> = [];
+
+    const addCheck = (
+        key: string,
+        label: string,
+        status: 'ok' | 'warning' | 'error',
+        message: string,
+        latencyMs?: number
+    ) => {
+        checks.push({ key, label, status, message, latencyMs });
+    };
+
+    try {
+        const dbStart = Date.now();
+        await prisma.$queryRaw`SELECT 1`;
+        addCheck('database', 'Base de datos', 'ok', 'PostgreSQL responde correctamente', Date.now() - dbStart);
+    } catch (error: any) {
+        addCheck('database', 'Base de datos', 'error', error.message || 'No se pudo consultar PostgreSQL');
+    }
+
+    addCheck(
+        'auth',
+        'Autenticación',
+        process.env.JWT_SECRET && process.env.JWT_SECRET !== 'fallback_secret' ? 'ok' : 'error',
+        process.env.JWT_SECRET && process.env.JWT_SECRET !== 'fallback_secret'
+            ? 'JWT_SECRET está configurado'
+            : 'JWT_SECRET falta o usa el valor por defecto'
+    );
+
+    addCheck(
+        'ai',
+        'IA',
+        process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY ? 'ok' : 'warning',
+        process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY
+            ? `Proveedor configurado: ${process.env.GEMINI_API_KEY ? 'Gemini' : 'Groq'}`
+            : 'No hay API key de IA configurada'
+    );
+
+    addCheck(
+        'email',
+        'Correo',
+        process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS ? 'ok' : 'warning',
+        process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
+            ? `SMTP configurado en ${process.env.SMTP_HOST}`
+            : 'SMTP incompleto; los correos pueden no enviarse'
+    );
+
+    addCheck(
+        'storage',
+        'Almacenamiento',
+        process.env.AZURE_STORAGE_CONNECTION_STRING ? 'ok' : 'warning',
+        process.env.AZURE_STORAGE_CONNECTION_STRING
+            ? `Azure Blob configurado (${process.env.AZURE_STORAGE_CONTAINER || 'pdfs'})`
+            : 'Sin Azure Blob; puede usar almacenamiento local del contenedor'
+    );
+
+    addCheck(
+        'cors',
+        'CORS',
+        process.env.CORS_ORIGIN || process.env.FRONTEND_URL ? 'ok' : 'warning',
+        process.env.CORS_ORIGIN || process.env.FRONTEND_URL
+            ? 'Origen de frontend configurado'
+            : 'No hay CORS_ORIGIN/FRONTEND_URL explícito'
+    );
+
+    const summaryStatus = checks.some(c => c.status === 'error')
+        ? 'error'
+        : checks.some(c => c.status === 'warning')
+            ? 'warning'
+            : 'ok';
+
+    res.json({
+        status: summaryStatus,
+        checkedAt: new Date().toISOString(),
+        uptimeSeconds: Math.round(process.uptime()),
+        environment: process.env.NODE_ENV || 'production',
+        responseTimeMs: Date.now() - startedAt,
+        checks
+    });
+};
+
 // ==================== STATS ====================
 
 export const getAdminStats = async (req: AuthRequest, res: Response) => {

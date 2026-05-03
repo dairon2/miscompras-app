@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, X, Send, Bot, User, Sparkles, Loader2, Paperclip, FileText, Image as ImageIcon, Trash2 } from "lucide-react";
 import api from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
 
 interface Message {
     role: 'user' | 'model';
@@ -25,16 +26,13 @@ interface Attachment {
 }
 
 export default function AIAssistant() {
+    const { user } = useAuthStore();
+    const canUseExecutiveAI = ['DEVELOPER', 'DIRECTOR', 'COORDINATOR', 'ADMIN'].includes(user?.role || '');
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'model',
-            content: '🤖 **MisCompras Bot activo**\n\nConsulta proyectos, presupuestos, requerimientos o busca proveedores. Ejemplos:\n• "¿Cuánto dinero se ha ejecutado?"\n• "Busca proveedores de papelería"\n• "Dame el resumen del proyecto X"',
-            actions: [
-                { label: 'Generar resumen', type: 'prompt', value: 'Genera un análisis ejecutivo completo' },
-                { label: 'Alertas de presupuesto', type: 'prompt', value: 'Muéstrame presupuestos bajos' },
-                { label: 'Exportar', type: 'prompt', value: 'Exporta los requerimientos a Excel' }
-            ]
+            content: '🤖 **MisCompras Bot activo**\n\nConsulta proyectos, presupuestos, requerimientos o busca proveedores. Ejemplos:\n• "¿Cuánto dinero se ha ejecutado?"\n• "Busca proveedores de papelería"\n• "Dame el resumen del proyecto X"'
         }
     ]);
     const [input, setInput] = useState("");
@@ -50,6 +48,18 @@ export default function AIAssistant() {
     useEffect(() => {
         scrollToBottom();
     }, [messages, isOpen, attachment]);
+
+    useEffect(() => {
+        setMessages(prev => {
+            if (prev.length === 0 || !prev[0].content.includes('MisCompras Bot activo')) return prev;
+            const executiveActions: AssistantAction[] = canUseExecutiveAI ? [
+                { label: 'Generar resumen', type: 'prompt', value: 'Genera un análisis ejecutivo completo' },
+                { label: 'Qué está atrasado', type: 'prompt', value: '¿Qué está atrasado?' },
+                { label: 'Dónde se gasta más', type: 'prompt', value: '¿Dónde se está gastando más?' }
+            ] : [];
+            return [{ ...prev[0], actions: executiveActions }, ...prev.slice(1)];
+        });
+    }, [canUseExecutiveAI]);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
