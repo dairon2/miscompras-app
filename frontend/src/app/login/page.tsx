@@ -13,6 +13,48 @@ import Link from "next/link";
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const isValidPassword = (password: string) => password.length >= 8;
 
+type LoginRequestError = {
+    response?: {
+        data?: {
+            error?: string;
+            message?: string;
+        };
+        status?: number;
+    };
+    code?: string;
+    message?: string;
+};
+
+const getLoginErrorMessage = (err: unknown) => {
+    const requestError = err as LoginRequestError;
+    const apiMessage = requestError.response?.data?.error || requestError.response?.data?.message;
+    const status = requestError.response?.status;
+
+    if (apiMessage) return apiMessage;
+
+    if (status === 400) {
+        return "Ingresa tu correo electrónico y contraseña para continuar.";
+    }
+
+    if (status === 401) {
+        return "Correo o contraseña incorrectos. Revisa los datos e intenta nuevamente.";
+    }
+
+    if (status === 403) {
+        return "Tu cuenta no tiene permiso para ingresar. Contacta al administrador del sistema.";
+    }
+
+    if (requestError.code === "ECONNABORTED" || requestError.message?.includes("timeout")) {
+        return "El servidor tardó demasiado en responder. Intenta nuevamente en unos segundos.";
+    }
+
+    if (requestError.message?.includes("Network Error")) {
+        return "No se pudo conectar con el servidor. Revisa tu conexión o intenta de nuevo más tarde.";
+    }
+
+    return "No pudimos iniciar sesión en este momento. Intenta nuevamente o contacta soporte si el problema continúa.";
+};
+
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -91,8 +133,8 @@ export default function LoginPage() {
             setAuth(user, token);
             addToast(`¡Bienvenido, ${user.name || user.email}!`, "success");
             router.push("/");
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.error || "Error al iniciar sesión";
+        } catch (err: unknown) {
+            const errorMessage = getLoginErrorMessage(err);
             setError(errorMessage);
             addToast(errorMessage, "error", 8000); // 8 seconds for login errors
         } finally {

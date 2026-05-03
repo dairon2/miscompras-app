@@ -61,7 +61,9 @@ export const login = async (req: Request, res: Response) => {
 
     // Input validation
     if (!email || !password) {
-        return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+        return res.status(400).json({
+            error: 'Ingresa tu correo electrónico y contraseña para continuar'
+        });
     }
 
     try {
@@ -79,19 +81,31 @@ export const login = async (req: Request, res: Response) => {
 
         if (!user) {
             // Generic error message for security
-            return res.status(401).json({ error: 'Credenciales inválidas' });
+            return res.status(401).json({
+                error: 'Correo o contraseña incorrectos. Revisa los datos e intenta nuevamente.'
+            });
         }
 
         const storedPassword = (user as any).password;
 
         if (!storedPassword) {
-            return res.status(500).json({ error: 'Error de configuración de usuario' });
+            return res.status(500).json({
+                error: 'Tu cuenta no tiene una contraseña configurada. Contacta al administrador del sistema.'
+            });
         }
 
         const isMatch = await bcrypt.compare(password, storedPassword);
 
         if (!isMatch) {
-            return res.status(401).json({ error: 'Credenciales inválidas' });
+            return res.status(401).json({
+                error: 'Correo o contraseña incorrectos. Revisa los datos e intenta nuevamente.'
+            });
+        }
+
+        if (user.isActive === false) {
+            return res.status(403).json({
+                error: 'Tu cuenta está desactivada. Contacta al administrador del sistema para recuperar el acceso.'
+            });
         }
 
         // Create access token
