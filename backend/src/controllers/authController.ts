@@ -6,7 +6,7 @@ import { prisma } from '../index';
 import { sendPasswordResetEmail } from '../services/emailService';
 
 export const register = async (req: Request, res: Response) => {
-    const { email, password, name, role, areaId } = req.body;
+    const { email, password, name, areaId } = req.body;
 
     // Input validation
     if (!email || !password || !name || !areaId) {
@@ -37,7 +37,7 @@ export const register = async (req: Request, res: Response) => {
                 email,
                 name,
                 password: hashedPassword,
-                role: role || 'USER',
+                role: 'USER',
                 areaId,
             },
         });
