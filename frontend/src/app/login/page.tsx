@@ -136,7 +136,7 @@ export default function LoginPage() {
         } catch (err: unknown) {
             const errorMessage = getLoginErrorMessage(err);
             setError(errorMessage);
-            addToast(errorMessage, "error", 8000); // 8 seconds for login errors
+            addToast(errorMessage, "error", 20000); // Keep login errors visible long enough to read
         } finally {
             setLoading(false);
         }

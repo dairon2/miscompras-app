@@ -23,8 +23,8 @@ export const useToastStore = create<ToastStore>((set) => ({
             toasts: [...state.toasts, newToast]
         }));
 
-        // Auto-dismiss after duration (default 3s, 6s for errors)
-        const dismissDuration = duration || (type === 'error' ? 6000 : 3000);
+        // Auto-dismiss after duration (default 3s, 12s for errors)
+        const dismissDuration = duration || (type === 'error' ? 12000 : 3000);
         setTimeout(() => {
             set((state) => ({
                 toasts: state.toasts.filter((t) => t.id !== id)
