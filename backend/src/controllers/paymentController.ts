@@ -27,9 +27,9 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'Este requerimiento no tiene habilitados los pagos múltiples' });
         }
 
-        // Check max 12 payments
-        if (requirement.payments.length >= 12) {
-            return res.status(400).json({ error: 'Se ha alcanzado el máximo de 12 pagos' });
+        // Check max 24 payments
+        if (requirement.payments.length >= 24) {
+            return res.status(400).json({ error: 'Se ha alcanzado el máximo de 24 pagos' });
         }
 
         // Calculate payment number based on highest existing number
