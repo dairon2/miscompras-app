@@ -10,6 +10,13 @@ const getInvoices = async (token: string, filters?: any) => {
     return response.data;
 };
 
+const getInvoiceById = async (token: string, id: string) => {
+    const response = await axios.get(`${API_URL}/invoices/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
 const createInvoice = async (token: string, formData: FormData) => {
     const response = await axios.post(`${API_URL}/invoices`, formData, {
         headers: {
@@ -51,6 +58,7 @@ const deleteInvoice = async (token: string, id: string) => {
 
 export const invoiceService = {
     getInvoices,
+    getInvoiceById,
     createInvoice,
     verifyInvoice,
     approveInvoice,

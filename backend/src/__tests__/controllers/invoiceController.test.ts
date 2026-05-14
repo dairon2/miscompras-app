@@ -3,7 +3,7 @@
  */
 
 import { Request, Response } from 'express';
-import { createInvoice, getInvoices, verifyInvoice, approveInvoice, payInvoice } from '../../controllers/invoiceController';
+import { createInvoice, getInvoices, getInvoiceById, verifyInvoice, approveInvoice, payInvoice } from '../../controllers/invoiceController';
 import { prisma } from '../../index';
 
 // Mock Prisma
@@ -11,19 +11,25 @@ jest.mock('../../index', () => ({
     prisma: {
         invoice: {
             findMany: jest.fn(),
+            findFirst: jest.fn(),
             create: jest.fn(),
             update: jest.fn(),
+            findUnique: jest.fn()
+        },
+        supplier: {
             findUnique: jest.fn()
         },
         requirement: {
             findUnique: jest.fn()
         },
         payment: {
+            findFirst: jest.fn(),
             create: jest.fn()
         },
         historyLog: {
             create: jest.fn()
-        }
+        },
+        $transaction: jest.fn()
     }
 }));
 
@@ -57,6 +63,8 @@ describe('Invoice Controller', () => {
             };
             req.file = { path: 'uploads/file.pdf' } as any;
 
+            (prisma.supplier.findUnique as jest.Mock).mockResolvedValue({ id: 'sup-1' });
+            (prisma.invoice.findFirst as jest.Mock).mockResolvedValue(null);
             (prisma.invoice.create as jest.Mock).mockResolvedValue({ id: 'inv-1', invoiceNumber: 'INV001', status: 'RECEIVED' });
 
             await createInvoice(req as Request, res as Response);
@@ -83,12 +91,48 @@ describe('Invoice Controller', () => {
         });
     });
 
+    describe('getInvoiceById', () => {
+        it('should return invoice when the user can view it', async () => {
+            req.params = { id: 'inv-1' };
+
+            (prisma.invoice.findUnique as jest.Mock).mockResolvedValue({
+                id: 'inv-1',
+                createdById: 'user-1',
+                requirement: null
+            });
+
+            await getInvoiceById(req as Request, res as Response);
+
+            expect(prisma.invoice.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+                where: { id: 'inv-1' }
+            }));
+            expect(json).toHaveBeenCalledWith(expect.objectContaining({ id: 'inv-1' }));
+        });
+
+        it('should deny invoice detail for users without visibility', async () => {
+            (req as any).user.role = 'USER';
+            (req as any).user.id = 'user-2';
+            req.params = { id: 'inv-1' };
+
+            (prisma.invoice.findUnique as jest.Mock).mockResolvedValue({
+                id: 'inv-1',
+                createdById: 'user-1',
+                requirement: { createdById: 'user-3' }
+            });
+
+            await getInvoiceById(req as Request, res as Response);
+
+            expect(status).toHaveBeenCalledWith(403);
+        });
+    });
+
     describe('verifyInvoice', () => {
         it('should verify match with approved PO', async () => {
             req.params = { id: 'inv-1' };
             req.body = { requirementId: 'req-1' };
 
-            (prisma.requirement.findUnique as jest.Mock).mockResolvedValue({ id: 'req-1', status: 'APPROVED' });
+            (prisma.invoice.findUnique as jest.Mock).mockResolvedValue({ id: 'inv-1', status: 'RECEIVED', supplierId: 'sup-1' });
+            (prisma.requirement.findUnique as jest.Mock).mockResolvedValue({ id: 'req-1', status: 'APPROVED', supplierId: 'sup-1' });
             (prisma.invoice.update as jest.Mock).mockResolvedValue({ id: 'inv-1', status: 'VERIFIED', requirementId: 'req-1' });
 
             await verifyInvoice(req as Request, res as Response);
@@ -104,12 +148,13 @@ describe('Invoice Controller', () => {
             req.params = { id: 'inv-1' };
             req.body = { requirementId: 'req-1' };
 
+            (prisma.invoice.findUnique as jest.Mock).mockResolvedValue({ id: 'inv-1', status: 'RECEIVED', supplierId: 'sup-1' });
             (prisma.requirement.findUnique as jest.Mock).mockResolvedValue({ id: 'req-1', status: 'PENDING_APPROVAL' });
 
             await verifyInvoice(req as Request, res as Response);
 
             expect(status).toHaveBeenCalledWith(400);
-            expect(json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Purchase Order is not approved' }));
+            expect(json).toHaveBeenCalledWith(expect.objectContaining({ error: 'El requerimiento debe estar aprobado para vincular una factura' }));
         });
     });
 
@@ -118,6 +163,7 @@ describe('Invoice Controller', () => {
             (req as any).user.role = 'LEADER';
             req.params = { id: 'inv-1' };
 
+            (prisma.invoice.findUnique as jest.Mock).mockResolvedValue({ id: 'inv-1', status: 'VERIFIED' });
             (prisma.invoice.update as jest.Mock).mockResolvedValue({ id: 'inv-1', status: 'APPROVED' });
 
             await approveInvoice(req as Request, res as Response);
@@ -143,28 +189,84 @@ describe('Invoice Controller', () => {
             req.params = { id: 'inv-1' };
             req.body = { paymentDate: '2025-01-10' };
 
-            (prisma.invoice.update as jest.Mock).mockResolvedValue({
-                id: 'inv-1',
-                status: 'PAID',
-                amount: 1000,
-                invoiceNumber: 'INV001',
-                requirementId: 'req-1'
-            });
+            const tx = {
+                invoice: {
+                    findUnique: jest.fn()
+                        .mockResolvedValueOnce({
+                            id: 'inv-1',
+                            status: 'APPROVED',
+                            amount: 1000,
+                            invoiceNumber: 'INV001',
+                            requirementId: 'req-1',
+                            requirement: { id: 'req-1', hasMultiplePayments: true, payments: [] }
+                        })
+                        .mockResolvedValueOnce({
+                            id: 'inv-1',
+                            status: 'PAID',
+                            amount: 1000,
+                            invoiceNumber: 'INV001',
+                            requirementId: 'req-1'
+                        }),
+                    update: jest.fn().mockResolvedValue({
+                        id: 'inv-1',
+                        status: 'PAID'
+                    })
+                },
+                payment: {
+                    findFirst: jest.fn()
+                        .mockResolvedValueOnce(null)
+                        .mockResolvedValueOnce({ paymentNumber: 2 }),
+                    create: jest.fn().mockResolvedValue({ id: 'pay-1' })
+                },
+                historyLog: {
+                    create: jest.fn().mockResolvedValue({ id: 'log-1' })
+                }
+            };
+
+            (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => callback(tx));
 
             await payInvoice(req as Request, res as Response);
 
-            expect(prisma.invoice.update).toHaveBeenCalledWith({
+            expect(tx.invoice.update).toHaveBeenCalledWith({
                 where: { id: 'inv-1' },
-                data: { status: 'PAID' },
-                include: { requirement: true }
+                data: { status: 'PAID' }
             });
 
-            expect(prisma.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+            expect(tx.payment.create).toHaveBeenCalledWith(expect.objectContaining({
                 data: expect.objectContaining({
                     requirementId: 'req-1',
+                    paymentNumber: 3,
                     amount: 1000,
                     invoiceNumber: 'INV001'
                 })
+            }));
+            expect(json).toHaveBeenCalledWith(expect.objectContaining({
+                id: 'inv-1',
+                status: 'PAID'
+            }));
+        });
+
+        it('should reject payment when invoice is not approved', async () => {
+            req.params = { id: 'inv-1' };
+            req.body = { paymentDate: '2025-01-10' };
+
+            const tx = {
+                invoice: {
+                    findUnique: jest.fn().mockResolvedValue({
+                        id: 'inv-1',
+                        status: 'VERIFIED',
+                        requirementId: 'req-1'
+                    })
+                }
+            };
+
+            (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => callback(tx));
+
+            await payInvoice(req as Request, res as Response);
+
+            expect(status).toHaveBeenCalledWith(400);
+            expect(json).toHaveBeenCalledWith(expect.objectContaining({
+                error: 'Solo se pueden pagar facturas autorizadas. Estado actual: VERIFIED'
             }));
         });
     });

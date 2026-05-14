@@ -47,20 +47,11 @@ export default function InvoiceDetailPage() {
 
     const loadInvoice = async () => {
         try {
-            // Re-using getInvoices for now or need a specific getById endpoint in service?
-            // The service doesn't have getById, so we might need to filter or add it.
-            // Let's assume we can filter by ID or just use the list for now to find it.
-            // Ideally backend should have getInvoiceById. 
-            // Controller has getInvoices (list) but not getById. I should add it or filter client side.
-            // For speed, let's filter client side from the list or add the endpoint. 
-            // Looking at backend routes: router.get('/', ... getInvoices). No /:id.
-            // I'll update backend later to be proper, for now I'll fetch all (inefficient) or just fix backend.
-            // Actually, let's use the list and find.
-            const all = await invoiceService.getInvoices(token!);
-            const found = all.find((i: any) => i.id === params.id);
+            const found = await invoiceService.getInvoiceById(token!, String(params.id));
             setInvoice(found);
         } catch (error) {
             console.error(error);
+            addToast('No se pudo cargar la factura', 'error');
         } finally {
             setLoading(false);
         }
@@ -117,21 +108,22 @@ export default function InvoiceDetailPage() {
             await invoiceService.approveInvoice(token!, invoice.id);
             addToast('Pago autorizado con éxito', 'success');
             loadInvoice();
-        } catch (error) {
-            addToast('Error al autorizar pago', 'error');
+        } catch (error: any) {
+            addToast(error.response?.data?.error || 'Error al autorizar pago', 'error');
         }
     };
 
     const handlePay = async () => {
         const date = prompt('Fecha de Pago (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
         if (!date) return;
+        const transactionNumber = prompt('Número de transacción o comprobante (opcional):', '') || undefined;
 
         try {
-            await invoiceService.payInvoice(token!, invoice.id, { paymentDate: date });
+            await invoiceService.payInvoice(token!, invoice.id, { paymentDate: date, transactionNumber });
             addToast('Pago registrado correctamente', 'success');
             loadInvoice();
-        } catch (error) {
-            addToast('Error al registrar pago', 'error');
+        } catch (error: any) {
+            addToast(error.response?.data?.error || 'Error al registrar pago', 'error');
         }
     };
 
@@ -146,6 +138,10 @@ export default function InvoiceDetailPage() {
     };
 
     const isMatchCorrect = selectedReq && Math.abs(parseFloat(invoice.amount) - (parseFloat(selectedReq.actualAmount || '0'))) < 1.0;
+    const userRole = user?.role || '';
+    const canManageInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(userRole);
+    const canApproveInvoices = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR'].includes(userRole);
+    const canPayInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(userRole);
 
     return (
         <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
@@ -217,12 +213,12 @@ export default function InvoiceDetailPage() {
 
                         {/* Actions */}
                         <div className="space-y-2">
-                            {invoice.status === 'VERIFIED' && (
+                            {invoice.status === 'VERIFIED' && canApproveInvoices && (
                                 <button onClick={handleApprove} className="w-full bg-amber-500 text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-sm">
                                     Autorizar Pago
                                 </button>
                             )}
-                            {invoice.status === 'APPROVED' && (
+                            {invoice.status === 'APPROVED' && canPayInvoices && (
                                 <button onClick={handlePay} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition-colors shadow-sm">
                                     Registrar Pago
                                 </button>
@@ -238,7 +234,8 @@ export default function InvoiceDetailPage() {
                         </h3>
 
                         {invoice.status === 'RECEIVED' ? (
-                            <div className="space-y-4">
+                            canManageInvoices ? (
+                                <div className="space-y-4">
                                 <p className="text-xs text-gray-500">Busca el requerimiento aprobado para vincular.</p>
                                 <div className="flex gap-2">
                                     <input
@@ -310,7 +307,14 @@ export default function InvoiceDetailPage() {
                                         </LoadingButton>
                                     </div>
                                 )}
-                            </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-800/30">
+                                    <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-2" />
+                                    <p className="font-bold text-amber-800 dark:text-amber-300">Pendiente de vinculación</p>
+                                    <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">Un usuario autorizado debe vincular esta factura a un requerimiento aprobado.</p>
+                                </div>
+                            )
                         ) : (
                             <div className="text-center py-8 bg-green-50 dark:bg-green-900/10 rounded-xl border border-green-100 dark:border-green-800/30">
                                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />

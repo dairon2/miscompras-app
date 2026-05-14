@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { invoiceService } from '@/services/invoiceService';
-import { Plus, CheckCircle, Clock, FileText, Upload, DollarSign, Filter, Eye, Edit, Trash2 } from 'lucide-react';
-import LoadingButton from '@/components/LoadingButton';
+import { Plus, FileText, Eye, Trash2 } from 'lucide-react';
 
 export default function InvoicesPage() {
     const { token, user } = useAuthStore();
@@ -13,6 +12,7 @@ export default function InvoicesPage() {
     const [invoices, setInvoices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState<string>('');
+    const canDeleteInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(user?.role || '');
 
     useEffect(() => {
         if (token) {
@@ -129,23 +129,15 @@ export default function InvoicesPage() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            {/* Action Buttons for Allowed Roles */}
-                                            {!['USER', 'LEADER', 'AUDITOR'].includes(user?.role || '') && (
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => router.push(`/invoices/${inv.id}`)}
-                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                        title="Gestionar"
-                                                    >
-                                                        <Eye size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => router.push(`/invoices/${inv.id}/edit`)}
-                                                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                                        title="Editar"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => router.push(`/invoices/${inv.id}`)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Ver factura"
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+                                                {canDeleteInvoices && inv.status !== 'PAID' && (
                                                     <button
                                                         onClick={async () => {
                                                             if (confirm('¿Estás seguro de eliminar esta factura?')) {
@@ -163,8 +155,8 @@ export default function InvoicesPage() {
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
