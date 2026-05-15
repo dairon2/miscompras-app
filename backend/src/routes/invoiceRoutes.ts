@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getInvoices, getInvoiceById, createInvoice, verifyInvoice, approveInvoice, payInvoice, deleteInvoice } from '../controllers/invoiceController';
+import { getInvoices, getInvoiceById, checkDuplicateInvoice, createInvoice, verifyInvoice, approveInvoice, payInvoice, deleteInvoice } from '../controllers/invoiceController';
 import { authMiddleware } from '../middlewares/auth';
 import multer from 'multer';
 import path from 'path';
@@ -45,6 +45,7 @@ const upload = multer({
 const router = Router();
 
 router.get('/', authMiddleware, getInvoices);
+router.get('/check-duplicate', authMiddleware, checkDuplicateInvoice);
 router.get('/:id', authMiddleware, getInvoiceById);
 router.post('/', authMiddleware, upload.single('file'), createInvoice);
 router.patch('/:id/verify', authMiddleware, verifyInvoice);

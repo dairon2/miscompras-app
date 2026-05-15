@@ -29,6 +29,9 @@ jest.mock('../../index', () => ({
         historyLog: {
             create: jest.fn()
         },
+        invoiceAuditLog: {
+            create: jest.fn()
+        },
         $transaction: jest.fn()
     }
 }));
@@ -51,6 +54,7 @@ describe('Invoice Controller', () => {
             params: {},
             query: {}
         } as any;
+        (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => callback(prisma));
     });
 
     describe('createInvoice', () => {
@@ -139,8 +143,11 @@ describe('Invoice Controller', () => {
 
             expect(prisma.invoice.update).toHaveBeenCalledWith({
                 where: { id: 'inv-1' },
-                data: { requirementId: 'req-1', status: 'VERIFIED' }
+                data: expect.objectContaining({ requirementId: 'req-1', status: 'VERIFIED', verifiedById: 'user-1' })
             });
+            expect(prisma.invoiceAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({ action: 'INVOICE_VERIFIED', invoiceId: 'inv-1' })
+            }));
             expect(json).toHaveBeenCalled();
         });
 
@@ -170,8 +177,11 @@ describe('Invoice Controller', () => {
 
             expect(prisma.invoice.update).toHaveBeenCalledWith({
                 where: { id: 'inv-1' },
-                data: { status: 'APPROVED' }
+                data: expect.objectContaining({ status: 'APPROVED', approvedById: 'user-1' })
             });
+            expect(prisma.invoiceAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({ action: 'INVOICE_APPROVED', invoiceId: 'inv-1' })
+            }));
         });
 
         it('should deny regular USER', async () => {
@@ -220,6 +230,9 @@ describe('Invoice Controller', () => {
                 },
                 historyLog: {
                     create: jest.fn().mockResolvedValue({ id: 'log-1' })
+                },
+                invoiceAuditLog: {
+                    create: jest.fn().mockResolvedValue({ id: 'audit-1' })
                 }
             };
 
@@ -229,16 +242,20 @@ describe('Invoice Controller', () => {
 
             expect(tx.invoice.update).toHaveBeenCalledWith({
                 where: { id: 'inv-1' },
-                data: { status: 'PAID' }
+                data: expect.objectContaining({ status: 'PAID', paidById: 'user-1' })
             });
 
             expect(tx.payment.create).toHaveBeenCalledWith(expect.objectContaining({
                 data: expect.objectContaining({
                     requirementId: 'req-1',
+                    invoiceId: 'inv-1',
                     paymentNumber: 3,
                     amount: 1000,
                     invoiceNumber: 'INV001'
                 })
+            }));
+            expect(tx.invoiceAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({ action: 'INVOICE_PAID', invoiceId: 'inv-1' })
             }));
             expect(json).toHaveBeenCalledWith(expect.objectContaining({
                 id: 'inv-1',

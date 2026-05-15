@@ -17,6 +17,14 @@ const getInvoiceById = async (token: string, id: string) => {
     return response.data;
 };
 
+const checkDuplicateInvoice = async (token: string, supplierId: string, invoiceNumber: string) => {
+    const response = await axios.get(`${API_URL}/invoices/check-duplicate`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { supplierId, invoiceNumber }
+    });
+    return response.data;
+};
+
 const createInvoice = async (token: string, formData: FormData) => {
     const response = await axios.post(`${API_URL}/invoices`, formData, {
         headers: {
@@ -59,6 +67,7 @@ const deleteInvoice = async (token: string, id: string) => {
 export const invoiceService = {
     getInvoices,
     getInvoiceById,
+    checkDuplicateInvoice,
     createInvoice,
     verifyInvoice,
     approveInvoice,

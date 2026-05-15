@@ -301,7 +301,11 @@ model Payment {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   purchaseOrder String?
+  invoiceId     String?
+  invoice       Invoice?    @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
 }
 
 model SystemConfig {
@@ -314,21 +318,52 @@ model SystemConfig {
 }
 
 model Invoice {
-  id            String        @id @default(uuid())
-  invoiceNumber String
-  supplierId    String
-  requirementId String?
-  amount        Decimal       @db.Decimal(15, 2)
-  issueDate     DateTime
-  dueDate       DateTime?
-  status        InvoiceStatus @default(RECEIVED)
-  fileUrl       String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  createdById   String
-  createdBy     User          @relation("InvoiceCreator", fields: [createdById], references: [id])
-  requirement   Requirement?  @relation(fields: [requirementId], references: [id])
-  supplier      Supplier      @relation(fields: [supplierId], references: [id])
+  id                String            @id @default(uuid())
+  invoiceNumber     String
+  supplierId        String
+  requirementId     String?
+  amount            Decimal           @db.Decimal(15, 2)
+  issueDate         DateTime
+  dueDate           DateTime?
+  status            InvoiceStatus     @default(RECEIVED)
+  fileUrl           String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  createdById       String
+  verifiedAt        DateTime?
+  verifiedById      String?
+  approvedAt        DateTime?
+  approvedById      String?
+  paidAt            DateTime?
+  paidById          String?
+  transactionNumber String?
+  auditLogs         InvoiceAuditLog[]
+  createdBy         User              @relation("InvoiceCreator", fields: [createdById], references: [id])
+  payments          Payment[]
+  requirement       Requirement?      @relation(fields: [requirementId], references: [id])
+  supplier          Supplier          @relation(fields: [supplierId], references: [id])
+
+  @@index([supplierId, invoiceNumber])
+  @@index([status])
+  @@index([dueDate])
+  @@index([paidAt])
+}
+
+model InvoiceAuditLog {
+  id         String         @id @default(uuid())
+  invoiceId  String?
+  action     String
+  fromStatus InvoiceStatus?
+  toStatus   InvoiceStatus?
+  details    String?
+  actorId    String?
+  actorEmail String?
+  createdAt  DateTime       @default(now())
+  invoice    Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+  @@index([action])
+  @@index([createdAt])
 }
 
 model SubmissionRule {

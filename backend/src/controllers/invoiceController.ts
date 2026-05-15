@@ -73,6 +73,35 @@ const parsePositiveAmount = (value: unknown) => {
     return amount;
 };
 
+const writeInvoiceAuditLog = async (
+    client: any,
+    data: {
+        invoiceId?: string | null;
+        action: string;
+        fromStatus?: 'RECEIVED' | 'VERIFIED' | 'APPROVED' | 'PAID' | 'REJECTED' | null;
+        toStatus?: 'RECEIVED' | 'VERIFIED' | 'APPROVED' | 'PAID' | 'REJECTED' | null;
+        details?: string;
+        actorId?: string;
+        actorEmail?: string;
+    }
+) => {
+    try {
+        await client.invoiceAuditLog.create({
+            data: {
+                invoiceId: data.invoiceId || null,
+                action: data.action,
+                fromStatus: data.fromStatus || null,
+                toStatus: data.toStatus || null,
+                details: data.details || null,
+                actorId: data.actorId || null,
+                actorEmail: data.actorEmail || null
+            }
+        });
+    } catch (error) {
+        logger.error('Could not create invoice audit log:', error);
+    }
+};
+
 // Get Invoices with Filters
 export const getInvoices = async (req: AuthRequest, res: Response) => {
     const { status, supplierId } = req.query;
@@ -132,6 +161,42 @@ export const getInvoiceById = async (req: AuthRequest, res: Response) => {
     } catch (error: any) {
         console.error("Get invoice error:", error);
         res.status(500).json({ error: 'Error al consultar la factura' });
+    }
+};
+
+// Soft duplicate validation for invoice reception
+export const checkDuplicateInvoice = async (req: AuthRequest, res: Response) => {
+    const { supplierId, invoiceNumber } = req.query;
+
+    try {
+        const normalizedInvoiceNumber = String(invoiceNumber || '').trim();
+        if (!supplierId || !normalizedInvoiceNumber) {
+            return res.json({ isDuplicate: false });
+        }
+
+        const duplicateInvoice = await prisma.invoice.findFirst({
+            where: {
+                supplierId: String(supplierId),
+                invoiceNumber: {
+                    equals: normalizedInvoiceNumber,
+                    mode: 'insensitive'
+                }
+            },
+            select: {
+                id: true,
+                invoiceNumber: true,
+                status: true,
+                createdAt: true
+            }
+        });
+
+        res.json({
+            isDuplicate: Boolean(duplicateInvoice),
+            invoice: duplicateInvoice
+        });
+    } catch (error: any) {
+        console.error("Check duplicate invoice error:", error);
+        res.status(500).json({ error: 'Error al validar si la factura ya existe' });
     }
 };
 
@@ -205,18 +270,14 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
             }
         });
 
-        // Log
-        // Note: HistoryLog requires a valid requirementId which we don't have yet.
-        // We will skip logging to HistoryLog for now or implementing a separate InvoiceLog later.
-        /*
-        await prisma.historyLog.create({
-            data: {
-                action: 'INVOICE_CREATED',
-                details: `Factura ${invoiceNumber} subida por ${req.user?.email}`,
-                requirementId: '' 
-            }
-        }).catch(err => console.warn("Could not create history log for invoice (no reqId)", err));
-        */
+        await writeInvoiceAuditLog(prisma, {
+            invoiceId: invoice.id,
+            action: 'INVOICE_CREATED',
+            toStatus: 'RECEIVED',
+            details: `Factura ${normalizedInvoiceNumber} recepcionada`,
+            actorId: userId,
+            actorEmail: req.user?.email
+        });
 
         res.status(201).json(invoice);
     } catch (error: any) {
@@ -260,12 +321,28 @@ export const verifyInvoice = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'El proveedor de la factura no coincide con el proveedor del requerimiento' });
         }
 
-        const updatedInvoice = await prisma.invoice.update({
-            where: { id },
-            data: {
-                requirementId,
-                status: 'VERIFIED'
-            }
+        const updatedInvoice = await prisma.$transaction(async (tx) => {
+            const updated = await tx.invoice.update({
+                where: { id },
+                data: {
+                    requirementId,
+                    status: 'VERIFIED',
+                    verifiedAt: new Date(),
+                    verifiedById: req.user?.id
+                }
+            });
+
+            await writeInvoiceAuditLog(tx, {
+                invoiceId: id,
+                action: 'INVOICE_VERIFIED',
+                fromStatus: 'RECEIVED',
+                toStatus: 'VERIFIED',
+                details: `Factura vinculada al requerimiento ${requirementId}`,
+                actorId: req.user?.id,
+                actorEmail: req.user?.email
+            });
+
+            return updated;
         });
 
         res.json(updatedInvoice);
@@ -294,9 +371,27 @@ export const approveInvoice = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: `Solo se pueden autorizar facturas verificadas. Estado actual: ${currentInvoice.status}` });
         }
 
-        const invoice = await prisma.invoice.update({
-            where: { id },
-            data: { status: 'APPROVED' }
+        const invoice = await prisma.$transaction(async (tx) => {
+            const updated = await tx.invoice.update({
+                where: { id },
+                data: {
+                    status: 'APPROVED',
+                    approvedAt: new Date(),
+                    approvedById: req.user?.id
+                }
+            });
+
+            await writeInvoiceAuditLog(tx, {
+                invoiceId: id,
+                action: 'INVOICE_APPROVED',
+                fromStatus: 'VERIFIED',
+                toStatus: 'APPROVED',
+                details: 'Pago de factura autorizado',
+                actorId: req.user?.id,
+                actorEmail: req.user?.email
+            });
+
+            return updated;
         });
         res.json(invoice);
     } catch (error: any) {
@@ -352,8 +447,13 @@ export const payInvoice = async (req: AuthRequest, res: Response) => {
 
             const existingInvoicePayment = await tx.payment.findFirst({
                 where: {
-                    requirementId: currentInvoice.requirementId,
-                    invoiceNumber: currentInvoice.invoiceNumber
+                    OR: [
+                        { invoiceId: currentInvoice.id },
+                        {
+                            requirementId: currentInvoice.requirementId,
+                            invoiceNumber: currentInvoice.invoiceNumber
+                        }
+                    ]
                 }
             });
 
@@ -370,18 +470,34 @@ export const payInvoice = async (req: AuthRequest, res: Response) => {
 
             await tx.invoice.update({
                 where: { id },
-                data: { status: 'PAID' }
+                data: {
+                    status: 'PAID',
+                    paidAt: new Date(),
+                    paidById: req.user?.id,
+                    transactionNumber: transactionNumber || null
+                }
             });
 
             await tx.payment.create({
                 data: {
                     requirementId: currentInvoice.requirementId,
+                    invoiceId: currentInvoice.id,
                     paymentNumber,
                     amount: currentInvoice.amount,
                     invoiceNumber: currentInvoice.invoiceNumber,
                     paymentDate: parsedPaymentDate,
                     observations: `Pago generado desde Factura ${currentInvoice.invoiceNumber}. Transacción: ${transactionNumber || 'N/A'}`
                 }
+            });
+
+            await writeInvoiceAuditLog(tx, {
+                invoiceId: currentInvoice.id,
+                action: 'INVOICE_PAID',
+                fromStatus: 'APPROVED',
+                toStatus: 'PAID',
+                details: `Factura pagada y abono #${paymentNumber} registrado. Transacción: ${transactionNumber || 'N/A'}`,
+                actorId: req.user?.id,
+                actorEmail: req.user?.email
             });
 
             await tx.historyLog.create({
@@ -424,7 +540,19 @@ export const deleteInvoice = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'No se puede eliminar una factura pagada desde este módulo' });
         }
 
-        await prisma.invoice.delete({ where: { id } });
+        await prisma.$transaction(async (tx) => {
+            await writeInvoiceAuditLog(tx, {
+                invoiceId: id,
+                action: 'INVOICE_DELETED',
+                fromStatus: invoice.status,
+                details: `Factura ${invoice.invoiceNumber} eliminada`,
+                actorId: req.user?.id,
+                actorEmail: req.user?.email
+            });
+
+            await tx.invoice.delete({ where: { id } });
+        });
+
         res.json({ message: 'Factura eliminada' });
     } catch (error: any) {
         console.error("Delete invoice error:", error);

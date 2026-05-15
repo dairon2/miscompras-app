@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { invoiceService } from '@/services/invoiceService';
 import LoadingButton from '@/components/LoadingButton';
-import { ChevronLeft, Upload, FileText } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, Upload } from 'lucide-react';
 import axios from 'axios';
 import { useToastStore } from '@/store/toastStore';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -16,11 +16,13 @@ export default function NewInvoicePage() {
     const { addToast } = useToastStore();
     const [loading, setLoading] = useState(false);
     const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         invoiceNumber: '',
         amount: '',
         issueDate: new Date().toISOString().split('T')[0],
+        dueDate: '',
         supplierId: ''
     });
     const [file, setFile] = useState<File | null>(null);
@@ -30,6 +32,28 @@ export default function NewInvoicePage() {
             loadSuppliers();
         }
     }, [token]);
+
+    useEffect(() => {
+        if (!token || !formData.supplierId || !formData.invoiceNumber.trim()) {
+            setDuplicateWarning(null);
+            return;
+        }
+
+        const timeout = setTimeout(async () => {
+            try {
+                const result = await invoiceService.checkDuplicateInvoice(token, formData.supplierId, formData.invoiceNumber);
+                if (result.isDuplicate) {
+                    setDuplicateWarning(`Ya existe una factura ${result.invoice?.invoiceNumber || formData.invoiceNumber} para este proveedor.`);
+                } else {
+                    setDuplicateWarning(null);
+                }
+            } catch (error) {
+                console.error('Error checking duplicate invoice:', error);
+            }
+        }, 500);
+
+        return () => clearTimeout(timeout);
+    }, [token, formData.supplierId, formData.invoiceNumber]);
 
     const loadSuppliers = async () => {
         try {
@@ -60,6 +84,7 @@ export default function NewInvoicePage() {
             data.append('invoiceNumber', formData.invoiceNumber);
             data.append('amount', formData.amount);
             data.append('issueDate', formData.issueDate);
+            if (formData.dueDate) data.append('dueDate', formData.dueDate);
             data.append('supplierId', formData.supplierId);
             data.append('file', file);
 
@@ -113,6 +138,12 @@ export default function NewInvoicePage() {
                                 className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                 placeholder="Ejs: FE-1234"
                             />
+                            {duplicateWarning && (
+                                <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-700 dark:border-amber-800/40 dark:bg-amber-900/10 dark:text-amber-300">
+                                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                                    <span>{duplicateWarning} Revisa antes de continuar.</span>
+                                </div>
+                            )}
                         </div>
 
                         <div>
@@ -122,6 +153,16 @@ export default function NewInvoicePage() {
                                 required
                                 value={formData.issueDate}
                                 onChange={e => setFormData({ ...formData, issueDate: e.target.value })}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Vencimiento</label>
+                            <input
+                                type="date"
+                                value={formData.dueDate}
+                                onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
                                 className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                             />
                         </div>
