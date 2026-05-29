@@ -41,6 +41,15 @@ interface Holiday {
 }
 
 const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const holidayDateFormatter = new Intl.DateTimeFormat('es-CO', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC'
+});
+
+const getHolidayDayNumber = (date: string) => new Date(date).getUTCDate();
+const formatHolidayDate = (date: string) => holidayDateFormatter.format(new Date(date));
 
 export default function SubmissionRulesPage() {
     const { user, token } = useAuthStore();
@@ -61,7 +70,7 @@ export default function SubmissionRulesPage() {
         startTime: '08:00',
         endTime: '16:00',
         isHolidayRule: false,
-        holidayShift: 0,
+        holidayShift: 1,
         priority: 1,
         isActive: true
     });
@@ -124,7 +133,7 @@ export default function SubmissionRulesPage() {
             startTime: '08:00',
             endTime: '16:00',
             isHolidayRule: false,
-            holidayShift: 0,
+            holidayShift: 1,
             priority: 1,
             isActive: true
         });
@@ -139,7 +148,7 @@ export default function SubmissionRulesPage() {
             startTime: rule.startTime,
             endTime: rule.endTime,
             isHolidayRule: rule.isHolidayRule,
-            holidayShift: rule.holidayShift || 0,
+            holidayShift: rule.holidayShift || 1,
             priority: rule.priority,
             isActive: rule.isActive
         });
@@ -276,7 +285,7 @@ export default function SubmissionRulesPage() {
                                                 <h3 className="font-bold">{rule.name}</h3>
                                                 {rule.isHolidayRule && (
                                                     <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-700 border border-amber-200">
-                                                        Festivo
+                                                        Festivo +{rule.holidayShift || 1}d
                                                     </span>
                                                 )}
                                                 {!rule.isActive && (
@@ -356,16 +365,12 @@ export default function SubmissionRulesPage() {
                             holidays.map((holiday) => (
                                 <div key={holiday.id} className="p-4 flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-600 font-black text-sm">
-                                        {new Date(holiday.date).getDate()}
+                                        {getHolidayDayNumber(holiday.date)}
                                     </div>
                                     <div>
                                         <p className="font-bold">{holiday.name}</p>
                                         <p className="text-xs text-gray-500">
-                                            {new Date(holiday.date).toLocaleDateString('es-CO', {
-                                                weekday: 'long',
-                                                month: 'long',
-                                                day: 'numeric'
-                                            })}
+                                            {formatHolidayDate(holiday.date)}
                                         </p>
                                     </div>
                                 </div>
@@ -478,10 +483,28 @@ export default function SubmissionRulesPage() {
                                     <label htmlFor="isHolidayRule" className="flex-1">
                                         <p className="font-bold text-amber-800 dark:text-amber-200">Regla de Festivo</p>
                                         <p className="text-xs text-amber-600 dark:text-amber-400">
-                                            Se activa cuando el día anterior es festivo
+                                            Se activa después de un festivo, según los días configurados abajo
                                         </p>
                                     </label>
                                 </div>
+                                {formData.isHolidayRule && (
+                                    <div>
+                                        <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">
+                                            Días después del festivo
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={formData.holidayShift}
+                                            onChange={(e) => setFormData({ ...formData, holidayShift: Math.max(0, parseInt(e.target.value || '0')) })}
+                                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 font-bold"
+                                            min={0}
+                                            max={7}
+                                        />
+                                        <p className="mt-2 text-xs text-gray-500">
+                                            Ejemplo: martes después de lunes festivo = 1; miércoles después de lunes festivo = 2.
+                                        </p>
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-4">
                                     <input
                                         type="checkbox"

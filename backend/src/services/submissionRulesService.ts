@@ -20,6 +20,8 @@ interface SubmissionCheckResult {
     currentRule?: any;
 }
 
+const COLOMBIA_UTC_OFFSET_HOURS = -5;
+
 /**
  * Obtiene los festivos colombianos desde la API de Nager.Date
  */
@@ -91,22 +93,22 @@ export const syncHolidaysForYear = async (year: number): Promise<number> => {
  * Verifica si una fecha específica es festivo en Colombia
  */
 export const isHoliday = async (date: Date): Promise<boolean> => {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
+    const holiday = await getHolidayForDate(date);
+    return !!holiday;
+};
 
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+const getHolidayForDate = async (date: Date) => {
+    const startOfDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    const endOfDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1));
 
-    const holiday = await prisma.colombianHoliday.findFirst({
+    return prisma.colombianHoliday.findFirst({
         where: {
             date: {
                 gte: startOfDay,
-                lte: endOfDay
+                lt: endOfDay
             }
         }
     });
-
-    return !!holiday;
 };
 
 /**
@@ -114,18 +116,77 @@ export const isHoliday = async (date: Date): Promise<boolean> => {
  */
 const getPreviousWorkday = (date: Date): Date => {
     const prev = new Date(date);
-    prev.setDate(prev.getDate() - 1);
+    prev.setUTCDate(prev.getUTCDate() - 1);
 
     // Si es domingo, retroceder a viernes
-    if (prev.getDay() === 0) {
-        prev.setDate(prev.getDate() - 2);
+    if (prev.getUTCDay() === 0) {
+        prev.setUTCDate(prev.getUTCDate() - 2);
     }
     // Si es sábado, retroceder a viernes
-    else if (prev.getDay() === 6) {
-        prev.setDate(prev.getDate() - 1);
+    else if (prev.getUTCDay() === 6) {
+        prev.setUTCDate(prev.getUTCDate() - 1);
     }
 
     return prev;
+};
+
+const getColombiaCalendarTime = (date = new Date()): Date => {
+    return new Date(date.getTime() + (COLOMBIA_UTC_OFFSET_HOURS * 60 * 60000));
+};
+
+const getHolidayReferenceDate = (date: Date, rule: any): Date => {
+    const referenceDate = new Date(date);
+
+    const holidayShift = getEffectiveHolidayShift(rule);
+    if (holidayShift !== null) {
+        referenceDate.setUTCDate(referenceDate.getUTCDate() - holidayShift);
+        return referenceDate;
+    }
+
+    return getPreviousWorkday(date);
+};
+
+const getEffectiveHolidayShift = (rule: any): number | null => {
+    if (!rule.isHolidayRule) return null;
+
+    const configuredShift = rule.holidayShift !== null && rule.holidayShift !== undefined
+        ? Number(rule.holidayShift)
+        : 1;
+
+    // Backward compatibility for the default rule that was seeded as +1d
+    // while its label says it applies on Wednesday when Monday is a holiday.
+    if (
+        configuredShift === 1 &&
+        rule.dayOfWeek === 3 &&
+        String(rule.name || '').toLowerCase().includes('lunes')
+    ) {
+        return 2;
+    }
+
+    return configuredShift;
+};
+
+const normalizeRuleForClient = (rule: any) => ({
+    ...rule,
+    holidayShift: getEffectiveHolidayShift(rule)
+});
+
+const doesHolidayRuleApply = async (rule: any, date: Date): Promise<boolean> => {
+    if (!rule.isHolidayRule) return false;
+    const referenceDate = getHolidayReferenceDate(date, rule);
+    return isHoliday(referenceDate);
+};
+
+const hasApplicableHolidayRuleForDay = async (rules: any[], dayOfWeek: number, date: Date): Promise<boolean> => {
+    for (const rule of rules) {
+        if (!rule.isHolidayRule || rule.dayOfWeek !== dayOfWeek) continue;
+        if (await doesHolidayRuleApply(rule, date)) return true;
+    }
+    return false;
+};
+
+const formatCalendarDateCO = (date: Date): string => {
+    return date.toLocaleDateString('es-CO', { timeZone: 'UTC' });
 };
 
 /**
@@ -155,21 +216,16 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
     }
 
     const now = new Date();
+    const colombiaTime = getColombiaCalendarTime(now);
 
-    // Calcular hora Colombia directamente (UTC-5)
-    // El servidor está en UTC, necesitamos restar 5 horas
-    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000); // Convertir a UTC
-    const colombiaTime = new Date(utcTime - (5 * 60 * 60000)); // Restar 5 horas para Colombia
-
-    const currentDay = colombiaTime.getDay();
-    const currentHour = colombiaTime.getHours();
-    const currentMinute = colombiaTime.getMinutes();
+    const currentDay = colombiaTime.getUTCDay();
+    const currentHour = colombiaTime.getUTCHours();
+    const currentMinute = colombiaTime.getUTCMinutes();
     const currentTimeMinutes = currentHour * 60 + currentMinute;
 
     console.log('[SubmissionRules] Debug Info:', {
         serverNow: now.toISOString(),
-        serverTimezoneOffset: now.getTimezoneOffset(),
-        utcTimeMs: utcTime,
+        colombiaOffsetHours: COLOMBIA_UTC_OFFSET_HOURS,
         colombiaTime: colombiaTime.toISOString(),
         colombiaLocalTime: `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`,
         currentDay: currentDay,
@@ -179,22 +235,19 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
     });
 
 
-    // Verificar si el día anterior fue festivo
-    const previousDay = getPreviousWorkday(colombiaTime);
-    const wasPreviousDayHoliday = await isHoliday(previousDay);
-
     // Obtener todas las reglas activas para informar al usuario si es necesario
-    const rules = await prisma.submissionRule.findMany({
+    const rules = (await prisma.submissionRule.findMany({
         where: { isActive: true },
         orderBy: { priority: 'desc' }
-    });
+    })).map(normalizeRuleForClient);
 
     console.log('[SubmissionRules] Active rules found:', rules.map(r => ({
         name: r.name,
         dayOfWeek: r.dayOfWeek,
         startTime: r.startTime,
         endTime: r.endTime,
-        isHolidayRule: r.isHolidayRule
+        isHolidayRule: r.isHolidayRule,
+        holidayShift: r.holidayShift
     })));
 
     // 1. Verificar si HOY es festivo
@@ -206,14 +259,7 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
         // Si es festivo, bloqueamos y damos mensaje claro
 
         // Obtener nombre del festivo para el mensaje
-        const holidayName = (await prisma.colombianHoliday.findFirst({
-            where: {
-                date: {
-                    gte: new Date(colombiaTime.getFullYear(), colombiaTime.getMonth(), colombiaTime.getDate()),
-                    lt: new Date(colombiaTime.getFullYear(), colombiaTime.getMonth(), colombiaTime.getDate() + 1)
-                }
-            }
-        }))?.name || 'Festivo';
+        const holidayName = (await getHolidayForDate(colombiaTime))?.name || 'Festivo';
 
         const nextAvailable = await findNextAvailableSlot(colombiaTime, rules);
         return {
@@ -237,12 +283,10 @@ export const checkSubmissionAllowed = async (userRole: string): Promise<Submissi
     for (const rule of rules) {
         // Verificar lógica de Holiday Shift
         if (rule.isHolidayRule) {
-            if (!wasPreviousDayHoliday) continue;
+            if (!(await doesHolidayRuleApply(rule, colombiaTime))) continue;
         } else {
-            if (wasPreviousDayHoliday) {
-                const hasHolidayRuleForToday = rules.some(r => r.isHolidayRule && r.dayOfWeek === currentDay);
-                if (hasHolidayRuleForToday) continue;
-            }
+            const hasHolidayRuleForToday = await hasApplicableHolidayRuleForDay(rules, currentDay, colombiaTime);
+            if (hasHolidayRuleForToday) continue;
         }
 
         if (rule.dayOfWeek !== currentDay) continue;
@@ -303,35 +347,32 @@ const findNextAvailableSlot = async (fromDate: Date, rules: any[]): Promise<{
     // Buscar en los próximos 7 días
     for (let i = 0; i < 7; i++) {
         if (i > 0) {
-            checkDate.setDate(checkDate.getDate() + 1);
+            checkDate.setUTCDate(checkDate.getUTCDate() + 1);
         }
 
-        const dayOfWeek = checkDate.getDay();
-        const previousDay = getPreviousWorkday(checkDate);
-        const wasPreviousDayHoliday = await isHoliday(previousDay);
+        const dayOfWeek = checkDate.getUTCDay();
 
         for (const rule of rules) {
             if (rule.dayOfWeek !== dayOfWeek) continue;
 
             // Verificar si la regla aplica según condiciones de festivo
-            if (rule.isHolidayRule && !wasPreviousDayHoliday) continue;
-            if (!rule.isHolidayRule && wasPreviousDayHoliday) {
-                const hasHolidayRuleForDay = rules.some(r =>
-                    r.isHolidayRule && r.dayOfWeek === dayOfWeek
-                );
+            if (rule.isHolidayRule) {
+                if (!(await doesHolidayRuleApply(rule, checkDate))) continue;
+            } else {
+                const hasHolidayRuleForDay = await hasApplicableHolidayRuleForDay(rules, dayOfWeek, checkDate);
                 if (hasHolidayRuleForDay) continue;
             }
 
             // Si es hoy, verificar que no haya pasado el horario
             if (i === 0) {
-                const currentMinutes = fromDate.getHours() * 60 + fromDate.getMinutes();
+                const currentMinutes = fromDate.getUTCHours() * 60 + fromDate.getUTCMinutes();
                 const endMinutes = timeToMinutes(rule.endTime);
                 if (currentMinutes > endMinutes) continue;
             }
 
             return {
                 day: dayNames[dayOfWeek],
-                date: checkDate.toLocaleDateString('es-CO'),
+                date: formatCalendarDateCO(checkDate),
                 startTime: rule.startTime,
                 endTime: rule.endTime
             };
@@ -386,7 +427,7 @@ export const seedDefaultRules = async (): Promise<void> => {
             startTime: '08:00',
             endTime: '12:00',
             isHolidayRule: true,
-            holidayShift: 1,
+            holidayShift: 2,
             priority: 2
         }
     ];
@@ -402,9 +443,10 @@ export const seedDefaultRules = async (): Promise<void> => {
  * Obtiene todas las reglas de envío
  */
 export const getAllRules = async () => {
-    return prisma.submissionRule.findMany({
+    const rules = await prisma.submissionRule.findMany({
         orderBy: [{ dayOfWeek: 'asc' }, { priority: 'desc' }]
     });
+    return rules.map(normalizeRuleForClient);
 };
 
 /**

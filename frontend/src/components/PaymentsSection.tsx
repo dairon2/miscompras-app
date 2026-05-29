@@ -218,7 +218,7 @@ export default function PaymentsSection({
             ) : (
                 <div className="space-y-3">
                     {/* Scrollable container - max 4 items visible (approx 340px) */}
-                    <div className="max-h-[340px] overflow-y-auto space-y-3 pr-2">
+                    <div className="max-h-[340px] overflow-y-auto overflow-x-hidden space-y-3 pr-2">
                         {payments.map((payment, index) => (
                             <motion.div
                                 key={payment.id}
@@ -241,9 +241,9 @@ export default function PaymentsSection({
                                         </p>
 
                                         {/* Row 2: Date and Delete */}
-                                        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-700 pb-2">
                                             {payment.paymentDate ? (
-                                                <span className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">
+                                                <span className="flex min-w-0 items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300">
                                                     <Calendar size={14} className="text-gray-400" />
                                                     {new Date(payment.paymentDate).toLocaleDateString('es-CO', {
                                                         day: '2-digit',
@@ -254,20 +254,23 @@ export default function PaymentsSection({
                                             ) : <span></span>}
 
                                             {canEdit && (
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex max-w-full flex-shrink-0 items-center gap-1">
                                                     <button
                                                         onClick={() => handleEdit(payment)}
                                                         className="flex items-center gap-1 text-xs text-primary-500 hover:text-primary-600 transition-colors font-medium px-2 py-1 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg"
+                                                        title="Editar abono"
                                                     >
                                                         <Pencil size={14} />
                                                         <span>Editar</span>
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(payment.id)}
-                                                        className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 transition-colors font-medium px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                                        className="flex h-8 w-8 items-center justify-center text-red-500 hover:text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                                        title="Eliminar abono"
+                                                        aria-label="Eliminar abono"
                                                     >
                                                         <Trash2 size={14} />
-                                                        <span>Eliminar</span>
+                                                        <span className="sr-only">Eliminar</span>
                                                     </button>
                                                 </div>
                                             )}
@@ -276,15 +279,15 @@ export default function PaymentsSection({
                                         {/* Row 3: Details (Stacked) */}
                                         <div className="space-y-1">
                                             {payment.invoiceNumber && (
-                                                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                                <div className="flex min-w-0 items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                                                     <span className="font-medium min-w-[30px]">Fac:</span>
-                                                    <span className="font-bold text-gray-900 dark:text-white">{payment.invoiceNumber}</span>
+                                                    <span className="truncate font-bold text-gray-900 dark:text-white">{payment.invoiceNumber}</span>
                                                 </div>
                                             )}
                                             {payment.purchaseOrder && (
-                                                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                                <div className="flex min-w-0 items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                                                     <span className="font-medium min-w-[30px]">OC:</span>
-                                                    <span className="font-bold text-gray-900 dark:text-white">{payment.purchaseOrder}</span>
+                                                    <span className="truncate font-bold text-gray-900 dark:text-white">{payment.purchaseOrder}</span>
                                                 </div>
                                             )}
                                         </div>

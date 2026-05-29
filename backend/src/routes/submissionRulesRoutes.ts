@@ -58,6 +58,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         }
 
         const { name, dayOfWeek, startTime, endTime, isHolidayRule, holidayShift, priority } = req.body;
+        const parsedIsHolidayRule = Boolean(isHolidayRule);
 
         if (!name || dayOfWeek === undefined || !startTime || !endTime) {
             return res.status(400).json({ error: 'Faltan campos requeridos' });
@@ -69,8 +70,8 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
                 dayOfWeek: parseInt(dayOfWeek),
                 startTime,
                 endTime,
-                isHolidayRule: isHolidayRule || false,
-                holidayShift: holidayShift ? parseInt(holidayShift) : null,
+                isHolidayRule: parsedIsHolidayRule,
+                holidayShift: parsedIsHolidayRule ? parseInt(holidayShift ?? '1') : null,
                 priority: priority ? parseInt(priority) : 0
             }
         });
@@ -95,6 +96,7 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 
         const { id } = req.params;
         const { name, dayOfWeek, startTime, endTime, isHolidayRule, holidayShift, isActive, priority } = req.body;
+        const parsedIsHolidayRule = isHolidayRule !== undefined ? Boolean(isHolidayRule) : undefined;
 
         const rule = await prisma.submissionRule.update({
             where: { id },
@@ -103,8 +105,8 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
                 dayOfWeek: dayOfWeek !== undefined ? parseInt(dayOfWeek) : undefined,
                 startTime,
                 endTime,
-                isHolidayRule,
-                holidayShift: holidayShift !== undefined ? parseInt(holidayShift) : undefined,
+                isHolidayRule: parsedIsHolidayRule,
+                holidayShift: parsedIsHolidayRule === false ? null : (holidayShift !== undefined ? parseInt(holidayShift) : undefined),
                 isActive,
                 priority: priority !== undefined ? parseInt(priority) : undefined
             }
