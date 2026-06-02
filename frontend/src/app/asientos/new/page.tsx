@@ -36,8 +36,27 @@ type Supplier = {
 
 type Budget = {
     id: string;
+    title: string;
+    code: string;
+    amount: string;
     status: string;
-    available: string | number;
+    available: number;
+    projectId: string;
+    areaId: string;
+    categoryId?: string;
+    category?: {
+        id: string;
+        name: string;
+        code: string;
+    };
+    project?: {
+        id: string;
+        name: string;
+    };
+    area?: {
+        id: string;
+        name: string;
+    };
     expirationDate?: string | null;
     manager?: {
         name?: string | null;
@@ -148,10 +167,14 @@ export default function NewAsientoPage() {
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value, type, checked } = e.target;
+        const { name, value } = e.target;
+        const nextValue = e.target instanceof HTMLInputElement && e.target.type === 'checkbox'
+            ? e.target.checked
+            : value;
+
         setForm(prev => ({
             ...prev,
-            [name]: type === 'checkbox' ? checked : value
+            [name]: nextValue
         }));
     };
 
