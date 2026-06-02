@@ -1751,7 +1751,9 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
         purchaseOrderNumber,
         invoiceNumber,
         hasMultiplePayments,
-        groupId
+        groupId,
+        procurementStatus,
+        processStatus
     } = req.body;
 
     // ========== VALIDATIONS FIRST (before any DB operations) ==========
@@ -1774,6 +1776,14 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
     }
 
     const validGroupId = parseInt(groupId);
+    const validProcurementStatuses = ['ANULADO', 'ENTREGADO', 'EN_TRAMITE', 'PENDIENTE', 'FINALIZADO', 'POSTERGADO', 'RECHAZADO'];
+    const selectedProcurementStatus = procurementStatus || processStatus || 'EN_TRAMITE';
+
+    if (!validProcurementStatuses.includes(selectedProcurementStatus)) {
+        return res.status(400).json({
+            error: `Estado de trámite inválido: ${selectedProcurementStatus}`
+        });
+    }
 
     try {
         // Use transaction to ensure atomicity - budget only decremented if asiento created successfully
@@ -1802,7 +1812,7 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
                     isAsiento: true,
                     hasMultiplePayments: hasMultiplePayments === 'true' || hasMultiplePayments === true,
                     status: 'APPROVED',  // Auto-approved for asientos
-                    procurementStatus: 'EN_TRAMITE',
+                    procurementStatus: selectedProcurementStatus as any,
                     groupId: validGroupId,
                     attachments: {
                         create: await processFileUploads(req.files as Express.Multer.File[] || [], 'asientos')

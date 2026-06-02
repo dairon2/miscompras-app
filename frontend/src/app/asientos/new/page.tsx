@@ -7,7 +7,6 @@ import {
     Save,
     BookOpen,
     Building,
-    Package,
     DollarSign,
     FileText,
     User,
@@ -21,24 +20,65 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
-import { useAuthStore } from "@/store/authStore";
 import { BudgetCascadeSelector } from "@/components";
 import SearchableSelect from "@/components/SearchableSelect";
 import { useToastStore } from "@/store/toastStore";
 
-// Forced recompile
+type Project = {
+    id: string;
+    name: string;
+};
+
+type Supplier = {
+    id: string;
+    name: string;
+};
+
+type Budget = {
+    id: string;
+    status: string;
+    available: string | number;
+    expirationDate?: string | null;
+    manager?: {
+        name?: string | null;
+    } | null;
+};
+
+type AsientoForm = {
+    title: string;
+    description: string;
+    quantity: string;
+    totalAmount: string;
+    projectId: string;
+    areaId: string;
+    supplierId: string;
+    budgetId: string;
+    reqCategory: string;
+    procurementStatus: string;
+    purchaseOrderNumber: string;
+    invoiceNumber: string;
+    hasMultiplePayments: boolean;
+    groupId: string;
+};
+
+type ApiError = {
+    response?: {
+        data?: {
+            error?: string;
+        };
+    };
+};
+
 export default function NewAsientoPage() {
     const router = useRouter();
-    const { user } = useAuthStore();
     const { addToast } = useToastStore();
     const [loading, setLoading] = useState(false);
-    const [projects, setProjects] = useState([]);
-    const [areas, setAreas] = useState([]);
-    const [suppliers, setSuppliers] = useState([]);
-    const [budgets, setBudgets] = useState([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [budgets, setBudgets] = useState<Budget[]>([]);
     const [files, setFiles] = useState<File[]>([]);
 
-    const [form, setForm] = useState({
+    const [form, setForm] = useState<AsientoForm>({
         title: '',
         description: '',
         quantity: '',
@@ -48,7 +88,7 @@ export default function NewAsientoPage() {
         supplierId: '',
         budgetId: '',
         reqCategory: 'COMPRA',
-        processStatus: 'EN_TRAMITE',
+        procurementStatus: '',
         purchaseOrderNumber: '',
         invoiceNumber: '',
         hasMultiplePayments: false,
@@ -67,8 +107,9 @@ export default function NewAsientoPage() {
     ];
 
     const processStatuses = [
+        { value: '', label: 'Seleccionar estado' },
         { value: 'EN_TRAMITE', label: 'En trámite' },
-        { value: 'PENDIENTES', label: 'Pendientes' },
+        { value: 'PENDIENTE', label: 'Pendiente' },
         { value: 'ENTREGADO', label: 'Entregado' },
         { value: 'FINALIZADO', label: 'Finalizado' },
         { value: 'POSTERGADO', label: 'Postergado' },
@@ -76,7 +117,7 @@ export default function NewAsientoPage() {
     ];
 
     // Get selected budget manager
-    const selectedBudget = budgets.find((b: any) => b.id === form.budgetId);
+    const selectedBudget = budgets.find((b) => b.id === form.budgetId);
 
     useEffect(() => {
         fetchCatalogs();
@@ -84,21 +125,19 @@ export default function NewAsientoPage() {
 
     const fetchCatalogs = async () => {
         try {
-            const [p, a, s, b] = await Promise.all([
-                api.get('/projects'),
-                api.get('/areas'),
-                api.get('/suppliers'),
-                api.get('/budgets', { params: { status: 'APPROVED' } })
+            const [p, s, b] = await Promise.all([
+                api.get<Project[]>('/projects'),
+                api.get<Supplier[]>('/suppliers'),
+                api.get<Budget[]>('/budgets', { params: { status: 'APPROVED' } })
             ]);
             setProjects(p.data);
-            setAreas(a.data);
             setSuppliers(s.data);
             // Filter only approved budgets with available funds and not expired
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const approvedBudgets = b.data.filter((budget: any) => {
+            const approvedBudgets = b.data.filter((budget) => {
                 const isApproved = budget.status === 'APPROVED';
-                const hasFunds = parseFloat(budget.available) > 0;
+                const hasFunds = Number(budget.available) > 0;
                 const isNotExpired = !budget.expirationDate || new Date(budget.expirationDate) >= today;
                 return isApproved && hasFunds && isNotExpired;
             });
@@ -108,7 +147,7 @@ export default function NewAsientoPage() {
         }
     };
 
-    const handleChange = (e: any) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type, checked } = e.target;
         setForm(prev => ({
             ...prev,
@@ -148,9 +187,10 @@ export default function NewAsientoPage() {
             });
             addToast('Asiento creado exitosamente', 'success');
             router.push('/asientos');
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const error = err as ApiError;
             console.error("Error creating asiento", err);
-            addToast(err.response?.data?.error || 'Error al crear el asiento', 'error');
+            addToast(error.response?.data?.error || 'Error al crear el asiento', 'error');
         } finally {
             setLoading(false);
         }
@@ -219,14 +259,14 @@ export default function NewAsientoPage() {
                             }}
                         />
                         {/* Show budget manager when budget is selected */}
-                        {selectedBudget && (selectedBudget as any).manager && (
+                        {selectedBudget?.manager && (
                             <div className="mt-4 flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-2xl border border-primary-200 dark:border-primary-800">
                                 <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 font-black text-sm">
                                     <User size={18} />
                                 </div>
                                 <div>
                                     <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Líder del Presupuesto</p>
-                                    <p className="font-bold text-sm text-gray-800 dark:text-gray-200">{(selectedBudget as any).manager?.name || 'Sin asignar'}</p>
+                                    <p className="font-bold text-sm text-gray-800 dark:text-gray-200">{selectedBudget.manager.name || 'Sin asignar'}</p>
                                 </div>
                             </div>
                         )}
@@ -291,11 +331,12 @@ export default function NewAsientoPage() {
                                 <label className="text-xs font-black text-gray-600">Estado del Trámite</label>
                                 <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-900">
                                     <SearchableSelect
-                                        value={form.processStatus}
-                                        onChange={(val) => setForm(prev => ({ ...prev, processStatus: val }))}
+                                        value={form.procurementStatus}
+                                        onChange={(val) => setForm(prev => ({ ...prev, procurementStatus: val }))}
                                         options={processStatuses}
                                     />
                                 </div>
+                                <p className="text-[10px] text-gray-400 font-medium">Si no seleccionas un estado, quedará En trámite</p>
                             </div>
 
                             <div className="space-y-2">
@@ -330,7 +371,7 @@ export default function NewAsientoPage() {
                                         onChange={(val) => setForm(prev => ({ ...prev, supplierId: val }))}
                                         options={[
                                             { value: "", label: "Seleccionar proveedor" },
-                                            ...suppliers.map((s: any) => ({ value: s.id, label: s.name }))
+                                            ...suppliers.map((s) => ({ value: s.id, label: s.name }))
                                         ]}
                                     />
                                 </div>
