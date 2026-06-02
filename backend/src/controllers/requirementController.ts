@@ -321,8 +321,7 @@ export const getRequirementById = async (req: AuthRequest, res: Response) => {
                 group: true,
                 budget: {
                     include: {
-                        category: true,
-                        subLeaders: true
+                        category: true
                     }
                 }
             }

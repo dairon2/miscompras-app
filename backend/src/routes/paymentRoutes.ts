@@ -13,10 +13,10 @@ const router = Router();
 router.use(authMiddleware);
 
 // Payment routes
-router.post('/:requirementId', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER', 'LEADER']), createPayment);
+router.post('/:requirementId', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), createPayment);
 router.get('/:requirementId', getPaymentsByRequirement);
-router.put('/update/:paymentId', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER', 'LEADER']), updatePayment);
-router.delete('/delete/:paymentId', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER', 'LEADER']), deletePayment);
-router.patch('/:requirementId/toggle-multiple', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER', 'LEADER']), toggleMultiplePayments);
+router.put('/update/:paymentId', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), updatePayment);
+router.delete('/delete/:paymentId', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), deletePayment);
+router.patch('/:requirementId/toggle-multiple', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), toggleMultiplePayments);
 
 export default router;
