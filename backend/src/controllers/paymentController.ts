@@ -2,24 +2,76 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../index';
 
+const GLOBAL_PAYMENT_VIEW_ROLES = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'];
+const GLOBAL_PAYMENT_MANAGE_ROLES = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'];
+
+const hasRole = (role: string | undefined, roles: string[]) => roles.includes(role || '');
+
+const canAccessRequirementPayments = (requirement: any, req: AuthRequest) => {
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    if (hasRole(userRole, GLOBAL_PAYMENT_VIEW_ROLES)) return true;
+    if (!userId) return false;
+
+    return requirement.createdById === userId ||
+        requirement.currentOwnerId === userId ||
+        requirement.project?.leaderId === userId ||
+        requirement.project?.subLeaderId === userId ||
+        requirement.area?.directorId === userId ||
+        requirement.budget?.managerId === userId ||
+        requirement.budget?.subLeaders?.some((subLeader: { userId: string }) => subLeader.userId === userId);
+};
+
+const canManageRequirementPayments = (requirement: any, req: AuthRequest) => {
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    if (hasRole(userRole, GLOBAL_PAYMENT_MANAGE_ROLES)) return true;
+    if (userRole !== 'LEADER' || !userId) return false;
+
+    return requirement.project?.leaderId === userId ||
+        requirement.project?.subLeaderId === userId ||
+        requirement.budget?.managerId === userId ||
+        requirement.budget?.subLeaders?.some((subLeader: { userId: string }) => subLeader.userId === userId);
+};
+
+const getRequirementWithPaymentAccess = (requirementId: string) => {
+    return prisma.requirement.findUnique({
+        where: { id: requirementId },
+        include: {
+            payments: true,
+            project: true,
+            area: true,
+            budget: {
+                include: {
+                    subLeaders: true
+                }
+            }
+        }
+    });
+};
+
 // Create a new payment for a requirement
 export const createPayment = async (req: AuthRequest, res: Response) => {
     const { requirementId } = req.params;
     const { amount, invoiceNumber, purchaseOrder, paymentDate, observations } = req.body;
+    const parsedAmount = Number(amount);
 
-    if (!amount || amount <= 0) {
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
         return res.status(400).json({ error: 'El monto del pago es requerido y debe ser mayor a 0' });
     }
 
     try {
         // Get the requirement
-        const requirement = await prisma.requirement.findUnique({
-            where: { id: requirementId },
-            include: { payments: true }
-        });
+        const requirement = await getRequirementWithPaymentAccess(requirementId);
 
         if (!requirement) {
             return res.status(404).json({ error: 'Requerimiento no encontrado' });
+        }
+
+        if (!canManageRequirementPayments(requirement, req)) {
+            return res.status(403).json({ error: 'No tienes permiso para registrar pagos en este requerimiento' });
         }
 
         // Check if requirement has multiple payments enabled
@@ -39,21 +91,11 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
         });
         const paymentNumber = (maxPayment?.paymentNumber || 0) + 1;
 
-        // Validate total doesn't exceed requirement amount
-        const totalPaid = requirement.payments.reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0);
-        const newTotal = totalPaid + parseFloat(amount);
-        const requirementTotal = parseFloat(requirement.totalAmount?.toString() || requirement.actualAmount?.toString() || '0');
-
-        // Requirement total validation removed to allow overpayment
-
-        console.log(`[DEBUG] createPayment for req ${requirementId}`);
-        console.log(`[DEBUG] ProcurementStatus before: ${requirement.procurementStatus}`);
-
         // Create the payment
         const payment = await prisma.payment.create({
             data: {
                 paymentNumber,
-                amount: parseFloat(amount),
+                amount: parsedAmount,
                 invoiceNumber,
                 purchaseOrder,
                 paymentDate: paymentDate ? new Date(paymentDate + 'T12:00:00') : null,
@@ -62,16 +104,12 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
             }
         });
 
-        const afterReq = await prisma.requirement.findUnique({ where: { id: requirementId } });
-        console.log(`[DEBUG] ProcurementStatus after creation: ${afterReq?.procurementStatus}`);
-
-
         // Log the action
         await prisma.historyLog.create({
             data: {
                 action: 'PAYMENT_REGISTERED',
                 requirementId,
-                details: `Pago #${paymentNumber} registrado por $${parseFloat(amount).toLocaleString()} - Factura: ${invoiceNumber || 'N/A'}`
+                details: `Pago #${paymentNumber} registrado por $${parsedAmount.toLocaleString()} - Factura: ${invoiceNumber || 'N/A'}`
             }
         });
 
@@ -87,6 +125,15 @@ export const getPaymentsByRequirement = async (req: AuthRequest, res: Response) 
     const { requirementId } = req.params;
 
     try {
+        const requirement = await getRequirementWithPaymentAccess(requirementId);
+        if (!requirement) {
+            return res.status(404).json({ error: 'Requerimiento no encontrado' });
+        }
+
+        if (!canAccessRequirementPayments(requirement, req)) {
+            return res.status(403).json({ error: 'No tienes permiso para consultar pagos de este requerimiento' });
+        }
+
         const payments = await prisma.payment.findMany({
             where: { requirementId },
             orderBy: { paymentNumber: 'asc' }
@@ -103,32 +150,43 @@ export const getPaymentsByRequirement = async (req: AuthRequest, res: Response) 
 export const updatePayment = async (req: AuthRequest, res: Response) => {
     const { paymentId } = req.params;
     const { amount, invoiceNumber, purchaseOrder, paymentDate, observations } = req.body;
+    const parsedAmount = amount !== undefined ? Number(amount) : undefined;
+
+    if (parsedAmount !== undefined && (!Number.isFinite(parsedAmount) || parsedAmount <= 0)) {
+        return res.status(400).json({ error: 'El monto del pago debe ser mayor a 0' });
+    }
 
     try {
         const payment = await prisma.payment.findUnique({
             where: { id: paymentId },
-            include: { requirement: { include: { payments: true } } }
+            include: {
+                requirement: {
+                    include: {
+                        payments: true,
+                        project: true,
+                        area: true,
+                        budget: {
+                            include: {
+                                subLeaders: true
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         if (!payment) {
             return res.status(404).json({ error: 'Pago no encontrado' });
         }
 
-        // Validate new total if amount changed
-        if (amount !== undefined) {
-            const otherPaymentsTotal = payment.requirement.payments
-                .filter(p => p.id !== paymentId)
-                .reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0);
-            const newTotal = otherPaymentsTotal + parseFloat(amount);
-            const requirementTotal = parseFloat(payment.requirement.totalAmount?.toString() || payment.requirement.actualAmount?.toString() || '0');
-
-            // Requirement total validation removed to allow overpayment
+        if (!canManageRequirementPayments(payment.requirement, req)) {
+            return res.status(403).json({ error: 'No tienes permiso para actualizar este pago' });
         }
 
         const updatedPayment = await prisma.payment.update({
             where: { id: paymentId },
             data: {
-                amount: amount !== undefined ? parseFloat(amount) : undefined,
+                amount: parsedAmount,
                 invoiceNumber,
                 purchaseOrder,
                 paymentDate: paymentDate ? new Date(paymentDate + 'T12:00:00') : undefined,
@@ -149,11 +207,28 @@ export const deletePayment = async (req: AuthRequest, res: Response) => {
 
     try {
         const payment = await prisma.payment.findUnique({
-            where: { id: paymentId }
+            where: { id: paymentId },
+            include: {
+                requirement: {
+                    include: {
+                        project: true,
+                        area: true,
+                        budget: {
+                            include: {
+                                subLeaders: true
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         if (!payment) {
             return res.status(404).json({ error: 'Pago no encontrado' });
+        }
+
+        if (!canManageRequirementPayments(payment.requirement, req)) {
+            return res.status(403).json({ error: 'No tienes permiso para eliminar este pago' });
         }
 
         await prisma.payment.delete({ where: { id: paymentId } });
@@ -180,6 +255,15 @@ export const toggleMultiplePayments = async (req: AuthRequest, res: Response) =>
     const { hasMultiplePayments } = req.body;
 
     try {
+        const existingRequirement = await getRequirementWithPaymentAccess(requirementId);
+        if (!existingRequirement) {
+            return res.status(404).json({ error: 'Requerimiento no encontrado' });
+        }
+
+        if (!canManageRequirementPayments(existingRequirement, req)) {
+            return res.status(403).json({ error: 'No tienes permiso para actualizar la configuración de pagos' });
+        }
+
         const requirement = await prisma.requirement.update({
             where: { id: requirementId },
             data: { hasMultiplePayments }

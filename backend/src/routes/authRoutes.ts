@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { register, login, getUsers, forgotPassword, resetPassword, refreshToken, changePassword } from '../controllers/authController';
-import { authMiddleware } from '../middlewares/auth';
+import { authMiddleware, roleCheck } from '../middlewares/auth';
 
 const router = Router();
 
@@ -12,7 +12,7 @@ router.post('/reset-password', resetPassword);
 router.post('/refresh-token', refreshToken);
 
 // Protected routes
-router.get('/users', authMiddleware, getUsers);
+router.get('/users', authMiddleware, roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR']), getUsers);
 router.post('/change-password', authMiddleware, changePassword as any);
 
 export default router;

@@ -3,9 +3,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, X, Send, Bot, User, Sparkles, Loader2, Paperclip, FileText, Image as ImageIcon, Trash2 } from "lucide-react";
+import { X, Send, Bot, User, Sparkles, Loader2, Paperclip, FileText, Image as ImageIcon } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import { resolveApiUrl } from "@/lib/utils";
 
 interface Message {
     role: 'user' | 'model';
@@ -23,6 +24,18 @@ interface Attachment {
     name: string;
     type: string;
     data: string; // Base64
+}
+
+interface AssistantApiError {
+    code?: string;
+    message?: string;
+    response?: {
+        data?: {
+            details?: string;
+            error?: string;
+            keyPresent?: boolean;
+        };
+    };
 }
 
 export default function AIAssistant() {
@@ -108,12 +121,13 @@ export default function AIAssistant() {
             });
 
             setMessages(prev => [...prev, { role: 'model', content: data.reply, actions: data.actions || [] }]);
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const apiError = error as AssistantApiError;
             console.error(error);
-            let errorMessage = error.response?.data?.details || error.response?.data?.error || 'Lo siento, tuve un problema conectando con mi cerebro. 🧠💥';
-            const apiKeyStatus = error.response?.data?.keyPresent !== undefined ? `(Key Present: ${error.response.data.keyPresent})` : '';
+            let errorMessage = apiError.response?.data?.details || apiError.response?.data?.error || 'Lo siento, tuve un problema conectando con mi cerebro. 🧠💥';
+            const apiKeyStatus = apiError.response?.data?.keyPresent !== undefined ? `(Key Present: ${apiError.response.data.keyPresent})` : '';
 
-            if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+            if (apiError.code === 'ERR_NETWORK' || apiError.message === 'Network Error') {
                 errorMessage = "⚠️ Error de Conexión: No pude contactar al servidor. Verifica tu conexión o la configuración de URL.";
             }
 
@@ -139,7 +153,7 @@ export default function AIAssistant() {
 
     const handleActionClick = async (action: AssistantAction) => {
         if (action.type === 'link') {
-            window.location.href = action.value;
+            window.location.href = resolveApiUrl(action.value);
             return;
         }
 
@@ -213,7 +227,7 @@ export default function AIAssistant() {
                                                 return (
                                                     <a
                                                         key={i}
-                                                        href={match[2]}
+                                                        href={resolveApiUrl(match[2])}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="underline font-bold text-inherit hover:opacity-80"

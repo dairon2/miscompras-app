@@ -78,7 +78,7 @@ router.post('/suppliers/bulk-import', roleCheck(['ADMIN', 'DIRECTOR', 'LEADER', 
 
 // Users Management
 router.get('/users', roleCheck(['DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), getUsers); // Leader sees list? Maybe needed
-router.get('/users/generate-password', roleCheck(['DIRECTOR', 'COORDINATOR', 'DEVELOPER']), generatePassword);
+router.get('/users/generate-password', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), generatePassword);
 router.post('/users', roleCheck(['DIRECTOR', 'COORDINATOR', 'DEVELOPER']), createUser);
 router.get('/users/:id', roleCheck(['DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER']), getUserById);
 router.put('/users/:id', roleCheck(['DIRECTOR', 'COORDINATOR', 'DEVELOPER']), updateUser);

@@ -31,7 +31,7 @@ router.get('/me', getProfile);
 router.patch('/me/password', changePassword);
 router.patch('/me/profile', updateProfile);
 router.post('/me/photo', upload.single('photo'), uploadProfilePhoto);
-router.get('/generate-password', generatePassword);
+router.get('/generate-password', roleCheck(['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER']), generatePassword);
 
 // Admin-only routes
 router.get('/:id', getUserById);

@@ -5,6 +5,14 @@ import crypto from 'crypto';
 import { prisma } from '../index';
 import { sendPasswordResetEmail } from '../services/emailService';
 
+const getJwtSecret = () => {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        throw new Error('JWT_SECRET is not configured');
+    }
+    return secret;
+};
+
 export const register = async (req: Request, res: Response) => {
     const { email, password, name, areaId } = req.body;
 
@@ -112,7 +120,7 @@ export const login = async (req: Request, res: Response) => {
         const tokenExpiry = rememberMe ? '30d' : '8h';
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role, areaId: user.areaId },
-            process.env.JWT_SECRET || 'fallback_secret',
+            getJwtSecret(),
             { expiresIn: tokenExpiry }
         );
 
@@ -276,7 +284,7 @@ export const refreshToken = async (req: Request, res: Response) => {
         // Create new access token
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role, areaId: user.areaId },
-            process.env.JWT_SECRET || 'fallback_secret',
+            getJwtSecret(),
             { expiresIn: '8h' }
         );
 

@@ -6,6 +6,7 @@ export interface AuthRequest extends Request {
         id: string;
         email: string;
         role: string;
+        areaId?: string | null;
     };
 }
 
@@ -16,14 +17,44 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
         return res.status(401).json({ error: 'No token provided' });
     }
 
-    // Bypass for demo/testing
-    if (token === 'mock-token') {
+    // Bypass only for local automated tests. Never allow this in deployed environments.
+    if (process.env.NODE_ENV === 'test' && token === 'mock-token') {
         req.user = { id: 'mock-admin-id', email: 'daironmoreno24@gmail.com', role: 'ADMIN' };
         return next();
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as any;
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            console.error('[AUTH ERROR] JWT_SECRET is not configured');
+            return res.status(500).json({ error: 'Authentication is not configured' });
+        }
+
+        const decoded = jwt.verify(token, secret) as any;
+        req.user = decoded;
+        next();
+    } catch (error) {
+        res.status(401).json({ error: 'Invalid token' });
+    }
+};
+
+export const fileAuthMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+    const bearerToken = req.headers.authorization?.split(' ')[1];
+    const queryToken = typeof req.query.token === 'string' ? req.query.token : undefined;
+    const token = bearerToken || queryToken;
+
+    if (!token) {
+        return res.status(401).json({ error: 'No token provided' });
+    }
+
+    try {
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            console.error('[AUTH ERROR] JWT_SECRET is not configured');
+            return res.status(500).json({ error: 'Authentication is not configured' });
+        }
+
+        const decoded = jwt.verify(token, secret) as any;
         req.user = decoded;
         next();
     } catch (error) {

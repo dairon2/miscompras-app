@@ -5,7 +5,7 @@ import compression from 'compression';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { prisma } from './db';
-import { authMiddleware, roleCheck } from './middlewares/auth';
+import { authMiddleware, fileAuthMiddleware, roleCheck } from './middlewares/auth';
 
 import authRoutes from './routes/authRoutes';
 import requirementRoutes from './routes/requirementRoutes';
@@ -29,12 +29,20 @@ const validateEnv = () => {
 
     if (missing.length > 0) {
         console.error(`[CONFIG ERROR] Missing required environment variables: ${missing.join(', ')}`);
+        if (process.env.NODE_ENV === 'production') {
+            process.exit(1);
+        }
         console.error('[CONFIG ERROR] The application may not function correctly.');
     }
 
-    // Warn about default JWT secret
-    if (process.env.JWT_SECRET === 'fallback_secret' || !process.env.JWT_SECRET) {
-        console.warn('[SECURITY WARNING] Using default JWT_SECRET. Set a strong secret in production!');
+    const jwtSecret = process.env.JWT_SECRET;
+    if (jwtSecret === 'fallback_secret' || !jwtSecret || jwtSecret.length < 32) {
+        const message = '[SECURITY WARNING] JWT_SECRET must be a strong secret with at least 32 characters.';
+        if (process.env.NODE_ENV === 'production') {
+            console.error(message);
+            process.exit(1);
+        }
+        console.warn(message);
     }
 };
 
@@ -66,10 +74,10 @@ app.use(cors({
 }));
 app.use(helmet());
 app.use(compression());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '10mb' }));
 app.use('/uploads', express.static('uploads'));
-app.use('/api/uploads', express.static('uploads'));
-app.use('/api/exports', express.static('exports'));
+app.use('/api/uploads', fileAuthMiddleware, express.static('uploads'));
+app.use('/api/exports', fileAuthMiddleware, express.static('exports'));
 
 // Public Routes (No auth needed)
 app.use('/api/auth', authRoutes);

@@ -5,15 +5,22 @@ import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../index';
 import { uploadBufferToBlobStorage } from '../services/blobStorageService';
 
+const USER_LIST_ROLES = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'];
+const USER_DETAIL_ROLES = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'];
+
 // Get all users with filters
 export const getUsers = async (req: AuthRequest, res: Response) => {
     const { role, areaId, isActive, search } = req.query;
+    const userRole = req.user?.role;
+    const userAreaId = req.user?.areaId;
+    const canViewDirectory = USER_LIST_ROLES.includes(userRole || '');
 
     try {
         const users = await prisma.user.findMany({
             where: {
-                ...(role && { role: role as any }),
-                ...(areaId && { areaId: areaId as string }),
+                ...(canViewDirectory && role && { role: role as any }),
+                ...(canViewDirectory && areaId && { areaId: areaId as string }),
+                ...(!canViewDirectory && { areaId: userAreaId || '__no_area__', isActive: true }),
                 ...(isActive !== undefined && { isActive: isActive === 'true' }),
                 ...(search && {
                     OR: [
@@ -30,9 +37,11 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
                 areaId: true,
                 area: { select: { id: true, name: true } },
                 isActive: true,
-                phone: true,
-                position: true,
-                createdAt: true
+                ...(canViewDirectory && {
+                    phone: true,
+                    position: true,
+                    createdAt: true
+                })
             },
             orderBy: { name: 'asc' }
         });
@@ -46,6 +55,11 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
 // Get user by ID
 export const getUserById = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
+    const userRole = req.user?.role;
+
+    if (id !== req.user?.id && !USER_DETAIL_ROLES.includes(userRole || '')) {
+        return res.status(403).json({ error: 'No tienes permiso para consultar este usuario' });
+    }
 
     try {
         const user = await prisma.user.findUnique({
