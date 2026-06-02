@@ -30,7 +30,9 @@ const canManageRequirementPayments = (requirement: any, req: AuthRequest) => {
     if (hasRole(userRole, GLOBAL_PAYMENT_MANAGE_ROLES)) return true;
     if (userRole !== 'LEADER' || !userId) return false;
 
-    return requirement.project?.leaderId === userId ||
+    return requirement.createdById === userId ||
+        requirement.currentOwnerId === userId ||
+        requirement.project?.leaderId === userId ||
         requirement.project?.subLeaderId === userId ||
         requirement.budget?.managerId === userId ||
         requirement.budget?.subLeaders?.some((subLeader: { userId: string }) => subLeader.userId === userId);

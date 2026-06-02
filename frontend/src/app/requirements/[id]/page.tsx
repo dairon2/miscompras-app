@@ -72,11 +72,12 @@ interface Requirement {
     reqCategory: string;
     hasMultiplePayments?: boolean;
     createdAt: string;
-    project: { name: string };
+    project: { name: string; leaderId?: string; subLeaderId?: string };
     area: { name: string };
     supplier?: { id: string; name: string };
     createdBy: { id: string; name?: string; email: string };
     createdById: string;
+    currentOwnerId?: string;
     receivedAtSatisfaction: boolean;
     logs: Array<{ id: string; action: string; details: string; createdAt: string }>;
     leaderApproval?: boolean;
@@ -91,6 +92,7 @@ interface Requirement {
         title: string;
         category?: { name: string };
         managerId?: string;
+        subLeaders?: Array<{ userId: string }>;
     };
 }
 
@@ -456,6 +458,17 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
     const isCreatorOrLeader = isCreator || ['LEADER'].includes(userRole);
     const canFullEdit = isAdmin || (isCreatorOrLeader && requirement.status === 'REJECTED');
     const canEditObservationsOnly = !isAdmin && isCreator;
+    const canManageRequirementPayments = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole) ||
+        (userRole === 'LEADER' && Boolean(
+            currentUser?.id && (
+                requirement.createdById === currentUser.id ||
+                requirement.currentOwnerId === currentUser.id ||
+                requirement.project?.leaderId === currentUser.id ||
+                requirement.project?.subLeaderId === currentUser.id ||
+                requirement.budget?.managerId === currentUser.id ||
+                requirement.budget?.subLeaders?.some((subLeader) => subLeader.userId === currentUser.id)
+            )
+        ));
 
     // User who created can only see their request status and mark satisfaction
     const isUserOnly = userRole === 'USER';
@@ -908,7 +921,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                 requirementId={requirement.id}
                                 hasMultiplePayments={requirement.hasMultiplePayments}
                                 totalAmount={parseFloat(requirement.totalAmount?.toString() || requirement.actualAmount?.toString() || '0')}
-                                canEdit={['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'FINANCE'].includes(currentUser?.role || '')}
+                                canEdit={canManageRequirementPayments}
                                 onPaymentsChange={() => fetchRequirement()}
                             />
                         </div>
