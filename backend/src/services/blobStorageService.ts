@@ -39,6 +39,25 @@ const getMimeType = (filePath: string): string => {
     return mimeTypes[ext] || 'application/octet-stream';
 };
 
+const sanitizeBlobFileName = (name: string): string => {
+    const ext = path.extname(name);
+    const baseName = path.basename(name, ext);
+    const safeBaseName = baseName
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/[^a-zA-Z0-9._-]/g, '')
+        .slice(0, 120) || 'archivo';
+
+    const safeExt = ext
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9.]/g, '')
+        .slice(0, 20);
+
+    return `${safeBaseName}${safeExt}`;
+};
+
 let containerClient: ContainerClient | null = null;
 
 /**
@@ -193,7 +212,8 @@ export const processFileUploads = async (files: Express.Multer.File[] | undefine
 
     return await Promise.all(files.map(async (file) => {
         try {
-            const blobName = `${folder}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+            const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+            const blobName = `${folder}/${uniqueSuffix}-${sanitizeBlobFileName(file.originalname)}`;
             const blobUrl = await uploadToBlobStorage(file.path, blobName);
 
             if (blobUrl) {

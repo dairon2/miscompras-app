@@ -43,6 +43,14 @@ interface RequirementItem {
     attachments?: File[];
 }
 
+const MAX_FILES_PER_ITEM = 10;
+const MAX_FILE_SIZE_MB = 20;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+const isRealFile = (value: unknown): value is File => (
+    typeof File !== 'undefined' && value instanceof File
+);
+
 function NewRequirementContent() {
     const { user } = useAuthStore();
     const { addToast } = useToastStore();
@@ -100,8 +108,18 @@ function NewRequirementContent() {
             try {
                 const parsed = JSON.parse(saved);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    setItems(parsed);
+                    let removedStoredAttachments = false;
+                    const sanitizedItems = parsed.map((item) => {
+                        if (item.attachments?.length) removedStoredAttachments = true;
+                        const { attachments, ...draftItem } = item;
+                        return draftItem;
+                    });
+
+                    setItems(sanitizedItems);
                     addToast('Borrador recuperado automáticamente', 'info');
+                    if (removedStoredAttachments) {
+                        addToast('Los adjuntos del borrador deben seleccionarse nuevamente antes de enviar.', 'warning', 8000);
+                    }
                 }
             } catch (e) {
                 console.error("Error loading draft:", e);
@@ -112,7 +130,11 @@ function NewRequirementContent() {
     // Save Items to LocalStorage when changed
     useEffect(() => {
         if (items.length > 0) {
-            localStorage.setItem('draft_requirements', JSON.stringify(items));
+            const serializableItems = items.map((item) => {
+                const { attachments, ...draftItem } = item;
+                return draftItem;
+            });
+            localStorage.setItem('draft_requirements', JSON.stringify(serializableItems));
         } else {
             // Only clear if we explicitly decide to (handled in submit), 
             // but if user deletes all items manually, we should reflect that?
@@ -262,6 +284,46 @@ function NewRequirementContent() {
         addToast('Ítem cargado en el formulario para edición', 'info');
     };
 
+    const handleAttachmentSelection = (selectedFiles: FileList | null) => {
+        const files = Array.from(selectedFiles || []);
+        if (files.length === 0) return;
+
+        const remainingSlots = MAX_FILES_PER_ITEM - currentAttachments.length;
+        if (remainingSlots <= 0) {
+            addToast(`Máximo ${MAX_FILES_PER_ITEM} archivos por ítem.`, 'warning', 8000);
+            return;
+        }
+
+        const validFiles: File[] = [];
+        const rejectedFiles: string[] = [];
+
+        for (const file of files.slice(0, remainingSlots)) {
+            if (file.size > MAX_FILE_SIZE_BYTES) {
+                rejectedFiles.push(`${file.name} supera ${MAX_FILE_SIZE_MB} MB`);
+                continue;
+            }
+
+            if (file.size === 0) {
+                rejectedFiles.push(`${file.name} está vacío`);
+                continue;
+            }
+
+            validFiles.push(file);
+        }
+
+        if (files.length > remainingSlots) {
+            rejectedFiles.push(`Solo se agregaron ${remainingSlots} archivo(s); el límite es ${MAX_FILES_PER_ITEM} por ítem`);
+        }
+
+        if (validFiles.length > 0) {
+            setCurrentAttachments(prev => [...prev, ...validFiles]);
+        }
+
+        if (rejectedFiles.length > 0) {
+            addToast(rejectedFiles.join('. '), 'warning', 10000);
+        }
+    };
+
     const handleAIParse = async () => {
         if (!aiPrompt.trim()) return;
         setAiLoading(true);
@@ -318,8 +380,9 @@ function NewRequirementContent() {
             // 4. Append attachments with indexed field names
             items.forEach((item, index) => {
                 console.log(`[DEBUG] Item ${index} attachments:`, item.attachments);
-                if (item.attachments && item.attachments.length > 0) {
-                    item.attachments.forEach(file => {
+                const attachments = (item.attachments || []).filter(isRealFile);
+                if (attachments.length > 0) {
+                    attachments.forEach(file => {
                         console.log(`[DEBUG] Appending file: ${file.name}, size: ${file.size}`);
                         // Key format: attachments_0, attachments_1, etc.
                         formData.append(`attachments_${index}`, file);
@@ -481,8 +544,8 @@ function NewRequirementContent() {
                                         type="file"
                                         multiple
                                         onChange={(e) => {
-                                            const files = Array.from(e.target.files || []);
-                                            setCurrentAttachments(prev => [...prev, ...files]);
+                                            handleAttachmentSelection(e.target.files);
+                                            e.target.value = '';
                                         }}
                                         className="hidden"
                                         id="attachmentInput"
@@ -592,6 +655,11 @@ function NewRequirementContent() {
                                                     <div className="flex flex-wrap gap-2">
                                                         <span className="bg-white dark:bg-slate-800 px-2 py-1 rounded-lg text-[9px] font-bold text-gray-500 border border-gray-100 dark:border-gray-700">{item.quantity}</span>
                                                         <span className="bg-white dark:bg-slate-800 px-2 py-1 rounded-lg text-[9px] font-bold text-gray-500 border border-gray-100 dark:border-gray-700">{item.areaName}</span>
+                                                        {item.attachments && item.attachments.length > 0 && (
+                                                            <span className="bg-primary-50 dark:bg-primary-900/30 px-2 py-1 rounded-lg text-[9px] font-bold text-primary-600 border border-primary-100 dark:border-primary-800">
+                                                                {item.attachments.filter(isRealFile).length} adjunto(s)
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-1">
