@@ -139,17 +139,25 @@ export const exportSuppliers = (suppliers: any[]) => {
     const columns: ExportColumn[] = [
         { header: 'Nombre', key: 'name', width: 30 },
         { header: 'NIT', key: 'taxId', width: 20 },
+        { header: 'Contacto', key: 'contactName', width: 25 },
         { header: 'Email', key: 'email', width: 30 },
         { header: 'Teléfono', key: 'phone', width: 20 },
-        { header: 'Dirección', key: 'address', width: 35 }
+        { header: 'Dirección', key: 'address', width: 35 },
+        { header: 'Actividad', key: 'activity', width: 35 },
+        { header: 'Tipo', key: 'supplierType', width: 20 },
+        { header: 'Criticidad', key: 'criticality', width: 15 }
     ];
 
     const data = suppliers.map(s => ({
         name: s.name || '',
-        taxId: s.taxId || 'N/A',
-        email: s.contactEmail || 'N/A',
-        phone: s.contactPhone || 'N/A',
-        address: s.address || 'N/A'
+        taxId: s.taxId || s.nit || 'N/A',
+        contactName: s.contactName || 'N/A',
+        email: s.email || s.contactEmail || 'N/A',
+        phone: s.phone || s.contactPhone || 'N/A',
+        address: s.address || 'N/A',
+        activity: s.activity || 'N/A',
+        supplierType: s.supplierType === 'SERVICE_PROVIDER' ? 'Prestador de servicio' : 'Proveedor',
+        criticality: s.criticality === 'HIGH' ? 'Alta' : s.criticality === 'MEDIUM' ? 'Media' : 'Baja'
     }));
 
     exportToExcel({

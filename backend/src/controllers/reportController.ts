@@ -161,18 +161,26 @@ export const exportSuppliers = async (req: AuthRequest, res: Response) => {
         const columns = [
             { header: 'NOMBRE PROVEEDOR', key: 'name', width: 35 },
             { header: 'NIT / TAX ID', key: 'taxId', width: 20 },
+            { header: 'CONTACTO', key: 'contactName', width: 25 },
             { header: 'CORREO CONTACTO', key: 'email', width: 30 },
             { header: 'TELÉFONO', key: 'phone', width: 20 },
             { header: 'DIRECCIÓN', key: 'address', width: 30 },
+            { header: 'ACTIVIDAD', key: 'activity', width: 35 },
+            { header: 'TIPO', key: 'supplierType', width: 22 },
+            { header: 'CRITICIDAD', key: 'criticality', width: 15 },
             { header: 'ESTADO', key: 'status', width: 15 },
         ];
 
         const rows = suppliers.map((s: any) => ({
             name: s.name,
-            taxId: s.taxId || 'N/A',
-            email: s.contactEmail || 'N/A',
-            phone: s.contactPhone || 'N/A',
+            taxId: s.taxId || s.nit || 'N/A',
+            contactName: s.contactName || 'N/A',
+            email: s.email || s.contactEmail || 'N/A',
+            phone: s.phone || s.contactPhone || 'N/A',
             address: s.address || 'N/A',
+            activity: s.activity || 'N/A',
+            supplierType: s.supplierType === 'SERVICE_PROVIDER' ? 'Prestador de servicio' : 'Proveedor',
+            criticality: s.criticality === 'HIGH' ? 'Alta' : s.criticality === 'MEDIUM' ? 'Media' : 'Baja',
             status: 'ACTIVO',
         }));
 

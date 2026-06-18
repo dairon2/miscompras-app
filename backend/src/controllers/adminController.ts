@@ -497,11 +497,14 @@ export const createSupplier = async (req: AuthRequest, res: Response) => {
     }
 
     try {
+        const cleanNit = nit?.trim() || null;
+        const cleanEmail = email?.trim() || null;
+        const cleanPhone = phone?.trim() || null;
+
         // Validation: NIT/TaxID uniqueness check
         // In Colombia, NIT and TaxID are often used interchangeably in systems. 
         // We must ensure the new NIT doesn't exist as 'nit' OR 'taxId' in the database.
-        if (nit) {
-            const cleanNit = nit.trim();
+        if (cleanNit) {
             const existing = await prisma.supplier.findFirst({
                 where: {
                     OR: [
@@ -523,12 +526,14 @@ export const createSupplier = async (req: AuthRequest, res: Response) => {
         const supplier = await prisma.supplier.create({
             data: {
                 name: name.trim(),
-                nit: nit?.trim() || null,
+                nit: cleanNit,
                 // If nit is provided, also save it as taxId to maintain consistency if the schema dictates usage of taxId
-                taxId: nit?.trim() || null,
+                taxId: cleanNit,
                 contactName: contactName?.trim() || null,
-                email: email?.trim() || null,
-                phone: phone?.trim() || null,
+                email: cleanEmail,
+                contactEmail: cleanEmail,
+                phone: cleanPhone,
+                contactPhone: cleanPhone,
                 address: address?.trim() || null,
                 activity: activity?.trim() || null,
                 supplierType: supplierType || 'SUPPLIER',
@@ -563,15 +568,21 @@ export const updateSupplier = async (req: AuthRequest, res: Response) => {
     }
 
     try {
+        const cleanNit = nit?.trim() || null;
+        const cleanEmail = email?.trim() || null;
+        const cleanPhone = phone?.trim() || null;
+
         const supplier = await prisma.supplier.update({
             where: { id },
             data: {
                 name: name.trim(),
-                nit: nit?.trim() || null,
-                taxId: nit?.trim() || null, // Sincronizamos con taxId para que se refleje en la interfaz
+                nit: cleanNit,
+                taxId: cleanNit, // Sincronizamos con taxId para que se refleje en la interfaz
                 contactName: contactName?.trim() || null,
-                email: email?.trim() || null,
-                phone: phone?.trim() || null,
+                email: cleanEmail,
+                contactEmail: cleanEmail,
+                phone: cleanPhone,
+                contactPhone: cleanPhone,
                 address: address?.trim() || null,
                 activity: activity?.trim() || null,
                 supplierType: supplierType || undefined,
@@ -621,17 +632,30 @@ export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
         // Field mapping from common Excel column names to database fields
         const fieldMapping: Record<string, string> = {
             'nombre': 'name',
+            'nombreproveedor': 'name',
+            'razonsocial': 'name',
+            'razonsocialproveedor': 'name',
             'name': 'name',
             'nit': 'nit',
+            'nitcc': 'nit',
+            'nitcedula': 'nit',
+            'documento': 'nit',
+            'identificacion': 'nit',
             'rut': 'nit',
             'taxid': 'taxId',
             'tax_id': 'taxId',
             'email': 'email',
             'correo': 'email',
+            'correoelectronico': 'email',
+            'mail': 'email',
             'contactemail': 'contactEmail',
             'contact_email': 'contactEmail',
             'emailcontacto': 'contactEmail',
+            'correocontacto': 'contactEmail',
             'telefono': 'phone',
+            'telefonofijo': 'phone',
+            'celular': 'phone',
+            'movil': 'phone',
             'phone': 'phone',
             'tel': 'phone',
             'contactphone': 'contactPhone',
@@ -642,6 +666,7 @@ export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
             'nombrecontacto': 'contactName',
             'contacto': 'contactName',
             'direccion': 'address',
+            'direccionproveedor': 'address',
             'address': 'address',
             'dir': 'address',
             // New fields
@@ -659,6 +684,13 @@ export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
             'riesgo': 'criticality',
             'risk': 'criticality'
         };
+
+        const normalizeImportKey = (key: string) => key
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[\s_/-]+/g, '')
+            .replace(/[^a-z0-9]/g, '');
 
         // Helper to map string values to enums
         const mapSupplierType = (value: string): 'SUPPLIER' | 'SERVICE_PROVIDER' => {
@@ -689,7 +721,7 @@ export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
                     // Skip ID field - let database auto-generate
                     if (key.toLowerCase() === 'id') continue;
 
-                    const normalizedKey = key.toLowerCase().replace(/\s+/g, '').replace(/_/g, '');
+                    const normalizedKey = normalizeImportKey(key);
                     const dbField = fieldMapping[normalizedKey] || key;
 
                     // Only set non-empty values
@@ -707,13 +739,13 @@ export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
 
                 // Check for existing supplier by NIT or taxId
                 const existingConditions: any[] = [];
-                if (mappedSupplier.nit) {
-                    existingConditions.push({ nit: mappedSupplier.nit });
-                }
-                if (mappedSupplier.taxId) {
-                    existingConditions.push({ taxId: mappedSupplier.taxId });
-                }
+                const nitValue = mappedSupplier.nit || mappedSupplier.taxId || null;
+                const emailValue = mappedSupplier.email || mappedSupplier.contactEmail || null;
+                const phoneValue = mappedSupplier.phone || mappedSupplier.contactPhone || null;
 
+                if (nitValue) {
+                    existingConditions.push({ nit: nitValue }, { taxId: nitValue });
+                }
                 if (existingConditions.length > 0) {
                     const existing = await prisma.supplier.findFirst({
                         where: { OR: existingConditions }
@@ -730,14 +762,15 @@ export const bulkImportSuppliers = async (req: AuthRequest, res: Response) => {
                 await prisma.supplier.create({
                     data: {
                         name: mappedSupplier.name,
-                        nit: mappedSupplier.nit && mappedSupplier.nit.trim() !== '' ? mappedSupplier.nit : null,
-                        taxId: mappedSupplier.taxId && mappedSupplier.taxId.trim() !== '' ? mappedSupplier.taxId : null,
-                        email: mappedSupplier.email || null,
-                        contactEmail: mappedSupplier.contactEmail || null,
-                        phone: mappedSupplier.phone || null,
-                        contactPhone: mappedSupplier.contactPhone || null,
+                        nit: nitValue && nitValue.trim() !== '' ? nitValue : null,
+                        taxId: nitValue && nitValue.trim() !== '' ? nitValue : null,
+                        email: emailValue || null,
+                        contactEmail: emailValue || null,
+                        phone: phoneValue || null,
+                        contactPhone: phoneValue || null,
                         contactName: mappedSupplier.contactName || null,
                         address: mappedSupplier.address || null,
+                        activity: mappedSupplier.activity || null,
                         supplierType: mappedSupplier.supplierType ? mapSupplierType(mappedSupplier.supplierType) : 'SUPPLIER',
                         criticality: mappedSupplier.criticality ? mapCriticality(mappedSupplier.criticality) : 'LOW'
                     }
