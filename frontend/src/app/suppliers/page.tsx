@@ -371,6 +371,18 @@ export default function SuppliersPage() {
                         </div>
                     ) : (
                         <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                            <div className="px-6 py-4 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-bold text-gray-500">
+                                        {filteredSuppliers.length} {filteredSuppliers.length === 1 ? 'proveedor' : 'proveedores'}
+                                    </span>
+                                    {filteredSuppliers.length !== suppliers.length && (
+                                        <span className="text-xs text-gray-400">
+                                            (de {suppliers.length} total)
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700">
