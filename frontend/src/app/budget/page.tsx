@@ -17,6 +17,7 @@ import { useFilterStore } from "@/store/filterStore";
 import VisualDashboard from "./VisualDashboard";
 import YearSelector from "@/components/YearSelector";
 import SearchableSelect from "@/components/SearchableSelect";
+import SourceBudgetCascade from "@/components/SourceBudgetCascade";
 import * as XLSX from 'xlsx';
 import ConfirmModal from "@/components/ConfirmModal";
 
@@ -141,6 +142,8 @@ export default function BudgetsPage() {
         sources: [] as Array<{ budgetId: string; amount: string }>
     });
     const [savingAdjustment, setSavingAdjustment] = useState(false);
+    const [allApprovedBudgets, setAllApprovedBudgets] = useState<Budget[]>([]);
+    const [loadingApprovedBudgets, setLoadingApprovedBudgets] = useState(false);
 
     const fetchBudgets = useCallback(async () => {
         // Ensure selectedYear has a valid value before fetching
@@ -423,10 +426,23 @@ export default function BudgetsPage() {
         setShowCreateModal(true);
     };
 
-    const openAdjustmentModal = (budget: Budget) => {
+    const openAdjustmentModal = async (budget: Budget) => {
         setSelectedBudget(budget);
         setAdjustmentData({ type: 'INCREASE', requestedAmount: '', reason: '', sources: [] });
         setShowAdjustmentModal(true);
+
+        // Fetch all approved budgets for source selection (unfiltered by page filters)
+        setLoadingApprovedBudgets(true);
+        try {
+            const res = await api.get('/budgets?status=APPROVED');
+            setAllApprovedBudgets(res.data);
+        } catch (err) {
+            console.error('Error fetching approved budgets for adjustment:', err);
+            // Fallback to page budgets
+            setAllApprovedBudgets(budgets);
+        } finally {
+            setLoadingApprovedBudgets(false);
+        }
     };
 
     if (!mounted) return null;
@@ -1103,45 +1119,53 @@ export default function BudgetsPage() {
                                         <p className="text-sm text-gray-400 italic">Agrega presupuestos de donde se descontará el monto</p>
                                     )}
 
+                                    {loadingApprovedBudgets && (
+                                        <div className="flex items-center gap-2 p-4 text-gray-400">
+                                            <div className="w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+                                            <span className="text-sm font-bold">Cargando presupuestos...</span>
+                                        </div>
+                                    )}
+
                                     {adjustmentData.sources.map((source, idx) => (
-                                        <div key={idx} className="flex gap-4 items-center">
-                                            <div className="flex-1 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden min-w-[200px]">
-                                                <SearchableSelect
-                                                    value={source.budgetId}
-                                                    onChange={(val) => {
-                                                        const updated = [...adjustmentData.sources];
-                                                        updated[idx].budgetId = val;
-                                                        setAdjustmentData({ ...adjustmentData, sources: updated });
-                                                    }}
-                                                    options={[
-                                                        { value: "", label: "Seleccionar presupuesto..." },
-                                                        ...budgets.filter(b => b.id !== selectedBudget.id).map((b) => ({
-                                                            value: b.id,
-                                                            label: `${b.title} (Disp: ${formatCurrency(Number(b.available))})`
-                                                        }))
-                                                    ]}
-                                                />
+                                        <div key={idx} className="bg-gray-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+                                            <div className="flex items-start gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <SourceBudgetCascade
+                                                        budgets={allApprovedBudgets}
+                                                        projects={projects}
+                                                        excludeBudgetId={selectedBudget.id}
+                                                        selectedBudgetId={source.budgetId}
+                                                        onBudgetSelect={(budgetId) => {
+                                                            const updated = [...adjustmentData.sources];
+                                                            updated[idx].budgetId = budgetId;
+                                                            setAdjustmentData({ ...adjustmentData, sources: updated });
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col items-end gap-2 pt-5">
+                                                    <input
+                                                        type="number"
+                                                        value={source.amount}
+                                                        onChange={(e) => {
+                                                            const updated = [...adjustmentData.sources];
+                                                            updated[idx].amount = e.target.value;
+                                                            setAdjustmentData({ ...adjustmentData, sources: updated });
+                                                        }}
+                                                        className="w-36 bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-700 p-3 rounded-xl font-bold text-sm"
+                                                        placeholder="Monto"
+                                                    />
+                                                    <button
+                                                        onClick={() => {
+                                                            const updated = adjustmentData.sources.filter((_, i) => i !== idx);
+                                                            setAdjustmentData({ ...adjustmentData, sources: updated });
+                                                        }}
+                                                        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                                                        title="Eliminar origen"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <input
-                                                type="number"
-                                                value={source.amount}
-                                                onChange={(e) => {
-                                                    const updated = [...adjustmentData.sources];
-                                                    updated[idx].amount = e.target.value;
-                                                    setAdjustmentData({ ...adjustmentData, sources: updated });
-                                                }}
-                                                className="w-32 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 p-3 rounded-xl font-bold text-sm"
-                                                placeholder="Monto"
-                                            />
-                                            <button
-                                                onClick={() => {
-                                                    const updated = adjustmentData.sources.filter((_, i) => i !== idx);
-                                                    setAdjustmentData({ ...adjustmentData, sources: updated });
-                                                }}
-                                                className="p-2 text-red-500 hover:bg-red-50 rounded-xl"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
                                         </div>
                                     ))}
 
