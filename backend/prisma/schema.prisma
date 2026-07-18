@@ -65,6 +65,7 @@ model Area {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   directorId   String?
+  commercialInvoices Invoice[] @relation("InvoiceCommercialArea")
   director     User?         @relation("AreaDirector", fields: [directorId], references: [id])
   budgets      Budget[]
   requirements Requirement[]
@@ -148,6 +149,7 @@ model Budget {
   manager           User?              @relation("BudgetManager", fields: [managerId], references: [id])
   project           Project            @relation(fields: [projectId], references: [id])
   adjustments       BudgetAdjustment[]
+  invoices          Invoice[]          @relation("InvoiceBudget")
   subLeaders        BudgetSubLeader[]
   requirements      Requirement[]
 }
@@ -318,35 +320,66 @@ model SystemConfig {
 }
 
 model Invoice {
-  id                String            @id @default(uuid())
-  invoiceNumber     String
-  supplierId        String
-  requirementId     String?
-  amount            Decimal           @db.Decimal(15, 2)
-  issueDate         DateTime
-  dueDate           DateTime?
-  status            InvoiceStatus     @default(RECEIVED)
-  fileUrl           String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  createdById       String
-  verifiedAt        DateTime?
-  verifiedById      String?
-  approvedAt        DateTime?
-  approvedById      String?
-  paidAt            DateTime?
-  paidById          String?
-  transactionNumber String?
-  auditLogs         InvoiceAuditLog[]
-  createdBy         User              @relation("InvoiceCreator", fields: [createdById], references: [id])
-  payments          Payment[]
-  requirement       Requirement?      @relation(fields: [requirementId], references: [id])
-  supplier          Supplier          @relation(fields: [supplierId], references: [id])
+  id                       String              @id @default(uuid())
+  invoiceNumber            String
+  supplierId               String
+  requirementId            String?
+  amount                   Decimal             @db.Decimal(15, 2)
+  issueDate                DateTime
+  dueDate                  DateTime?
+  status                   InvoiceStatus       @default(RECEIVED)
+  fileUrl                  String?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  createdById              String
+  verifiedAt               DateTime?
+  verifiedById             String?
+  approvedAt               DateTime?
+  approvedById             String?
+  paidAt                   DateTime?
+  paidById                 String?
+  transactionNumber        String?
+  purchaseOrderNumber      String?
+  budgetId                 String?
+  observations             String?
+  causationNumber          String?
+  causationDate            DateTime?
+  leaderApproval           Boolean?
+  subtotal                 Decimal?            @db.Decimal(15, 2)
+  taxAmount                Decimal?            @db.Decimal(15, 2)
+  commercialAreaId         String?
+  policyApproverName       String?
+  policyReviewObservations String?
+  causationObservations    String?
+  requirementNumber        String?
+  attachments              InvoiceAttachment[]
+  auditLogs                InvoiceAuditLog[]
+  budget                   Budget?             @relation("InvoiceBudget", fields: [budgetId], references: [id], onDelete: SetNull)
+  commercialArea           Area?               @relation("InvoiceCommercialArea", fields: [commercialAreaId], references: [id], onDelete: SetNull)
+  createdBy                User                @relation("InvoiceCreator", fields: [createdById], references: [id])
+  payments                 Payment[]
+  requirement              Requirement?        @relation(fields: [requirementId], references: [id])
+  supplier                 Supplier            @relation(fields: [supplierId], references: [id])
 
   @@index([supplierId, invoiceNumber])
   @@index([status])
   @@index([dueDate])
   @@index([paidAt])
+  @@index([budgetId])
+  @@index([commercialAreaId])
+  @@index([causationNumber])
+  @@index([purchaseOrderNumber])
+}
+
+model InvoiceAttachment {
+  id        String   @id @default(uuid())
+  fileName  String
+  fileUrl   String
+  invoiceId String
+  createdAt DateTime @default(now())
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
 }
 
 model InvoiceAuditLog {

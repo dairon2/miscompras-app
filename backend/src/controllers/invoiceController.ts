@@ -1,17 +1,39 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../index';
-import path from 'path';
-import { uploadToBlobStorage } from '../services/blobStorageService';
+import { processFileUploads, uploadToBlobStorage } from '../services/blobStorageService';
 import logger from '../services/logger';
+import fs from 'fs';
 
 const GLOBAL_INVOICE_VIEWER_ROLES = ['ADMIN', 'DIRECTOR', 'AUDITOR', 'DEVELOPER', 'COORDINATOR'];
 const INVOICE_MANAGER_ROLES = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'];
 const INVOICE_APPROVER_ROLES = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR'];
 const INVOICE_PAYMENT_ROLES = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'];
+const INVOICE_STATUSES = ['RECEIVED', 'VERIFIED', 'APPROVED', 'PAID', 'REJECTED'];
+
+class InvoiceRequestError extends Error {
+    constructor(public status: number, message: string) {
+        super(message);
+        this.name = 'InvoiceRequestError';
+    }
+}
 
 const invoiceInclude = {
     supplier: true,
+    budget: {
+        include: {
+            project: true,
+            area: true,
+            category: true
+        }
+    },
+    commercialArea: true,
+    attachments: {
+        orderBy: { createdAt: 'desc' as const }
+    },
+    auditLogs: {
+        orderBy: { createdAt: 'desc' as const }
+    },
     requirement: {
         include: {
             project: true,
@@ -73,6 +95,50 @@ const parsePositiveAmount = (value: unknown) => {
     return amount;
 };
 
+const parseOptionalAmount = (value: unknown, fieldName: string) => {
+    if (value === undefined || value === null || value === '') return null;
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount < 0) {
+        throw new Error(`${fieldName} debe ser un valor mayor o igual a 0`);
+    }
+    return amount;
+};
+
+const parseOptionalBoolean = (value: unknown) => {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+        if (value === 'true') return true;
+        if (value === 'false') return false;
+    }
+    throw new Error('La aprobación del líder debe ser verdadera o falsa');
+};
+
+const normalizeOptionalString = (value: unknown) => {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed || null;
+};
+
+const getUploadedFiles = (req: AuthRequest) => {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    return {
+        invoicePdf: files?.file?.[0] || req.file,
+        attachments: files?.attachments || []
+    };
+};
+
+const cleanupUploadedFiles = (files: Array<Express.Multer.File | undefined>) => {
+    files.forEach(file => {
+        if (!file?.path) return;
+        try {
+            if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        } catch (error) {
+            logger.warn('Could not clean up invoice upload:', error);
+        }
+    });
+};
+
 const writeInvoiceAuditLog = async (
     client: any,
     data: {
@@ -104,28 +170,50 @@ const writeInvoiceAuditLog = async (
 
 // Get Invoices with Filters
 export const getInvoices = async (req: AuthRequest, res: Response) => {
-    const { status, supplierId } = req.query;
+    const { status, supplierId, search } = req.query;
     const userRole = req.user?.role;
     const userId = req.user?.id;
 
     try {
-        const where: any = {};
-        if (status) where.status = status;
-        if (supplierId) where.supplierId = supplierId;
+        if (!userId) return res.status(401).json({ error: 'User not authenticated' });
+
+        const filters: any[] = [];
+        if (status) {
+            const normalizedStatus = String(status).toUpperCase();
+            if (!INVOICE_STATUSES.includes(normalizedStatus)) {
+                return res.status(400).json({ error: 'Estado de factura no válido' });
+            }
+            filters.push({ status: normalizedStatus });
+        }
+        if (supplierId) filters.push({ supplierId: String(supplierId) });
+
+        const normalizedSearch = String(search || '').trim();
+        if (normalizedSearch) {
+            filters.push({
+                OR: [
+                    { invoiceNumber: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { purchaseOrderNumber: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { requirementNumber: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { causationNumber: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { supplier: { name: { contains: normalizedSearch, mode: 'insensitive' } } },
+                    { requirement: { title: { contains: normalizedSearch, mode: 'insensitive' } } }
+                ]
+            });
+        }
 
         // Role-based visibility
         const isGlobalViewer = hasRole(userRole, GLOBAL_INVOICE_VIEWER_ROLES);
 
         if (!isGlobalViewer) {
             // Users/Leaders see invoices if they uploaded them OR if they own the related requirement
-            where.OR = [
+            filters.push({ OR: [
                 { createdById: userId },
                 { requirement: { createdById: userId } }
-            ];
+            ] });
         }
 
         const invoices = await prisma.invoice.findMany({
-            where,
+            where: filters.length > 0 ? { AND: filters } : {},
             include: invoiceInclude,
             orderBy: { createdAt: 'desc' }
         });
@@ -202,12 +290,38 @@ export const checkDuplicateInvoice = async (req: AuthRequest, res: Response) => 
 
 // Create Invoice (Reception)
 export const createInvoice = async (req: AuthRequest, res: Response) => {
-    const { invoiceNumber, supplierId, amount, issueDate, dueDate } = req.body;
+    const {
+        invoiceNumber,
+        supplierId,
+        amount,
+        issueDate,
+        dueDate,
+        purchaseOrderNumber,
+        budgetId,
+        observations,
+        causationNumber,
+        causationDate,
+        leaderApproval,
+        subtotal,
+        taxAmount,
+        commercialAreaId,
+        policyApproverName,
+        policyReviewObservations,
+        causationObservations,
+        requirementNumber
+    } = req.body;
     const userId = req.user?.id;
-    const file = req.file;
+    const { invoicePdf, attachments } = getUploadedFiles(req);
+    const uploadedFiles = [invoicePdf, ...attachments];
 
-    if (!userId) return res.status(401).json({ error: 'User not authenticated' });
-    if (!file) return res.status(400).json({ error: 'Invoice PDF is required' });
+    if (!userId) {
+        cleanupUploadedFiles(uploadedFiles);
+        return res.status(401).json({ error: 'User not authenticated' });
+    }
+    if (!invoicePdf) {
+        cleanupUploadedFiles(uploadedFiles);
+        return res.status(400).json({ error: 'Invoice PDF is required' });
+    }
 
 
     try {
@@ -220,12 +334,35 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
         }
 
         const parsedAmount = parsePositiveAmount(amount);
+        const parsedSubtotal = parseOptionalAmount(subtotal, 'El subtotal');
+        const parsedTaxAmount = parseOptionalAmount(taxAmount, 'El IVA');
         const parsedIssueDate = parseRequiredDate(issueDate, 'La fecha de emisión');
         const parsedDueDate = parseOptionalDate(dueDate, 'La fecha de vencimiento');
+        const parsedCausationDate = parseOptionalDate(causationDate, 'La fecha de causación');
+
+        if (parsedDueDate && parsedDueDate < parsedIssueDate) {
+            throw new Error('La fecha de vencimiento no puede ser anterior a la fecha de emisión');
+        }
+
+        if (parsedSubtotal !== null && parsedTaxAmount !== null && Math.abs(parsedSubtotal + parsedTaxAmount - parsedAmount) > 0.01) {
+            throw new Error('El subtotal más el IVA debe coincidir con el monto total de la factura');
+        }
 
         const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
         if (!supplier) {
-            return res.status(404).json({ error: 'Proveedor no encontrado' });
+            throw new InvoiceRequestError(404, 'Proveedor no encontrado');
+        }
+
+        const normalizedBudgetId = normalizeOptionalString(budgetId);
+        if (normalizedBudgetId) {
+            const budget = await prisma.budget.findUnique({ where: { id: normalizedBudgetId } });
+            if (!budget) throw new InvoiceRequestError(404, 'Presupuesto no encontrado');
+        }
+
+        const normalizedCommercialAreaId = normalizeOptionalString(commercialAreaId);
+        if (normalizedCommercialAreaId) {
+            const area = await prisma.area.findUnique({ where: { id: normalizedCommercialAreaId } });
+            if (!area) throw new InvoiceRequestError(404, 'Área comercial no encontrada');
         }
 
         const duplicateInvoice = await prisma.invoice.findFirst({
@@ -239,16 +376,16 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
         });
 
         if (duplicateInvoice) {
-            return res.status(409).json({ error: 'Ya existe una factura con este número para el proveedor seleccionado' });
+            throw new InvoiceRequestError(409, 'Ya existe una factura con este número para el proveedor seleccionado');
         }
 
         // Normalize path for local fallback immediately
-        let fileUrl = file.path.replace(/\\/g, '/');
+        let fileUrl = invoicePdf.path.replace(/\\/g, '/');
 
         // Upload to Blob Storage if available
         try {
-            const blobName = `invoices/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
-            const blobUrl = await uploadToBlobStorage(file.path, blobName);
+            const blobName = `invoices/${Date.now()}-${invoicePdf.originalname.replace(/\s+/g, '_')}`;
+            const blobUrl = await uploadToBlobStorage(invoicePdf.path, blobName);
             if (blobUrl) {
                 fileUrl = blobUrl;
                 logger.blob('Invoice uploaded to cloud:', blobUrl);
@@ -257,17 +394,34 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
             logger.error('Failed to upload invoice to blob storage, using local path:', blobErr);
         }
 
+        const attachmentData = await processFileUploads(attachments, 'invoice-attachments');
+
         const invoice = await prisma.invoice.create({
             data: {
                 invoiceNumber: normalizedInvoiceNumber,
                 amount: parsedAmount,
+                subtotal: parsedSubtotal,
+                taxAmount: parsedTaxAmount,
                 issueDate: parsedIssueDate,
                 dueDate: parsedDueDate,
                 supplierId,
                 createdById: userId,
                 status: 'RECEIVED',
-                fileUrl: fileUrl
-            }
+                fileUrl: fileUrl,
+                purchaseOrderNumber: normalizeOptionalString(purchaseOrderNumber),
+                budgetId: normalizedBudgetId,
+                observations: normalizeOptionalString(observations),
+                causationNumber: normalizeOptionalString(causationNumber),
+                causationDate: parsedCausationDate,
+                leaderApproval: parseOptionalBoolean(leaderApproval),
+                commercialAreaId: normalizedCommercialAreaId,
+                policyApproverName: normalizeOptionalString(policyApproverName),
+                policyReviewObservations: normalizeOptionalString(policyReviewObservations),
+                causationObservations: normalizeOptionalString(causationObservations),
+                requirementNumber: normalizeOptionalString(requirementNumber),
+                attachments: attachmentData.length > 0 ? { create: attachmentData } : undefined
+            },
+            include: invoiceInclude
         });
 
         await writeInvoiceAuditLog(prisma, {
@@ -281,8 +435,9 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
 
         res.status(201).json(invoice);
     } catch (error: any) {
+        cleanupUploadedFiles(uploadedFiles);
         console.error("Create invoice error:", error);
-        res.status(400).json({ error: error.message || 'Error al crear la factura' });
+        res.status(error instanceof InvoiceRequestError ? error.status : 400).json({ error: error.message || 'Error al crear la factura' });
     }
 };
 

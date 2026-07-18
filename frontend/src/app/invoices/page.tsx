@@ -1,36 +1,56 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { invoiceService } from '@/services/invoiceService';
-import { Plus, FileText, Eye, Trash2 } from 'lucide-react';
+import { Plus, FileText, Eye, Trash2, Search, RefreshCw } from 'lucide-react';
+import { useToastStore } from '@/store/toastStore';
+
+type InvoiceListItem = {
+    id: string;
+    invoiceNumber: string;
+    amount: number | string;
+    issueDate: string;
+    status: string;
+    supplier?: { name?: string | null } | null;
+    requirement?: { id: string; title?: string | null } | null;
+};
 
 export default function InvoicesPage() {
     const { token, user } = useAuthStore();
     const router = useRouter();
-    const [invoices, setInvoices] = useState<any[]>([]);
+    const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState<string>('');
+    const [search, setSearch] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const { addToast } = useToastStore();
     const canDeleteInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(user?.role || '');
 
-    useEffect(() => {
-        if (token) {
-            loadInvoices();
-        }
-    }, [token, filterStatus]);
-
-    const loadInvoices = async () => {
+    const loadInvoices = useCallback(async () => {
+        if (!token) return;
         setLoading(true);
+        setError(null);
         try {
-            const data = await invoiceService.getInvoices(token!, { status: filterStatus || undefined });
+            const data = await invoiceService.getInvoices(token, {
+                status: filterStatus || undefined,
+                search: search.trim() || undefined
+            });
             setInvoices(data);
-        } catch (error) {
-            console.error(error);
+        } catch (requestError) {
+            console.error(requestError);
+            setError('No se pudieron cargar las facturas.');
         } finally {
             setLoading(false);
         }
-    };
+    }, [token, filterStatus, search]);
+
+    useEffect(() => {
+        if (!token) return;
+        const timeout = setTimeout(() => loadInvoices(), 250);
+        return () => clearTimeout(timeout);
+    }, [token, loadInvoices]);
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -38,6 +58,7 @@ export default function InvoicesPage() {
             case 'VERIFIED': return <span className="px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">Verificada</span>;
             case 'APPROVED': return <span className="px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Por Pagar</span>;
             case 'PAID': return <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">Pagada</span>;
+            case 'REJECTED': return <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">Rechazada</span>;
             default: return <span className="px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-800">{status}</span>;
         }
     };
@@ -65,24 +86,44 @@ export default function InvoicesPage() {
             </div>
 
             {/* Filters */}
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex gap-4 overflow-x-auto">
-                <button onClick={() => setFilterStatus('')} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${!filterStatus ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-50'}`}>
-                    Todas
-                </button>
-                <button onClick={() => setFilterStatus('RECEIVED')} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filterStatus === 'RECEIVED' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}>
-                    Pendientes de Verificación
-                </button>
-                <button onClick={() => setFilterStatus('VERIFIED')} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filterStatus === 'VERIFIED' ? 'bg-purple-50 text-purple-700' : 'text-gray-600 hover:bg-gray-50'}`}>
-                    Por Aprobar
-                </button>
-                <button onClick={() => setFilterStatus('APPROVED')} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filterStatus === 'APPROVED' ? 'bg-amber-50 text-amber-700' : 'text-gray-600 hover:bg-gray-50'}`}>
-                    Listas para Pago
-                </button>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+                <div className="relative max-w-xl">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <input
+                        value={search}
+                        onChange={event => setSearch(event.target.value)}
+                        placeholder="Buscar por factura, proveedor, OC o requerimiento..."
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700/50"
+                    />
+                </div>
+                <div className="flex gap-2 overflow-x-auto">
+                    {[
+                        ['', 'Todas'],
+                        ['RECEIVED', 'Pendientes de Verificación'],
+                        ['VERIFIED', 'Por Aprobar'],
+                        ['APPROVED', 'Listas para Pago'],
+                        ['PAID', 'Pagadas'],
+                        ['REJECTED', 'Rechazadas']
+                    ].map(([status, label]) => (
+                        <button key={status || 'all'} onClick={() => setFilterStatus(status)} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filterStatus === status ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* List */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                {invoices.length === 0 && !loading ? (
+                {loading ? (
+                    <div className="flex items-center justify-center gap-2 p-12 text-gray-500">
+                        <RefreshCw className="h-5 w-5 animate-spin" /> Cargando facturas...
+                    </div>
+                ) : error ? (
+                    <div className="p-12 text-center text-red-600">
+                        <p>{error}</p>
+                        <button onClick={loadInvoices} className="mt-3 font-semibold underline">Intentar de nuevo</button>
+                    </div>
+                ) : invoices.length === 0 ? (
                     <div className="p-12 text-center text-gray-500">
                         <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
                         <p>No hay facturas registradas</p>
@@ -121,7 +162,7 @@ export default function InvoicesPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             {inv.requirement ? (
-                                                <span className="text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/requirements/${inv.requirement.id}`)}>
+                                                <span className="text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/requirements/${inv.requirement?.id}`)}>
                                                     {inv.requirement.title}
                                                 </span>
                                             ) : (
@@ -143,10 +184,11 @@ export default function InvoicesPage() {
                                                             if (confirm('¿Estás seguro de eliminar esta factura?')) {
                                                                 try {
                                                                     await invoiceService.deleteInvoice(token!, inv.id);
+                                                                    addToast('Factura eliminada', 'success');
                                                                     loadInvoices();
                                                                 } catch (error) {
                                                                     console.error(error);
-                                                                    alert('Error al eliminar factura');
+                                                                    addToast('No se pudo eliminar la factura', 'error');
                                                                 }
                                                             }
                                                         }}

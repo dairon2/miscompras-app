@@ -130,6 +130,33 @@ describe('Invoice Controller', () => {
         });
     });
 
+    describe('getInvoices', () => {
+        it('should combine search filters with the visibility scope', async () => {
+            (req as any).user.role = 'USER';
+            (req as any).user.id = 'user-1';
+            req.query = { search: 'FE-001', status: 'RECEIVED' };
+            (prisma.invoice.findMany as jest.Mock).mockResolvedValue([]);
+
+            await getInvoices(req as Request, res as Response);
+
+            expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({
+                where: {
+                    AND: expect.arrayContaining([
+                        { status: 'RECEIVED' },
+                        expect.objectContaining({ OR: expect.arrayContaining([
+                            { invoiceNumber: { contains: 'FE-001', mode: 'insensitive' } }
+                        ]) }),
+                        { OR: [
+                            { createdById: 'user-1' },
+                            { requirement: { createdById: 'user-1' } }
+                        ] }
+                    ])
+                }
+            }));
+            expect(json).toHaveBeenCalledWith([]);
+        });
+    });
+
     describe('verifyInvoice', () => {
         it('should verify match with approved PO', async () => {
             req.params = { id: 'inv-1' };

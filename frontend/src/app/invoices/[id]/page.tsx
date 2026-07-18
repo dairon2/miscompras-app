@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { invoiceService } from '@/services/invoiceService';
@@ -11,12 +11,51 @@ import ConfirmModal from '@/components/ConfirmModal';
 import { useToastStore } from '@/store/toastStore';
 import { translateStatus } from '@/lib/translations';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+
+type InvoiceAttachment = { id: string; fileName: string; fileUrl: string };
+type InvoiceAuditLog = { id: string; action: string; details?: string | null; actorEmail?: string | null; createdAt: string };
+type RequirementOption = { id: string; title: string; status: string; actualAmount?: number | string | null; supplierId?: string | null };
+type InvoiceDetail = {
+    id: string;
+    invoiceNumber: string;
+    supplierId: string;
+    amount: number | string;
+    subtotal?: number | string | null;
+    taxAmount?: number | string | null;
+    issueDate: string;
+    dueDate?: string | null;
+    status: string;
+    fileUrl?: string | null;
+    purchaseOrderNumber?: string | null;
+    requirementNumber?: string | null;
+    observations?: string | null;
+    causationNumber?: string | null;
+    causationDate?: string | null;
+    leaderApproval?: boolean | null;
+    policyApproverName?: string | null;
+    policyReviewObservations?: string | null;
+    causationObservations?: string | null;
+    transactionNumber?: string | null;
+    supplier?: { name?: string | null } | null;
+    budget?: { title?: string | null; code?: string | null } | null;
+    commercialArea?: { name?: string | null } | null;
+    requirement?: { id: string; title?: string | null } | null;
+    attachments?: InvoiceAttachment[];
+    auditLogs?: InvoiceAuditLog[];
+};
+
+const getRequestErrorMessage = (error: unknown, fallback: string) => {
+    if (axios.isAxiosError(error)) return error.response?.data?.error || fallback;
+    return error instanceof Error ? error.message : fallback;
+};
+
 export default function InvoiceDetailPage() {
     const { token, user } = useAuthStore();
     const params = useParams();
     const router = useRouter();
     const { addToast } = useToastStore();
-    const [invoice, setInvoice] = useState<any>(null);
+    const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
     const [loading, setLoading] = useState(true);
 
     const [confirmConfig, setConfirmConfig] = useState<{
@@ -35,19 +74,14 @@ export default function InvoiceDetailPage() {
 
     // Matching State
     const [searchQuery, setSearchQuery] = useState('');
-    const [requirements, setRequirements] = useState<any[]>([]);
-    const [selectedReq, setSelectedReq] = useState<any>(null);
+    const [requirements, setRequirements] = useState<RequirementOption[]>([]);
+    const [selectedReq, setSelectedReq] = useState<RequirementOption | null>(null);
     const [verifying, setVerifying] = useState(false);
 
-    useEffect(() => {
-        if (token && params.id) {
-            loadInvoice();
-        }
-    }, [token, params.id]);
-
-    const loadInvoice = async () => {
+    const loadInvoice = useCallback(async () => {
+        if (!token || !params.id) return;
         try {
-            const found = await invoiceService.getInvoiceById(token!, String(params.id));
+            const found = await invoiceService.getInvoiceById(token, String(params.id));
             setInvoice(found);
         } catch (error) {
             console.error(error);
@@ -55,38 +89,45 @@ export default function InvoiceDetailPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [addToast, params.id, token]);
+
+    useEffect(() => {
+        if (token && params.id) {
+            loadInvoice();
+        }
+    }, [loadInvoice, params.id, token]);
 
     const searchRequirements = async () => {
-        if (!searchQuery) return;
+        const normalizedQuery = searchQuery.trim().toLowerCase();
+        if (!normalizedQuery || !invoice) return;
         try {
-            // Using existing requirements endpoint with search
-            // The existing endpoint might not support search param.
-            // Let's fetch all and filter client side for prototype.
-            const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/requirements/all`, { // Admin endpoint usually has all
+            const res = await axios.get(`${API_URL}/requirements/all`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            const matches = res.data.data ? res.data.data : res.data; // Handle pagination structure or plain array
-            const filtered = (Array.isArray(matches) ? matches : []).filter((r: any) =>
-                r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                r.id.includes(searchQuery)
+            const matches = (res.data.data ? res.data.data : res.data) as RequirementOption[];
+            const filtered = (Array.isArray(matches) ? matches : []).filter((r) =>
+                r.status === 'APPROVED' &&
+                (!invoice.supplierId || !r.supplierId || r.supplierId === invoice.supplierId) &&
+                (r.title?.toLowerCase().includes(normalizedQuery) || r.id?.toLowerCase().includes(normalizedQuery))
             ).slice(0, 5);
             setRequirements(filtered);
+            if (filtered.length === 0) addToast('No se encontraron requerimientos aprobados compatibles', 'info');
         } catch (error) {
             console.error(error);
+            addToast('No se pudieron consultar los requerimientos', 'error');
         }
     };
 
     const handleVerify = async () => {
-        if (!selectedReq) return;
+        if (!selectedReq || !invoice) return;
         setVerifying(true);
         try {
             await invoiceService.verifyInvoice(token!, invoice.id, selectedReq.id);
             addToast('Factura vinculada exitosamente', 'success');
             loadInvoice();
             setSelectedReq(null);
-        } catch (error: any) {
-            addToast(error.response?.data?.error || 'Error al vincular', 'error');
+        } catch (error: unknown) {
+            addToast(getRequestErrorMessage(error, 'Error al vincular'), 'error');
         } finally {
             setVerifying(false);
         }
@@ -103,17 +144,19 @@ export default function InvoiceDetailPage() {
     };
 
     const executeApprove = async () => {
+        if (!invoice) return;
         setConfirmConfig(prev => ({ ...prev, isOpen: false }));
         try {
             await invoiceService.approveInvoice(token!, invoice.id);
             addToast('Pago autorizado con éxito', 'success');
             loadInvoice();
-        } catch (error: any) {
-            addToast(error.response?.data?.error || 'Error al autorizar pago', 'error');
+        } catch (error: unknown) {
+            addToast(getRequestErrorMessage(error, 'Error al autorizar pago'), 'error');
         }
     };
 
     const handlePay = async () => {
+        if (!invoice) return;
         const date = prompt('Fecha de Pago (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
         if (!date) return;
         const transactionNumber = prompt('Número de transacción o comprobante (opcional):', '') || undefined;
@@ -122,8 +165,8 @@ export default function InvoiceDetailPage() {
             await invoiceService.payInvoice(token!, invoice.id, { paymentDate: date, transactionNumber });
             addToast('Pago registrado correctamente', 'success');
             loadInvoice();
-        } catch (error: any) {
-            addToast(error.response?.data?.error || 'Error al registrar pago', 'error');
+        } catch (error: unknown) {
+            addToast(getRequestErrorMessage(error, 'Error al registrar pago'), 'error');
         }
     };
 
@@ -137,11 +180,20 @@ export default function InvoiceDetailPage() {
         return `${baseUrl}/${url.replace(/\\/g, '/')}`;
     };
 
-    const isMatchCorrect = selectedReq && Math.abs(parseFloat(invoice.amount) - (parseFloat(selectedReq.actualAmount || '0'))) < 1.0;
+    const isMatchCorrect = selectedReq && Math.abs(Number(invoice.amount) - Number(selectedReq.actualAmount || 0)) < 1.0;
     const userRole = user?.role || '';
     const canManageInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(userRole);
     const canApproveInvoices = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR'].includes(userRole);
     const canPayInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(userRole);
+    const formatCurrency = (value: number | string | null | undefined) => value !== null && value !== undefined ? `$${Number(value).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
+    const leaderApprovalLabel = invoice.leaderApproval === true ? 'Aprobada' : invoice.leaderApproval === false ? 'No aprobada' : 'Pendiente / No aplica';
+    const auditActionLabel = (action: string) => ({
+        INVOICE_CREATED: 'Factura recepcionada',
+        INVOICE_VERIFIED: 'Factura vinculada',
+        INVOICE_APPROVED: 'Pago autorizado',
+        INVOICE_PAID: 'Pago registrado',
+        INVOICE_DELETED: 'Factura eliminada'
+    }[action] || action);
 
     return (
         <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
@@ -203,7 +255,7 @@ export default function InvoiceDetailPage() {
                         <div className="grid grid-cols-2 gap-4 text-sm mb-6">
                             <div>
                                 <label className="block text-gray-500 text-xs">Monto Factura</label>
-                                <p className="text-lg font-mono font-bold">${Number(invoice.amount).toLocaleString()}</p>
+                                <p className="text-lg font-mono font-bold">{formatCurrency(invoice.amount)}</p>
                             </div>
                             <div>
                                 <label className="block text-gray-500 text-xs">Fecha Emisión</label>
@@ -211,8 +263,69 @@ export default function InvoiceDetailPage() {
                             </div>
                         </div>
 
+                        <div className="space-y-5 border-t border-gray-100 pt-5 text-sm dark:border-gray-700">
+                            <div className="grid grid-cols-2 gap-4">
+                                <InfoBlock label="Subtotal" value={formatCurrency(invoice.subtotal)} />
+                                <InfoBlock label="IVA" value={formatCurrency(invoice.taxAmount)} />
+                                <InfoBlock label="Orden de Compra" value={invoice.purchaseOrderNumber || '-'} />
+                                <InfoBlock label="Requerimiento" value={invoice.requirementNumber || invoice.requirement?.id || '-'} />
+                                <InfoBlock label="Vencimiento" value={invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '-'} />
+                                <InfoBlock label="Presupuesto" value={invoice.budget?.title || invoice.budget?.code || '-'} />
+                                <InfoBlock label="Área Comercial" value={invoice.commercialArea?.name || '-'} />
+                                <InfoBlock label="Causación" value={invoice.causationNumber || '-'} />
+                                <InfoBlock label="Fecha Causación" value={invoice.causationDate ? new Date(invoice.causationDate).toLocaleDateString() : '-'} />
+                                <InfoBlock label="Aprobación Líder" value={leaderApprovalLabel} />
+                                <InfoBlock label="Aprueba Pólizas" value={invoice.policyApproverName || '-'} />
+                                <InfoBlock label="Transacción" value={invoice.transactionNumber || '-'} />
+                            </div>
+
+                            {(invoice.observations || invoice.causationObservations || invoice.policyReviewObservations) && (
+                                <div className="space-y-3">
+                                    {invoice.observations && <LongInfoBlock label="Observaciones" value={invoice.observations} />}
+                                    {invoice.causationObservations && <LongInfoBlock label="Observaciones de Causación" value={invoice.causationObservations} />}
+                                    {invoice.policyReviewObservations && <LongInfoBlock label="Observaciones de Pólizas" value={invoice.policyReviewObservations} />}
+                                </div>
+                            )}
+
+                            {invoice.attachments && invoice.attachments.length > 0 && (
+                                <div>
+                                    <label className="block text-gray-500 text-xs mb-2">Anexos</label>
+                                    <div className="space-y-2">
+                                        {invoice.attachments.map((attachment: InvoiceAttachment) => (
+                                            <a
+                                                key={attachment.id}
+                                                href={getFileUrl(attachment.fileUrl)}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:border-gray-700 dark:hover:bg-blue-900/20"
+                                            >
+                                                <span className="truncate">{attachment.fileName}</span>
+                                                <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {invoice.auditLogs && invoice.auditLogs.length > 0 && (
+                                <div>
+                                    <label className="block text-gray-500 text-xs mb-2">Trazabilidad</label>
+                                    <div className="space-y-3 border-l-2 border-blue-100 pl-4 dark:border-blue-900/40">
+                                        {invoice.auditLogs.map((log: InvoiceAuditLog) => (
+                                            <div key={log.id} className="relative text-xs">
+                                                <span className="absolute -left-[23px] top-0.5 h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-white dark:ring-gray-800" />
+                                                <p className="font-semibold text-gray-800 dark:text-gray-200">{auditActionLabel(log.action)}</p>
+                                                <p className="text-gray-500">{new Date(log.createdAt).toLocaleString()} {log.actorEmail ? `· ${log.actorEmail}` : ''}</p>
+                                                {log.details && <p className="mt-1 text-gray-600 dark:text-gray-400">{log.details}</p>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Actions */}
-                        <div className="space-y-2">
+                        <div className="space-y-2 mt-6">
                             {invoice.status === 'VERIFIED' && canApproveInvoices && (
                                 <button onClick={handleApprove} className="w-full bg-amber-500 text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-sm">
                                     Autorizar Pago
@@ -322,7 +435,7 @@ export default function InvoiceDetailPage() {
                                 {invoice.requirement && (
                                     <div className="mt-4 p-4 bg-white dark:bg-gray-800 mx-4 rounded-lg shadow-sm text-left border dark:border-gray-700">
                                         <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Orden de Compra</p>
-                                        <p className="font-bold text-sm text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/requirements/${invoice.requirement.id}`)}>
+                                        <p className="font-bold text-sm text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/requirements/${invoice.requirement?.id}`)}>
                                             {invoice.requirement.title}
                                         </p>
                                         <p className="text-[10px] text-gray-400 mt-1">ID: {invoice.requirement.id}</p>
@@ -342,6 +455,24 @@ export default function InvoiceDetailPage() {
                 message={confirmConfig.message}
                 type={confirmConfig.type}
             />
+        </div>
+    );
+}
+
+function InfoBlock({ label, value }: { label: string; value: string }) {
+    return (
+        <div>
+            <label className="block text-gray-500 text-xs">{label}</label>
+            <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{value}</p>
+        </div>
+    );
+}
+
+function LongInfoBlock({ label, value }: { label: string; value: string }) {
+    return (
+        <div>
+            <label className="block text-gray-500 text-xs">{label}</label>
+            <p className="mt-1 whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-xs leading-relaxed text-gray-700 dark:bg-gray-900/40 dark:text-gray-300">{value}</p>
         </div>
     );
 }
