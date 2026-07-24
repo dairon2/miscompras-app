@@ -352,6 +352,13 @@ model Invoice {
   policyReviewObservations String?
   causationObservations    String?
   requirementNumber        String?
+  itemNumber               Int                 @default(autoincrement())
+  passToArea               String?
+  costCenterOrProject      String?
+  purchaseObservations     String?
+  commercialValidation     String?
+  legalValidation          String?
+  legalObservations        String?
   attachments              InvoiceAttachment[]
   auditLogs                InvoiceAuditLog[]
   budget                   Budget?             @relation("InvoiceBudget", fields: [budgetId], references: [id], onDelete: SetNull)

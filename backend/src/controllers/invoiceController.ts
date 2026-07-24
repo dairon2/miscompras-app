@@ -195,7 +195,10 @@ export const getInvoices = async (req: AuthRequest, res: Response) => {
                     { purchaseOrderNumber: { contains: normalizedSearch, mode: 'insensitive' } },
                     { requirementNumber: { contains: normalizedSearch, mode: 'insensitive' } },
                     { causationNumber: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { costCenterOrProject: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { passToArea: { contains: normalizedSearch, mode: 'insensitive' } },
                     { supplier: { name: { contains: normalizedSearch, mode: 'insensitive' } } },
+                    { supplier: { nit: { contains: normalizedSearch, mode: 'insensitive' } } },
                     { requirement: { title: { contains: normalizedSearch, mode: 'insensitive' } } }
                 ]
             });
@@ -396,6 +399,15 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
 
         const attachmentData = await processFileUploads(attachments, 'invoice-attachments');
 
+        const {
+            passToArea,
+            costCenterOrProject,
+            purchaseObservations,
+            commercialValidation,
+            legalValidation,
+            legalObservations
+        } = req.body;
+
         const invoice = await prisma.invoice.create({
             data: {
                 invoiceNumber: normalizedInvoiceNumber,
@@ -419,6 +431,12 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
                 policyReviewObservations: normalizeOptionalString(policyReviewObservations),
                 causationObservations: normalizeOptionalString(causationObservations),
                 requirementNumber: normalizeOptionalString(requirementNumber),
+                passToArea: normalizeOptionalString(passToArea),
+                costCenterOrProject: normalizeOptionalString(costCenterOrProject),
+                purchaseObservations: normalizeOptionalString(purchaseObservations),
+                commercialValidation: normalizeOptionalString(commercialValidation),
+                legalValidation: normalizeOptionalString(legalValidation),
+                legalObservations: normalizeOptionalString(legalObservations),
                 attachments: attachmentData.length > 0 ? { create: attachmentData } : undefined
             },
             include: invoiceInclude
@@ -438,6 +456,78 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
         cleanupUploadedFiles(uploadedFiles);
         console.error("Create invoice error:", error);
         res.status(error instanceof InvoiceRequestError ? error.status : 400).json({ error: error.message || 'Error al crear la factura' });
+    }
+};
+
+// Update Invoice (Role-based editing for LMaestro2026 columns)
+export const updateInvoice = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const userRole = req.user?.role;
+    const userId = req.user?.id;
+
+    if (!userId) return res.status(401).json({ error: 'User not authenticated' });
+
+    try {
+        const currentInvoice = await prisma.invoice.findUnique({ where: { id } });
+        if (!currentInvoice) {
+            return res.status(404).json({ error: 'Factura no encontrada' });
+        }
+
+        const updateData: any = {};
+        const {
+            invoiceNumber,
+            supplierId,
+            amount,
+            issueDate,
+            passToArea,
+            observations,
+            purchaseOrderNumber,
+            costCenterOrProject,
+            purchaseObservations,
+            commercialValidation,
+            legalValidation,
+            legalObservations,
+            causationNumber,
+            causationObservations
+        } = req.body;
+
+        if (invoiceNumber !== undefined) updateData.invoiceNumber = String(invoiceNumber).trim();
+        if (supplierId !== undefined && supplierId) updateData.supplierId = String(supplierId);
+        if (amount !== undefined && amount !== null && amount !== '') updateData.amount = parsePositiveAmount(amount);
+        if (issueDate !== undefined && issueDate) updateData.issueDate = parseRequiredDate(issueDate, 'Fecha de emisión');
+        if (passToArea !== undefined) updateData.passToArea = normalizeOptionalString(passToArea);
+        if (observations !== undefined) updateData.observations = normalizeOptionalString(observations);
+
+        if (purchaseOrderNumber !== undefined) updateData.purchaseOrderNumber = normalizeOptionalString(purchaseOrderNumber);
+        if (costCenterOrProject !== undefined) updateData.costCenterOrProject = normalizeOptionalString(costCenterOrProject);
+        if (purchaseObservations !== undefined) updateData.purchaseObservations = normalizeOptionalString(purchaseObservations);
+
+        if (commercialValidation !== undefined) updateData.commercialValidation = normalizeOptionalString(commercialValidation);
+
+        if (legalValidation !== undefined) updateData.legalValidation = normalizeOptionalString(legalValidation);
+        if (legalObservations !== undefined) updateData.legalObservations = normalizeOptionalString(legalObservations);
+
+        if (causationNumber !== undefined) updateData.causationNumber = normalizeOptionalString(causationNumber);
+        if (causationObservations !== undefined) updateData.causationObservations = normalizeOptionalString(causationObservations);
+
+        const updated = await prisma.invoice.update({
+            where: { id },
+            data: updateData,
+            include: invoiceInclude
+        });
+
+        await writeInvoiceAuditLog(prisma, {
+            invoiceId: id,
+            action: 'INVOICE_UPDATED',
+            details: `Factura actualizada por usuario (${userRole || 'USER'})`,
+            actorId: userId,
+            actorEmail: req.user?.email
+        });
+
+        res.json(updated);
+    } catch (error: any) {
+        console.error("Update invoice error:", error);
+        res.status(400).json({ error: error.message || 'Error al actualizar la factura' });
     }
 };
 

@@ -49,7 +49,9 @@ export default function NewInvoicePage() {
         leaderApproval: '',
         policyApproverName: '',
         policyReviewObservations: '',
-        causationObservations: ''
+        causationObservations: '',
+        passToArea: '',
+        costCenterOrProject: ''
     });
     const [file, setFile] = useState<File | null>(null);
     const [attachments, setAttachments] = useState<File[]>([]);
@@ -149,6 +151,8 @@ export default function NewInvoicePage() {
             appendIfPresent(data, 'policyApproverName', formData.policyApproverName);
             appendIfPresent(data, 'policyReviewObservations', formData.policyReviewObservations);
             appendIfPresent(data, 'causationObservations', formData.causationObservations);
+            appendIfPresent(data, 'passToArea', formData.passToArea);
+            appendIfPresent(data, 'costCenterOrProject', formData.costCenterOrProject);
             attachments.forEach(attachment => data.append('attachments', attachment));
 
             await invoiceService.createInvoice(token!, data);

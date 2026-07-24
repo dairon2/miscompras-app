@@ -35,6 +35,13 @@ const createInvoice = async (token: string, formData: FormData) => {
     return response.data;
 };
 
+const updateInvoice = async (token: string, id: string, data: any) => {
+    const response = await axios.patch(`${API_URL}/invoices/${id}`, data, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
 const verifyInvoice = async (token: string, id: string, requirementId: string) => {
     const response = await axios.patch(`${API_URL}/invoices/${id}/verify`,
         { requirementId },
@@ -69,6 +76,7 @@ export const invoiceService = {
     getInvoiceById,
     checkDuplicateInvoice,
     createInvoice,
+    updateInvoice,
     verifyInvoice,
     approveInvoice,
     payInvoice,

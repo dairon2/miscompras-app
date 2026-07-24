@@ -4,27 +4,73 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { invoiceService } from '@/services/invoiceService';
-import { Plus, FileText, Eye, Trash2, Search, RefreshCw } from 'lucide-react';
+import { Plus, FileText, Eye, Trash2, Search, RefreshCw, Edit3, X, Check, FileDown, ExternalLink } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
 
-type InvoiceListItem = {
+type InvoiceItem = {
     id: string;
+    itemNumber?: number | null;
     invoiceNumber: string;
     amount: number | string;
     issueDate: string;
     status: string;
-    supplier?: { name?: string | null } | null;
+    fileUrl?: string | null;
+    supplier?: { name?: string | null; nit?: string | null; taxId?: string | null } | null;
     requirement?: { id: string; title?: string | null } | null;
+    passToArea?: string | null;
+    observations?: string | null;
+    purchaseOrderNumber?: string | null;
+    costCenterOrProject?: string | null;
+    purchaseObservations?: string | null;
+    commercialValidation?: string | null;
+    legalValidation?: string | null;
+    legalObservations?: string | null;
+    causationNumber?: string | null;
+    causationObservations?: string | null;
 };
+
+const AREA_OPTIONS = [
+    'ADMINISTRATIVO',
+    'BIENESTAR LABORAL',
+    'CALLE MUSEO',
+    'CCMA-MANTENIMIENTO Y RESTAURACIÓN',
+    'CENTRO DE DOCUMENTACIÓN',
+    'COMUNICACIONES',
+    'COSTOS OPERACIÓN PROYECTOS',
+    'CURADURÍA',
+    'EDUCACIÓN',
+    'EVENTOS',
+    'EXPOSICIÓN CANO',
+    'EXPOSICIÓN CASA ÁNGEL',
+    'FUNDACIÓN SOFÍA PÉREZ DE SOTO',
+    'GESTIÓN HUMANA',
+    'JORNADA ESCOLAR COMPLEMENTARIA',
+    'LA ESCUELA EN EL MUSEO',
+    'MAPA TEATRO',
+    'NOCHES DEL MUSEO',
+    'PRODUCCIÓN Y LOGÍSTICA',
+    'SALA PEDRITO BOTERO',
+    'SISTEMAS',
+    'TIENDA',
+    'NÓMINA',
+    'COMPRAS',
+    'COMERCIAL',
+    'JURÍDICA',
+    'CONTABILIDAD'
+];
 
 export default function InvoicesPage() {
     const { token, user } = useAuthStore();
     const router = useRouter();
-    const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
+    const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState<string>('');
     const [search, setSearch] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [editingInvoice, setEditingInvoice] = useState<InvoiceItem | null>(null);
+    const [editForm, setEditForm] = useState<Partial<InvoiceItem>>({});
+    const [saving, setSaving] = useState(false);
+
     const { addToast } = useToastStore();
     const canDeleteInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(user?.role || '');
 
@@ -52,26 +98,62 @@ export default function InvoicesPage() {
         return () => clearTimeout(timeout);
     }, [token, loadInvoices]);
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'RECEIVED': return <span className="px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">Recibida</span>;
-            case 'VERIFIED': return <span className="px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">Verificada</span>;
-            case 'APPROVED': return <span className="px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Por Pagar</span>;
-            case 'PAID': return <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">Pagada</span>;
-            case 'REJECTED': return <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">Rechazada</span>;
-            default: return <span className="px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-800">{status}</span>;
+    const openEditModal = (inv: InvoiceItem) => {
+        setEditingInvoice(inv);
+        setEditForm({
+            invoiceNumber: inv.invoiceNumber,
+            amount: inv.amount,
+            issueDate: inv.issueDate ? new Date(inv.issueDate).toISOString().split('T')[0] : '',
+            passToArea: inv.passToArea || '',
+            observations: inv.observations || '',
+            purchaseOrderNumber: inv.purchaseOrderNumber || '',
+            costCenterOrProject: inv.costCenterOrProject || '',
+            purchaseObservations: inv.purchaseObservations || '',
+            commercialValidation: inv.commercialValidation || '',
+            legalValidation: inv.legalValidation || '',
+            legalObservations: inv.legalObservations || '',
+            causationNumber: inv.causationNumber || '',
+            causationObservations: inv.causationObservations || ''
+        });
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingInvoice || !token) return;
+        setSaving(true);
+        try {
+            await invoiceService.updateInvoice(token, editingInvoice.id, editForm);
+            addToast('Factura actualizada correctamente', 'success');
+            setEditingInvoice(null);
+            loadInvoices();
+        } catch (err: any) {
+            console.error(err);
+            addToast(err?.response?.data?.error || 'Error al actualizar factura', 'error');
+        } finally {
+            setSaving(false);
         }
     };
 
+    const renderValidationBadge = (val?: string | null) => {
+        if (!val) return <span className="text-gray-400 italic">Pendiente</span>;
+        const upper = val.toUpperCase();
+        if (upper === 'APROBADO') {
+            return <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">APROBADO</span>;
+        }
+        if (upper === 'RECHAZADO') {
+            return <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">RECHAZADO</span>;
+        }
+        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">{val}</span>;
+    };
+
     return (
-        <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-6">
+        <div className="p-6 lg:p-10 max-w-[1920px] mx-auto space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                         <FileText className="w-8 h-8 text-blue-600" />
-                        Gestión de Facturas
+                        Módulo de Facturas (Control Unificado)
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Administra y valida las facturas de proveedores</p>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">Reemplazo de LMaestro2026.xlsm - Gestión por roles y almacenamiento directo en Azure</p>
                 </div>
 
                 <div className="flex gap-2">
@@ -85,14 +167,14 @@ export default function InvoicesPage() {
                 </div>
             </div>
 
-            {/* Filters */}
+            {/* Search & Filters */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
                 <div className="relative max-w-xl">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
                         value={search}
-                        onChange={event => setSearch(event.target.value)}
-                        placeholder="Buscar por factura, proveedor, OC o requerimiento..."
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Buscar por NIT, Proveedor, N° Documento, N° Orden, Causación o Centro de Costo..."
                         className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700/50"
                     />
                 </div>
@@ -105,14 +187,18 @@ export default function InvoicesPage() {
                         ['PAID', 'Pagadas'],
                         ['REJECTED', 'Rechazadas']
                     ].map(([status, label]) => (
-                        <button key={status || 'all'} onClick={() => setFilterStatus(status)} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filterStatus === status ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+                        <button
+                            key={status || 'all'}
+                            onClick={() => setFilterStatus(status)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filterStatus === status ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+                        >
                             {label}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* List */}
+            {/* Table with EXACT 16 COLUMNS from LMaestro2026.xlsm */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                 {loading ? (
                     <div className="flex items-center justify-center gap-2 p-12 text-gray-500">
@@ -129,54 +215,141 @@ export default function InvoicesPage() {
                         <p>No hay facturas registradas</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-900/50">
+                    <div className="overflow-x-auto max-w-full">
+                        <table className="w-full text-xs text-left whitespace-nowrap">
+                            <thead className="text-[11px] font-bold uppercase text-gray-600 bg-gray-100 dark:bg-gray-900/80 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
                                 <tr>
-                                    <th className="px-6 py-3">Factura #</th>
-                                    <th className="px-6 py-3">Proveedor</th>
-                                    <th className="px-6 py-3">Monto</th>
-                                    <th className="px-6 py-3">Fecha Emisión</th>
-                                    <th className="px-6 py-3">Estado</th>
-                                    <th className="px-6 py-3">OC Vinculada</th>
-                                    <th className="px-6 py-3 text-right">Acciones</th>
+                                    <th className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700">#</th>
+                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">NIT</th>
+                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">RAZÓN SOCIAL</th>
+                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">N° DE DOCUMENTO</th>
+                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">VALOR</th>
+                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">FECHA DE RECEPCIÓN Y DOCUMENTO</th>
+                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">PASA A:</th>
+                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE ARCHIVO</th>
+                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">N° DE ORDEN</th>
+                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">CENTRO DE COSTOS O PROYECTO</th>
+                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE COMPRAS</th>
+                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">VALIDACIÓN COMERCIAL</th>
+                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">VALIDACIÓN JURÍDICA</th>
+                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE JURÍDICA</th>
+                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">N° DE CAUSACIÓN</th>
+                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE CONTABILIDAD</th>
+                                    <th className="px-3 py-3 text-right sticky right-0 bg-gray-100 dark:bg-gray-900 shadow-sm">ACCIONES</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {invoices.map((inv) => (
-                                    <tr key={inv.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                                            {inv.invoiceNumber}
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-200">
+                                {invoices.map((inv, idx) => (
+                                    <tr key={inv.id} className="hover:bg-blue-50/50 dark:hover:bg-gray-700/40 transition-colors">
+                                        {/* 1. ITEM / CONSECUTIVO */}
+                                        <td className="px-3 py-3 text-center font-bold text-gray-500 border-r border-gray-100 dark:border-gray-700/50">
+                                            {inv.itemNumber || idx + 1}
                                         </td>
-                                        <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
+
+                                        {/* 2. NIT */}
+                                        <td className="px-3 py-3 font-mono border-r border-gray-100 dark:border-gray-700/50">
+                                            {inv.supplier?.nit || inv.supplier?.taxId || '-'}
+                                        </td>
+
+                                        {/* 3. RAZÓN SOCIAL */}
+                                        <td className="px-4 py-3 font-medium max-w-[220px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.supplier?.name || ''}>
                                             {inv.supplier?.name || '-'}
                                         </td>
-                                        <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                                            ${Number(inv.amount).toLocaleString()}
+
+                                        {/* 4. N° DE DOCUMENTO */}
+                                        <td className="px-3 py-3 font-semibold text-blue-600 dark:text-blue-400 border-r border-gray-100 dark:border-gray-700/50">
+                                            {inv.invoiceNumber}
                                         </td>
-                                        <td className="px-6 py-4 text-gray-500">
-                                            {new Date(inv.issueDate).toLocaleDateString()}
+
+                                        {/* 5. VALOR */}
+                                        <td className="px-3 py-3 font-mono font-bold text-gray-900 dark:text-gray-100 border-r border-gray-100 dark:border-gray-700/50">
+                                            ${Number(inv.amount).toLocaleString('es-CO')}
                                         </td>
-                                        <td className="px-6 py-4">
-                                            {getStatusBadge(inv.status)}
+
+                                        {/* 6. FECHA DE RECEPCIÓN Y DOCUMENTO */}
+                                        <td className="px-3 py-3 border-r border-gray-100 dark:border-gray-700/50">
+                                            <div className="flex items-center gap-2">
+                                                <span>{new Date(inv.issueDate).toLocaleDateString()}</span>
+                                                {inv.fileUrl && (
+                                                    <a
+                                                        href={inv.fileUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 font-semibold"
+                                                        title="Ver PDF en Azure"
+                                                    >
+                                                        <ExternalLink size={12} /> Azure
+                                                    </a>
+                                                )}
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            {inv.requirement ? (
-                                                <span className="text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/requirements/${inv.requirement?.id}`)}>
-                                                    {inv.requirement.title}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400 italic">No vinculada</span>
-                                            )}
+
+                                        {/* 7. PASA A: */}
+                                        <td className="px-3 py-3 font-medium text-purple-700 dark:text-purple-300 border-r border-gray-100 dark:border-gray-700/50">
+                                            {inv.passToArea || '-'}
                                         </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
+
+                                        {/* 8. OBSERVACIONES DESDE ARCHIVO */}
+                                        <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.observations || ''}>
+                                            {inv.observations || '-'}
+                                        </td>
+
+                                        {/* 9. N° DE ORDEN */}
+                                        <td className="px-3 py-3 font-mono border-r border-gray-100 dark:border-gray-700/50">
+                                            {inv.purchaseOrderNumber || '-'}
+                                        </td>
+
+                                        {/* 10. CENTRO DE COSTOS O PROYECTO */}
+                                        <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.costCenterOrProject || ''}>
+                                            {inv.costCenterOrProject || '-'}
+                                        </td>
+
+                                        {/* 11. OBSERVACIONES DESDE COMPRAS */}
+                                        <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.purchaseObservations || ''}>
+                                            {inv.purchaseObservations || '-'}
+                                        </td>
+
+                                        {/* 12. VALIDACIÓN COMERCIAL */}
+                                        <td className="px-3 py-3 text-center border-r border-gray-100 dark:border-gray-700/50">
+                                            {renderValidationBadge(inv.commercialValidation)}
+                                        </td>
+
+                                        {/* 13. VALIDACIÓN JURÍDICA */}
+                                        <td className="px-3 py-3 text-center border-r border-gray-100 dark:border-gray-700/50">
+                                            {renderValidationBadge(inv.legalValidation)}
+                                        </td>
+
+                                        {/* 14. OBSERVACIONES DESDE JURÍDICA */}
+                                        <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.legalObservations || ''}>
+                                            {inv.legalObservations || '-'}
+                                        </td>
+
+                                        {/* 15. N° DE CAUSACIÓN */}
+                                        <td className="px-3 py-3 font-mono font-semibold text-emerald-700 dark:text-emerald-400 border-r border-gray-100 dark:border-gray-700/50">
+                                            {inv.causationNumber || '-'}
+                                        </td>
+
+                                        {/* 16. OBSERVACIONES DESDE CONTABILIDAD */}
+                                        <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.causationObservations || ''}>
+                                            {inv.causationObservations || '-'}
+                                        </td>
+
+                                        {/* ACCIONES */}
+                                        <td className="px-3 py-3 text-right sticky right-0 bg-white dark:bg-gray-800 shadow-sm border-l border-gray-100 dark:border-gray-700">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button
+                                                    onClick={() => openEditModal(inv)}
+                                                    className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                    title="Editar campos de mi área"
+                                                >
+                                                    <Edit3 size={15} />
+                                                </button>
                                                 <button
                                                     onClick={() => router.push(`/invoices/${inv.id}`)}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="Ver factura"
+                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Ver detalle de la factura"
                                                 >
-                                                    <Eye size={16} />
+                                                    <Eye size={15} />
                                                 </button>
                                                 {canDeleteInvoices && inv.status !== 'PAID' && (
                                                     <button
@@ -186,16 +359,16 @@ export default function InvoicesPage() {
                                                                     await invoiceService.deleteInvoice(token!, inv.id);
                                                                     addToast('Factura eliminada', 'success');
                                                                     loadInvoices();
-                                                                } catch (error) {
-                                                                    console.error(error);
+                                                                } catch (err) {
+                                                                    console.error(err);
                                                                     addToast('No se pudo eliminar la factura', 'error');
                                                                 }
                                                             }
                                                         }}
-                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Eliminar"
+                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Eliminar factura"
                                                     >
-                                                        <Trash2 size={16} />
+                                                        <Trash2 size={15} />
                                                     </button>
                                                 )}
                                             </div>
@@ -207,6 +380,181 @@ export default function InvoicesPage() {
                     </div>
                 )}
             </div>
+
+            {/* EDIT MODAL FOR ROLE-BASED FIELD EDITING */}
+            {editingInvoice && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between border-b pb-4 dark:border-gray-700">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                    Editar Factura #{editingInvoice.invoiceNumber}
+                                </h3>
+                                <p className="text-xs text-gray-500">Proveedor: {editingInvoice.supplier?.name || 'N/A'}</p>
+                            </div>
+                            <button onClick={() => setEditingInvoice(null)} className="text-gray-400 hover:text-gray-600">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            {/* Sección Archivo / General */}
+                            <div className="border rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600">1. Datos de Archivo / Recepción</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Pasa A:</label>
+                                        <select
+                                            value={editForm.passToArea || ''}
+                                            onChange={e => setEditForm({ ...editForm, passToArea: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        >
+                                            <option value="">-- Seleccionar área --</option>
+                                            {AREA_OPTIONS.map(opt => (
+                                                <option key={opt} value={opt}>{opt}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Observaciones desde Archivo:</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.observations || ''}
+                                            onChange={e => setEditForm({ ...editForm, observations: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Sección Compras */}
+                            <div className="border rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">2. Sección Compras</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">N° de Orden:</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.purchaseOrderNumber || ''}
+                                            onChange={e => setEditForm({ ...editForm, purchaseOrderNumber: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Centro de Costos o Proyecto:</label>
+                                        <select
+                                            value={editForm.costCenterOrProject || ''}
+                                            onChange={e => setEditForm({ ...editForm, costCenterOrProject: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        >
+                                            <option value="">-- Seleccionar Centro de Costo / Proyecto --</option>
+                                            {AREA_OPTIONS.map(opt => (
+                                                <option key={opt} value={opt}>{opt}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Observaciones desde Compras:</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.purchaseObservations || ''}
+                                            onChange={e => setEditForm({ ...editForm, purchaseObservations: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Sección Comercial */}
+                            <div className="border rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-purple-600">3. Sección Comercial</h4>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Validación Comercial:</label>
+                                    <select
+                                        value={editForm.commercialValidation || ''}
+                                        onChange={e => setEditForm({ ...editForm, commercialValidation: e.target.value })}
+                                        className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                    >
+                                        <option value="">-- Pendiente --</option>
+                                        <option value="APROBADO">APROBADO</option>
+                                        <option value="RECHAZADO">RECHAZADO</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Sección Jurídica */}
+                            <div className="border rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-red-600">4. Sección Jurídica</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Validación Jurídica:</label>
+                                        <select
+                                            value={editForm.legalValidation || ''}
+                                            onChange={e => setEditForm({ ...editForm, legalValidation: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        >
+                                            <option value="">-- Pendiente --</option>
+                                            <option value="APROBADO">APROBADO</option>
+                                            <option value="RECHAZADO">RECHAZADO</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Observaciones desde Jurídica:</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.legalObservations || ''}
+                                            onChange={e => setEditForm({ ...editForm, legalObservations: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Sección Contabilidad */}
+                            <div className="border rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600">5. Sección Contabilidad</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">N° de Causación:</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.causationNumber || ''}
+                                            onChange={e => setEditForm({ ...editForm, causationNumber: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Observaciones desde Contabilidad:</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.causationObservations || ''}
+                                            onChange={e => setEditForm({ ...editForm, causationObservations: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 border-t pt-4 dark:border-gray-700">
+                            <button
+                                onClick={() => setEditingInvoice(null)}
+                                className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors dark:text-gray-300 dark:hover:bg-gray-700"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSaveEdit}
+                                disabled={saving}
+                                className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-50"
+                            >
+                                {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from 'express';
-import { getInvoices, getInvoiceById, checkDuplicateInvoice, createInvoice, verifyInvoice, approveInvoice, payInvoice, deleteInvoice } from '../controllers/invoiceController';
+import { getInvoices, getInvoiceById, checkDuplicateInvoice, createInvoice, updateInvoice, verifyInvoice, approveInvoice, payInvoice, deleteInvoice } from '../controllers/invoiceController';
 import { authMiddleware } from '../middlewares/auth';
 import multer from 'multer';
 import path from 'path';
@@ -96,6 +96,7 @@ router.get('/', authMiddleware, getInvoices);
 router.get('/check-duplicate', authMiddleware, checkDuplicateInvoice);
 router.get('/:id', authMiddleware, getInvoiceById);
 router.post('/', authMiddleware, uploadInvoiceFiles, createInvoice);
+router.patch('/:id', authMiddleware, updateInvoice);
 router.patch('/:id/verify', authMiddleware, verifyInvoice);
 router.patch('/:id/approve', authMiddleware, approveInvoice);
 router.patch('/:id/pay', authMiddleware, payInvoice);
