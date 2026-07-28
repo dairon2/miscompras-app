@@ -248,11 +248,18 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
 });
 
 // Supplier detail route
-app.get('/api/suppliers/:id', authMiddleware, async (req, res) => {
+app.get('/api/suppliers/:id(*)', authMiddleware, async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        const supplier = await prisma.supplier.findUnique({
-            where: { id },
+        const rawId = req.params[0] || req.params.id;
+        const targetId = decodeURIComponent(rawId);
+        const supplier = await prisma.supplier.findFirst({
+            where: {
+                OR: [
+                    { id: targetId },
+                    { taxId: targetId },
+                    { nit: targetId }
+                ]
+            },
             include: {
                 requirements: {
                     orderBy: { createdAt: 'desc' },

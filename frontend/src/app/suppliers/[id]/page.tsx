@@ -99,9 +99,11 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
     }, [id]);
 
     const fetchSupplier = async () => {
+        if (!id) return;
+        const encodedId = encodeURIComponent(decodeURIComponent(id));
         console.log('[SupplierDetailPage] Fetching supplier with id:', id);
         try {
-            const response = await api.get(`/suppliers/${id}`);
+            const response = await api.get(`/suppliers/${encodedId}`);
             console.log('[SupplierDetailPage] Received supplier data:', response.data);
             setSupplier(response.data);
         } catch (err: any) {

@@ -188,7 +188,8 @@ export default function SuppliersPage() {
     };
 
     const navigateToSupplier = (supplierId: string) => {
-        router.push(`/suppliers/${supplierId}`);
+        if (!supplierId) return;
+        router.push(`/suppliers/${encodeURIComponent(supplierId)}`);
     };
 
     const handleCreateSupplier = async (e: React.FormEvent) => {

@@ -398,8 +398,15 @@ export const getSupplierById = async (req: AuthRequest, res: Response) => {
             ]
         };
 
-        const supplier = await prisma.supplier.findUnique({
-            where: { id },
+        const decodedId = decodeURIComponent(id);
+        const supplier = await prisma.supplier.findFirst({
+            where: {
+                OR: [
+                    { id: decodedId },
+                    { taxId: decodedId },
+                    { nit: decodedId }
+                ]
+            },
             include: {
                 requirements: {
                     where: reqAccessWhere,
