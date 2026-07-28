@@ -78,7 +78,10 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
-app.use(helmet());
+app.use(helmet({
+    crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: false
+}));
 app.use(compression());
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '10mb' }));
 app.use('/uploads', express.static('uploads'));
@@ -254,10 +257,9 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
 });
 
 // Supplier detail route
-app.get('/api/suppliers/:id(*)', authMiddleware, async (req: Request, res: Response) => {
+app.get('/api/suppliers/:id', authMiddleware, async (req: Request, res: Response) => {
     try {
-        const rawId = req.params[0] || req.params.id;
-        const targetId = decodeURIComponent(rawId);
+        const targetId = decodeURIComponent(req.params.id);
         const supplier = await prisma.supplier.findFirst({
             where: {
                 OR: [
