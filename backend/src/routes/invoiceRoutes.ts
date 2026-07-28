@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from 'express';
-import { getInvoices, getInvoiceById, checkDuplicateInvoice, createInvoice, updateInvoice, verifyInvoice, approveInvoice, payInvoice, deleteInvoice, exportInvoicesExcel } from '../controllers/invoiceController';
+import { getInvoices, getInvoiceById, checkDuplicateInvoice, createInvoice, updateInvoice, verifyInvoice, approveInvoice, payInvoice, deleteInvoice, exportInvoicesExcel, importInvoicesFromExcel } from '../controllers/invoiceController';
 import { authMiddleware } from '../middlewares/auth';
 import multer from 'multer';
 import path from 'path';
@@ -92,10 +92,24 @@ const uploadInvoiceFiles = (req: Request, res: Response, next: NextFunction) => 
 
 const router = Router();
 
+const uploadExcel = multer({
+    storage,
+    limits: { fileSize: 25 * 1024 * 1024 }, // 25MB límite para reportes maestros
+    fileFilter: (req, file, cb) => {
+        const name = file.originalname.toLowerCase();
+        if (name.endsWith('.xlsx') || name.endsWith('.xlsm') || name.endsWith('.xls') || file.mimetype.includes('excel') || file.mimetype.includes('spreadsheet')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Solo se permiten archivos de Excel (.xlsx, .xlsm, .xls)'));
+        }
+    }
+}).single('file');
+
 router.get('/', authMiddleware, getInvoices);
 router.get('/export', authMiddleware, exportInvoicesExcel);
 router.get('/check-duplicate', authMiddleware, checkDuplicateInvoice);
 router.get('/:id', authMiddleware, getInvoiceById);
+router.post('/import-excel', authMiddleware, uploadExcel, (req, res) => importInvoicesFromExcel(req, res));
 router.post('/', authMiddleware, uploadInvoiceFiles, createInvoice);
 router.patch('/:id', authMiddleware, updateInvoice);
 router.patch('/:id/verify', authMiddleware, verifyInvoice);

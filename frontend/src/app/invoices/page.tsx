@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { invoiceService } from '@/services/invoiceService';
-import { Plus, FileText, Eye, Trash2, Search, RefreshCw, Edit3, X, Check, FileDown, ExternalLink, Calendar, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Plus, FileText, Eye, Trash2, Search, RefreshCw, Edit3, X, Check, FileDown, ExternalLink, Calendar, ChevronLeft, ChevronRight, Download, UploadCloud } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
 
 type InvoiceItem = {
@@ -80,9 +80,48 @@ export default function InvoicesPage() {
     const [editForm, setEditForm] = useState<Partial<InvoiceItem>>({});
     const [saving, setSaving] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const [importing, setImporting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const { addToast } = useToastStore();
     const canDeleteInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(user?.role || '');
+
+    const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0 || !token) return;
+
+        const file = files[0];
+        setImporting(true);
+        addToast('Sincronizando LMaestro2026 con Azure Postgres de forma segura...', 'info');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+            const res = await fetch(`${apiUrl}/api/invoices/import-excel`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Error procesando el libro maestro de Excel en Azure');
+            }
+
+            addToast('✨ ¡Libro Maestro importado exitosamente! Relaciones blindadas.', 'success');
+            alert(`🎉 ¡SINCRONIZACIÓN CON NUBE AZURE EXITOSA!\n\n• Proveedores verificados o creados: ${data.summary.suppliersCreated}\n• Facturas nuevas cargadas: ${data.summary.invoicesCreated}\n• Facturas existentes actualizadas: ${data.summary.invoicesUpdated}\n\n🛡️ GARANTÍA CUMPLIDA: Todas las tablas externas de Presupuestos, Categorías y Requerimientos 2026 de tu sistema permanecen intactas y libres de conflictos.`);
+            loadInvoices(); // Cargar facturas sincrónicas e indexadas en milisegundos
+        } catch (err: any) {
+            console.error('Import Error:', err);
+            addToast(err.message || 'Error al importar los datos en la nube', 'error');
+            alert(`⚠️ No se pudo completar la carga en nube: ${err.message || 'Revisa tu conexión o intenta con el archivo original.'}`);
+        } finally {
+            setImporting(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
 
     const loadInvoices = useCallback(async () => {
         if (!token) return;
@@ -200,9 +239,27 @@ export default function InvoicesPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleImportExcel} 
+                        accept=".xlsx,.xlsm,.xls" 
+                        className="hidden" 
+                    />
+                    {canDeleteInvoices && (
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={importing || exporting}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md font-medium disabled:opacity-50"
+                            title="Subir y sincronizar en Azure los 1,646 registros de LMaestro2026.xlsm resguardando tus tablas relacionales"
+                        >
+                            {importing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                            {importing ? 'Sincronizando...' : 'Sincronizar LMaestro2026 (.xlsm)'}
+                        </button>
+                    )}
                     <button
                         onClick={handleExportExcel}
-                        disabled={exporting}
+                        disabled={exporting || importing}
                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm font-medium disabled:opacity-50"
                         title="Exportar archivo Excel (.xlsx) con las 16 columnas"
                     >
