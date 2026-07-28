@@ -10,6 +10,23 @@ const getInvoices = async (token: string, filters?: any) => {
     return response.data;
 };
 
+const exportInvoicesExcel = async (token: string, filters?: any) => {
+    const response = await axios.get(`${API_URL}/invoices/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: filters,
+        responseType: 'blob'
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Reporte_Facturas_${new Date().toISOString().split('T')[0]}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+};
+
 const getInvoiceById = async (token: string, id: string) => {
     const response = await axios.get(`${API_URL}/invoices/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -73,6 +90,7 @@ const deleteInvoice = async (token: string, id: string) => {
 
 export const invoiceService = {
     getInvoices,
+    exportInvoicesExcel,
     getInvoiceById,
     checkDuplicateInvoice,
     createInvoice,

@@ -4,6 +4,7 @@ import { prisma } from '../index';
 import { processFileUploads, uploadToBlobStorage } from '../services/blobStorageService';
 import logger from '../services/logger';
 import fs from 'fs';
+import ExcelJS from 'exceljs';
 
 const GLOBAL_INVOICE_VIEWER_ROLES = ['ADMIN', 'DIRECTOR', 'AUDITOR', 'DEVELOPER', 'COORDINATOR'];
 const INVOICE_MANAGER_ROLES = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'];
@@ -168,9 +169,185 @@ const writeInvoiceAuditLog = async (
     }
 };
 
-// Get Invoices with Filters
+// Helper to notify relevant users when an invoice is passed to an area
+const notifyPassToAreaUsers = async (invoice: any, passToArea: string, actorId: string) => {
+    try {
+        if (!passToArea || !passToArea.trim()) return;
+        const areaUpper = passToArea.toUpperCase();
+        let targetRoles: string[] = [];
+
+        if (areaUpper.includes('COMPRA')) {
+            targetRoles = ['COORDINATOR', 'ADMIN', 'DEVELOPER'];
+        } else if (areaUpper.includes('JURIDIC') || areaUpper.includes('JURÍDIC')) {
+            targetRoles = ['AUDITOR', 'ADMIN', 'DEVELOPER'];
+        } else if (areaUpper.includes('CONTAB')) {
+            targetRoles = ['COORDINATOR', 'ADMIN', 'DEVELOPER'];
+        } else if (areaUpper.includes('COMER')) {
+            targetRoles = ['LEADER', 'DIRECTOR', 'ADMIN', 'DEVELOPER'];
+        } else {
+            targetRoles = ['ADMIN', 'DEVELOPER', 'COORDINATOR'];
+        }
+
+        const usersToNotify = await prisma.user.findMany({
+            where: {
+                role: { in: targetRoles as any },
+                isActive: true,
+                id: { not: actorId }
+            },
+            select: { id: true }
+        });
+
+        if (usersToNotify.length > 0) {
+            const supplierName = invoice.supplier?.name || 'Proveedor';
+            const invNum = invoice.invoiceNumber;
+            await prisma.notification.createMany({
+                data: usersToNotify.map(u => ({
+                    userId: u.id,
+                    title: `Factura Trasladada a ${passToArea}`,
+                    message: `La factura N° ${invNum} (${supplierName}) ha sido asignada al área de ${passToArea}.`,
+                    type: 'INFO'
+                }))
+            });
+        }
+    } catch (err) {
+        logger.error('Error creating passToArea notifications:', err);
+    }
+};
+
+// Export Invoices to Excel (.xlsx) with 16 columns matching LMaestro2026.xlsm
+export const exportInvoicesExcel = async (req: AuthRequest, res: Response) => {
+    const { status, supplierId, search, startDate, endDate } = req.query;
+    const userRole = req.user?.role;
+    const userId = req.user?.id;
+
+    try {
+        if (!userId) return res.status(401).json({ error: 'User not authenticated' });
+
+        const filters: any[] = [];
+        if (status) {
+            const normalizedStatus = String(status).toUpperCase();
+            if (INVOICE_STATUSES.includes(normalizedStatus)) {
+                filters.push({ status: normalizedStatus });
+            }
+        }
+        if (supplierId) filters.push({ supplierId: String(supplierId) });
+
+        if (startDate) {
+            const parsedStart = new Date(String(startDate));
+            if (!isNaN(parsedStart.getTime())) {
+                filters.push({ issueDate: { gte: parsedStart } });
+            }
+        }
+
+        if (endDate) {
+            const parsedEnd = new Date(String(endDate));
+            if (!isNaN(parsedEnd.getTime())) {
+                parsedEnd.setHours(23, 59, 59, 999);
+                filters.push({ issueDate: { lte: parsedEnd } });
+            }
+        }
+
+        const normalizedSearch = String(search || '').trim();
+        if (normalizedSearch) {
+            filters.push({
+                OR: [
+                    { invoiceNumber: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { purchaseOrderNumber: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { requirementNumber: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { causationNumber: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { costCenterOrProject: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { passToArea: { contains: normalizedSearch, mode: 'insensitive' } },
+                    { supplier: { name: { contains: normalizedSearch, mode: 'insensitive' } } },
+                    { supplier: { nit: { contains: normalizedSearch, mode: 'insensitive' } } },
+                    { requirement: { title: { contains: normalizedSearch, mode: 'insensitive' } } }
+                ]
+            });
+        }
+
+        const isGlobalViewer = hasRole(userRole, GLOBAL_INVOICE_VIEWER_ROLES);
+        if (!isGlobalViewer) {
+            filters.push({ OR: [
+                { createdById: userId },
+                { requirement: { createdById: userId } }
+            ] });
+        }
+
+        const invoices = await prisma.invoice.findMany({
+            where: filters.length > 0 ? { AND: filters } : {},
+            include: invoiceInclude,
+            orderBy: { createdAt: 'desc' }
+        });
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Control Facturas');
+
+        worksheet.columns = [
+            { header: '#', key: 'item', width: 8 },
+            { header: 'NIT', key: 'nit', width: 16 },
+            { header: 'RAZÓN SOCIAL', key: 'supplierName', width: 35 },
+            { header: 'N° DE DOCUMENTO', key: 'invoiceNumber', width: 20 },
+            { header: 'VALOR', key: 'amount', width: 18 },
+            { header: 'FECHA DE RECEPCIÓN Y DOCUMENTO', key: 'issueDate', width: 22 },
+            { header: 'PASA A:', key: 'passToArea', width: 20 },
+            { header: 'OBSERVACIONES DESDE ARCHIVO', key: 'observations', width: 30 },
+            { header: 'N° DE ORDEN', key: 'purchaseOrderNumber', width: 18 },
+            { header: 'CENTRO DE COSTOS O PROYECTO', key: 'costCenterOrProject', width: 30 },
+            { header: 'OBSERVACIONES DESDE COMPRAS', key: 'purchaseObservations', width: 30 },
+            { header: 'VALIDACIÓN COMERCIAL', key: 'commercialValidation', width: 22 },
+            { header: 'VALIDACIÓN JURÍDICA', key: 'legalValidation', width: 22 },
+            { header: 'OBSERVACIONES DESDE JURÍDICA', key: 'legalObservations', width: 30 },
+            { header: 'N° DE CAUSACIÓN', key: 'causationNumber', width: 18 },
+            { header: 'OBSERVACIONES DESDE CONTABILIDAD', key: 'causationObservations', width: 30 }
+        ];
+
+        const headerRow = worksheet.getRow(1);
+        headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 10 };
+        headerRow.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: '1E3A8A' }
+        };
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+        invoices.forEach((inv, idx) => {
+            const row = worksheet.addRow({
+                item: inv.itemNumber || idx + 1,
+                nit: inv.supplier?.nit || inv.supplier?.taxId || '',
+                supplierName: inv.supplier?.name || '',
+                invoiceNumber: inv.invoiceNumber,
+                amount: Number(inv.amount),
+                issueDate: inv.issueDate ? new Date(inv.issueDate).toLocaleDateString('es-CO') : '',
+                passToArea: inv.passToArea || '',
+                observations: inv.observations || '',
+                purchaseOrderNumber: inv.purchaseOrderNumber || '',
+                costCenterOrProject: inv.costCenterOrProject || '',
+                purchaseObservations: inv.purchaseObservations || '',
+                commercialValidation: inv.commercialValidation || 'PENDIENTE',
+                legalValidation: inv.legalValidation || 'PENDIENTE',
+                legalObservations: inv.legalObservations || '',
+                causationNumber: inv.causationNumber || '',
+                causationObservations: inv.causationObservations || ''
+            });
+
+            const amountCell = row.getCell('amount');
+            amountCell.numFmt = '"$"#,##0.00';
+            amountCell.alignment = { horizontal: 'right' };
+        });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=Reporte_Facturas_${Date.now()}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error: any) {
+        console.error("Export invoices excel error:", error);
+        res.status(500).json({ error: 'Error al generar reporte de facturas en Excel' });
+    }
+};
+
+// Get Invoices with Filters, Date Ranges & Pagination
 export const getInvoices = async (req: AuthRequest, res: Response) => {
-    const { status, supplierId, search } = req.query;
+    const { status, supplierId, search, startDate, endDate, page, limit, paginate } = req.query;
     const userRole = req.user?.role;
     const userId = req.user?.id;
 
@@ -186,6 +363,21 @@ export const getInvoices = async (req: AuthRequest, res: Response) => {
             filters.push({ status: normalizedStatus });
         }
         if (supplierId) filters.push({ supplierId: String(supplierId) });
+
+        if (startDate) {
+            const parsedStart = new Date(String(startDate));
+            if (!isNaN(parsedStart.getTime())) {
+                filters.push({ issueDate: { gte: parsedStart } });
+            }
+        }
+
+        if (endDate) {
+            const parsedEnd = new Date(String(endDate));
+            if (!isNaN(parsedEnd.getTime())) {
+                parsedEnd.setHours(23, 59, 59, 999);
+                filters.push({ issueDate: { lte: parsedEnd } });
+            }
+        }
 
         const normalizedSearch = String(search || '').trim();
         if (normalizedSearch) {
@@ -208,15 +400,43 @@ export const getInvoices = async (req: AuthRequest, res: Response) => {
         const isGlobalViewer = hasRole(userRole, GLOBAL_INVOICE_VIEWER_ROLES);
 
         if (!isGlobalViewer) {
-            // Users/Leaders see invoices if they uploaded them OR if they own the related requirement
             filters.push({ OR: [
                 { createdById: userId },
                 { requirement: { createdById: userId } }
             ] });
         }
 
+        const whereClause = filters.length > 0 ? { AND: filters } : {};
+
+        // Paginated or All
+        const shouldPaginate = Boolean(page || limit || paginate === 'true');
+        if (shouldPaginate) {
+            const pageNum = Math.max(1, parseInt(String(page || '1'), 10));
+            const limitNum = Math.max(1, Math.min(500, parseInt(String(limit || '50'), 10)));
+            const skip = (pageNum - 1) * limitNum;
+
+            const [invoices, total] = await Promise.all([
+                prisma.invoice.findMany({
+                    where: whereClause,
+                    include: invoiceInclude,
+                    orderBy: { createdAt: 'desc' },
+                    skip,
+                    take: limitNum
+                }),
+                prisma.invoice.count({ where: whereClause })
+            ]);
+
+            return res.json({
+                data: invoices,
+                total,
+                page: pageNum,
+                limit: limitNum,
+                totalPages: Math.ceil(total / limitNum)
+            });
+        }
+
         const invoices = await prisma.invoice.findMany({
-            where: filters.length > 0 ? { AND: filters } : {},
+            where: whereClause,
             include: invoiceInclude,
             orderBy: { createdAt: 'desc' }
         });
@@ -451,6 +671,10 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
             actorEmail: req.user?.email
         });
 
+        if (invoice.passToArea) {
+            notifyPassToAreaUsers(invoice, invoice.passToArea, userId);
+        }
+
         res.status(201).json(invoice);
     } catch (error: any) {
         cleanupUploadedFiles(uploadedFiles);
@@ -523,6 +747,10 @@ export const updateInvoice = async (req: AuthRequest, res: Response) => {
             actorId: userId,
             actorEmail: req.user?.email
         });
+
+        if (updated.passToArea && updated.passToArea !== currentInvoice.passToArea) {
+            notifyPassToAreaUsers(updated, updated.passToArea, userId);
+        }
 
         res.json(updated);
     } catch (error: any) {

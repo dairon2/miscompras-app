@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { invoiceService } from '@/services/invoiceService';
-import { Plus, FileText, Eye, Trash2, Search, RefreshCw, Edit3, X, Check, FileDown, ExternalLink } from 'lucide-react';
+import { Plus, FileText, Eye, Trash2, Search, RefreshCw, Edit3, X, Check, FileDown, ExternalLink, Calendar, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
 
 type InvoiceItem = {
@@ -66,10 +66,20 @@ export default function InvoicesPage() {
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState<string>('');
     const [search, setSearch] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    // Pagination state
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(50);
+    const [total, setTotal] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
     const [error, setError] = useState<string | null>(null);
     const [editingInvoice, setEditingInvoice] = useState<InvoiceItem | null>(null);
     const [editForm, setEditForm] = useState<Partial<InvoiceItem>>({});
     const [saving, setSaving] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     const { addToast } = useToastStore();
     const canDeleteInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(user?.role || '');
@@ -79,24 +89,57 @@ export default function InvoicesPage() {
         setLoading(true);
         setError(null);
         try {
-            const data = await invoiceService.getInvoices(token, {
+            const res = await invoiceService.getInvoices(token, {
                 status: filterStatus || undefined,
-                search: search.trim() || undefined
+                search: search.trim() || undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+                page,
+                limit,
+                paginate: true
             });
-            setInvoices(data);
+
+            if (res && Array.isArray(res.data)) {
+                setInvoices(res.data);
+                setTotal(res.total || res.data.length);
+                setTotalPages(res.totalPages || 1);
+            } else if (Array.isArray(res)) {
+                setInvoices(res);
+                setTotal(res.length);
+                setTotalPages(1);
+            }
         } catch (requestError) {
             console.error(requestError);
             setError('No se pudieron cargar las facturas.');
         } finally {
             setLoading(false);
         }
-    }, [token, filterStatus, search]);
+    }, [token, filterStatus, search, startDate, endDate, page, limit]);
 
     useEffect(() => {
         if (!token) return;
         const timeout = setTimeout(() => loadInvoices(), 250);
         return () => clearTimeout(timeout);
     }, [token, loadInvoices]);
+
+    const handleExportExcel = async () => {
+        if (!token) return;
+        setExporting(true);
+        try {
+            await invoiceService.exportInvoicesExcel(token, {
+                status: filterStatus || undefined,
+                search: search.trim() || undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined
+            });
+            addToast('Reporte Excel generado correctamente', 'success');
+        } catch (err: any) {
+            console.error(err);
+            addToast('Error al exportar reporte Excel', 'error');
+        } finally {
+            setExporting(false);
+        }
+    };
 
     const openEditModal = (inv: InvoiceItem) => {
         setEditingInvoice(inv);
@@ -153,10 +196,19 @@ export default function InvoicesPage() {
                         <FileText className="w-8 h-8 text-blue-600" />
                         Módulo de Facturas (Control Unificado)
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Reemplazo de LMaestro2026.xlsm - Gestión por roles y almacenamiento directo en Azure</p>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">Reemplazo de LMaestro2026.xlsm - Gestión por roles y almacenamiento en Azure</p>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={handleExportExcel}
+                        disabled={exporting}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm font-medium disabled:opacity-50"
+                        title="Exportar archivo Excel (.xlsx) con las 16 columnas"
+                    >
+                        {exporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        Exportar a Excel (.xlsx)
+                    </button>
                     <button
                         onClick={() => router.push('/invoices/new')}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
@@ -167,18 +219,56 @@ export default function InvoicesPage() {
                 </div>
             </div>
 
-            {/* Search & Filters */}
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
-                <div className="relative max-w-xl">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                    <input
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Buscar por NIT, Proveedor, N° Documento, N° Orden, Causación o Centro de Costo..."
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700/50"
-                    />
+            {/* Search, Date Range & Status Filters */}
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+                    {/* Búsqueda */}
+                    <div className="relative lg:col-span-6">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <input
+                            value={search}
+                            onChange={e => { setSearch(e.target.value); setPage(1); }}
+                            placeholder="Buscar por NIT, Proveedor, N° Documento, N° Orden, Causación o Centro de Costo..."
+                            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700/50"
+                        />
+                    </div>
+
+                    {/* Filtro por Rango de Fechas (Cierres Mensuales) */}
+                    <div className="lg:col-span-6 flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <span className="text-xs font-semibold text-gray-500">Desde:</span>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={e => { setStartDate(e.target.value); setPage(1); }}
+                                className="bg-transparent text-xs outline-none text-gray-700 dark:text-gray-200 font-medium"
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <span className="text-xs font-semibold text-gray-500">Hasta:</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={e => { setEndDate(e.target.value); setPage(1); }}
+                                className="bg-transparent text-xs outline-none text-gray-700 dark:text-gray-200 font-medium"
+                            />
+                        </div>
+
+                        {(startDate || endDate) && (
+                            <button
+                                onClick={() => { setStartDate(''); setEndDate(''); setPage(1); }}
+                                className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded font-medium"
+                            >
+                                Limpiar fechas
+                            </button>
+                        )}
+                    </div>
                 </div>
-                <div className="flex gap-2 overflow-x-auto">
+
+                <div className="flex gap-2 overflow-x-auto pt-2 border-t dark:border-gray-700">
                     {[
                         ['', 'Todas'],
                         ['RECEIVED', 'Pendientes de Verificación'],
@@ -189,7 +279,7 @@ export default function InvoicesPage() {
                     ].map(([status, label]) => (
                         <button
                             key={status || 'all'}
-                            onClick={() => setFilterStatus(status)}
+                            onClick={() => { setFilterStatus(status); setPage(1); }}
                             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filterStatus === status ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'}`}
                         >
                             {label}
@@ -215,169 +305,215 @@ export default function InvoicesPage() {
                         <p>No hay facturas registradas</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto max-w-full">
-                        <table className="w-full text-xs text-left whitespace-nowrap">
-                            <thead className="text-[11px] font-bold uppercase text-gray-600 bg-gray-100 dark:bg-gray-900/80 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
-                                <tr>
-                                    <th className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700">#</th>
-                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">NIT</th>
-                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">RAZÓN SOCIAL</th>
-                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">N° DE DOCUMENTO</th>
-                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">VALOR</th>
-                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">FECHA DE RECEPCIÓN Y DOCUMENTO</th>
-                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">PASA A:</th>
-                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE ARCHIVO</th>
-                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">N° DE ORDEN</th>
-                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">CENTRO DE COSTOS O PROYECTO</th>
-                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE COMPRAS</th>
-                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">VALIDACIÓN COMERCIAL</th>
-                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">VALIDACIÓN JURÍDICA</th>
-                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE JURÍDICA</th>
-                                    <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">N° DE CAUSACIÓN</th>
-                                    <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE CONTABILIDAD</th>
-                                    <th className="px-3 py-3 text-right sticky right-0 bg-gray-100 dark:bg-gray-900 shadow-sm">ACCIONES</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-200">
-                                {invoices.map((inv, idx) => (
-                                    <tr key={inv.id} className="hover:bg-blue-50/50 dark:hover:bg-gray-700/40 transition-colors">
-                                        {/* 1. ITEM / CONSECUTIVO */}
-                                        <td className="px-3 py-3 text-center font-bold text-gray-500 border-r border-gray-100 dark:border-gray-700/50">
-                                            {inv.itemNumber || idx + 1}
-                                        </td>
-
-                                        {/* 2. NIT */}
-                                        <td className="px-3 py-3 font-mono border-r border-gray-100 dark:border-gray-700/50">
-                                            {inv.supplier?.nit || inv.supplier?.taxId || '-'}
-                                        </td>
-
-                                        {/* 3. RAZÓN SOCIAL */}
-                                        <td className="px-4 py-3 font-medium max-w-[220px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.supplier?.name || ''}>
-                                            {inv.supplier?.name || '-'}
-                                        </td>
-
-                                        {/* 4. N° DE DOCUMENTO */}
-                                        <td className="px-3 py-3 font-semibold text-blue-600 dark:text-blue-400 border-r border-gray-100 dark:border-gray-700/50">
-                                            {inv.invoiceNumber}
-                                        </td>
-
-                                        {/* 5. VALOR */}
-                                        <td className="px-3 py-3 font-mono font-bold text-gray-900 dark:text-gray-100 border-r border-gray-100 dark:border-gray-700/50">
-                                            ${Number(inv.amount).toLocaleString('es-CO')}
-                                        </td>
-
-                                        {/* 6. FECHA DE RECEPCIÓN Y DOCUMENTO */}
-                                        <td className="px-3 py-3 border-r border-gray-100 dark:border-gray-700/50">
-                                            <div className="flex items-center gap-2">
-                                                <span>{new Date(inv.issueDate).toLocaleDateString()}</span>
-                                                {inv.fileUrl && (
-                                                    <a
-                                                        href={inv.fileUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 font-semibold"
-                                                        title="Ver PDF en Azure"
-                                                    >
-                                                        <ExternalLink size={12} /> Azure
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </td>
-
-                                        {/* 7. PASA A: */}
-                                        <td className="px-3 py-3 font-medium text-purple-700 dark:text-purple-300 border-r border-gray-100 dark:border-gray-700/50">
-                                            {inv.passToArea || '-'}
-                                        </td>
-
-                                        {/* 8. OBSERVACIONES DESDE ARCHIVO */}
-                                        <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.observations || ''}>
-                                            {inv.observations || '-'}
-                                        </td>
-
-                                        {/* 9. N° DE ORDEN */}
-                                        <td className="px-3 py-3 font-mono border-r border-gray-100 dark:border-gray-700/50">
-                                            {inv.purchaseOrderNumber || '-'}
-                                        </td>
-
-                                        {/* 10. CENTRO DE COSTOS O PROYECTO */}
-                                        <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.costCenterOrProject || ''}>
-                                            {inv.costCenterOrProject || '-'}
-                                        </td>
-
-                                        {/* 11. OBSERVACIONES DESDE COMPRAS */}
-                                        <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.purchaseObservations || ''}>
-                                            {inv.purchaseObservations || '-'}
-                                        </td>
-
-                                        {/* 12. VALIDACIÓN COMERCIAL */}
-                                        <td className="px-3 py-3 text-center border-r border-gray-100 dark:border-gray-700/50">
-                                            {renderValidationBadge(inv.commercialValidation)}
-                                        </td>
-
-                                        {/* 13. VALIDACIÓN JURÍDICA */}
-                                        <td className="px-3 py-3 text-center border-r border-gray-100 dark:border-gray-700/50">
-                                            {renderValidationBadge(inv.legalValidation)}
-                                        </td>
-
-                                        {/* 14. OBSERVACIONES DESDE JURÍDICA */}
-                                        <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.legalObservations || ''}>
-                                            {inv.legalObservations || '-'}
-                                        </td>
-
-                                        {/* 15. N° DE CAUSACIÓN */}
-                                        <td className="px-3 py-3 font-mono font-semibold text-emerald-700 dark:text-emerald-400 border-r border-gray-100 dark:border-gray-700/50">
-                                            {inv.causationNumber || '-'}
-                                        </td>
-
-                                        {/* 16. OBSERVACIONES DESDE CONTABILIDAD */}
-                                        <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.causationObservations || ''}>
-                                            {inv.causationObservations || '-'}
-                                        </td>
-
-                                        {/* ACCIONES */}
-                                        <td className="px-3 py-3 text-right sticky right-0 bg-white dark:bg-gray-800 shadow-sm border-l border-gray-100 dark:border-gray-700">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <button
-                                                    onClick={() => openEditModal(inv)}
-                                                    className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                                    title="Editar campos de mi área"
-                                                >
-                                                    <Edit3 size={15} />
-                                                </button>
-                                                <button
-                                                    onClick={() => router.push(`/invoices/${inv.id}`)}
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="Ver detalle de la factura"
-                                                >
-                                                    <Eye size={15} />
-                                                </button>
-                                                {canDeleteInvoices && inv.status !== 'PAID' && (
-                                                    <button
-                                                        onClick={async () => {
-                                                            if (confirm('¿Estás seguro de eliminar esta factura?')) {
-                                                                try {
-                                                                    await invoiceService.deleteInvoice(token!, inv.id);
-                                                                    addToast('Factura eliminada', 'success');
-                                                                    loadInvoices();
-                                                                } catch (err) {
-                                                                    console.error(err);
-                                                                    addToast('No se pudo eliminar la factura', 'error');
-                                                                }
-                                                            }
-                                                        }}
-                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Eliminar factura"
-                                                    >
-                                                        <Trash2 size={15} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
+                    <>
+                        <div className="overflow-x-auto max-w-full">
+                            <table className="w-full text-xs text-left whitespace-nowrap">
+                                <thead className="text-[11px] font-bold uppercase text-gray-600 bg-gray-100 dark:bg-gray-900/80 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                                    <tr>
+                                        <th className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700">#</th>
+                                        <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">NIT</th>
+                                        <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">RAZÓN SOCIAL</th>
+                                        <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">N° DE DOCUMENTO</th>
+                                        <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">VALOR</th>
+                                        <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">FECHA DE RECEPCIÓN Y DOCUMENTO</th>
+                                        <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">PASA A:</th>
+                                        <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE ARCHIVO</th>
+                                        <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">N° DE ORDEN</th>
+                                        <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">CENTRO DE COSTOS O PROYECTO</th>
+                                        <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE COMPRAS</th>
+                                        <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">VALIDACIÓN COMERCIAL</th>
+                                        <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">VALIDACIÓN JURÍDICA</th>
+                                        <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE JURÍDICA</th>
+                                        <th className="px-3 py-3 border-r border-gray-200 dark:border-gray-700">N° DE CAUSACIÓN</th>
+                                        <th className="px-4 py-3 border-r border-gray-200 dark:border-gray-700">OBSERVACIONES DESDE CONTABILIDAD</th>
+                                        <th className="px-3 py-3 text-right sticky right-0 bg-gray-100 dark:bg-gray-900 shadow-sm">ACCIONES</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-200">
+                                    {invoices.map((inv, idx) => (
+                                        <tr key={inv.id} className="hover:bg-blue-50/50 dark:hover:bg-gray-700/40 transition-colors">
+                                            {/* 1. ITEM / CONSECUTIVO */}
+                                            <td className="px-3 py-3 text-center font-bold text-gray-500 border-r border-gray-100 dark:border-gray-700/50">
+                                                {inv.itemNumber || (page - 1) * limit + idx + 1}
+                                            </td>
+
+                                            {/* 2. NIT */}
+                                            <td className="px-3 py-3 font-mono border-r border-gray-100 dark:border-gray-700/50">
+                                                {inv.supplier?.nit || inv.supplier?.taxId || '-'}
+                                            </td>
+
+                                            {/* 3. RAZÓN SOCIAL */}
+                                            <td className="px-4 py-3 font-medium max-w-[220px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.supplier?.name || ''}>
+                                                {inv.supplier?.name || '-'}
+                                            </td>
+
+                                            {/* 4. N° DE DOCUMENTO */}
+                                            <td className="px-3 py-3 font-semibold text-blue-600 dark:text-blue-400 border-r border-gray-100 dark:border-gray-700/50">
+                                                {inv.invoiceNumber}
+                                            </td>
+
+                                            {/* 5. VALOR */}
+                                            <td className="px-3 py-3 font-mono font-bold text-gray-900 dark:text-gray-100 border-r border-gray-100 dark:border-gray-700/50">
+                                                ${Number(inv.amount).toLocaleString('es-CO')}
+                                            </td>
+
+                                            {/* 6. FECHA DE RECEPCIÓN Y DOCUMENTO */}
+                                            <td className="px-3 py-3 border-r border-gray-100 dark:border-gray-700/50">
+                                                <div className="flex items-center gap-2">
+                                                    <span>{inv.issueDate ? new Date(inv.issueDate).toLocaleDateString('es-CO') : '-'}</span>
+                                                    {inv.fileUrl && (
+                                                        <a
+                                                            href={inv.fileUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 font-semibold"
+                                                            title="Ver PDF en Azure"
+                                                        >
+                                                            <ExternalLink size={12} /> Azure
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            {/* 7. PASA A: */}
+                                            <td className="px-3 py-3 font-medium text-purple-700 dark:text-purple-300 border-r border-gray-100 dark:border-gray-700/50">
+                                                {inv.passToArea || '-'}
+                                            </td>
+
+                                            {/* 8. OBSERVACIONES DESDE ARCHIVO */}
+                                            <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.observations || ''}>
+                                                {inv.observations || '-'}
+                                            </td>
+
+                                            {/* 9. N° DE ORDEN */}
+                                            <td className="px-3 py-3 font-mono border-r border-gray-100 dark:border-gray-700/50">
+                                                {inv.purchaseOrderNumber || '-'}
+                                            </td>
+
+                                            {/* 10. CENTRO DE COSTOS O PROYECTO */}
+                                            <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.costCenterOrProject || ''}>
+                                                {inv.costCenterOrProject || '-'}
+                                            </td>
+
+                                            {/* 11. OBSERVACIONES DESDE COMPRAS */}
+                                            <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.purchaseObservations || ''}>
+                                                {inv.purchaseObservations || '-'}
+                                            </td>
+
+                                            {/* 12. VALIDACIÓN COMERCIAL */}
+                                            <td className="px-3 py-3 text-center border-r border-gray-100 dark:border-gray-700/50">
+                                                {renderValidationBadge(inv.commercialValidation)}
+                                            </td>
+
+                                            {/* 13. VALIDACIÓN JURÍDICA */}
+                                            <td className="px-3 py-3 text-center border-r border-gray-100 dark:border-gray-700/50">
+                                                {renderValidationBadge(inv.legalValidation)}
+                                            </td>
+
+                                            {/* 14. OBSERVACIONES DESDE JURÍDICA */}
+                                            <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.legalObservations || ''}>
+                                                {inv.legalObservations || '-'}
+                                            </td>
+
+                                            {/* 15. N° DE CAUSACIÓN */}
+                                            <td className="px-3 py-3 font-mono font-semibold text-emerald-700 dark:text-emerald-400 border-r border-gray-100 dark:border-gray-700/50">
+                                                {inv.causationNumber || '-'}
+                                            </td>
+
+                                            {/* 16. OBSERVACIONES DESDE CONTABILIDAD */}
+                                            <td className="px-4 py-3 max-w-[200px] truncate border-r border-gray-100 dark:border-gray-700/50" title={inv.causationObservations || ''}>
+                                                {inv.causationObservations || '-'}
+                                            </td>
+
+                                            {/* ACCIONES */}
+                                            <td className="px-3 py-3 text-right sticky right-0 bg-white dark:bg-gray-800 shadow-sm border-l border-gray-100 dark:border-gray-700">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <button
+                                                        onClick={() => openEditModal(inv)}
+                                                        className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                        title="Editar campos de mi área"
+                                                    >
+                                                        <Edit3 size={15} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => router.push(`/invoices/${inv.id}`)}
+                                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="Ver detalle de la factura"
+                                                    >
+                                                        <Eye size={15} />
+                                                    </button>
+                                                    {canDeleteInvoices && inv.status !== 'PAID' && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (confirm('¿Estás seguro de eliminar esta factura?')) {
+                                                                    try {
+                                                                        await invoiceService.deleteInvoice(token!, inv.id);
+                                                                        addToast('Factura eliminada', 'success');
+                                                                        loadInvoices();
+                                                                    } catch (err) {
+                                                                        console.error(err);
+                                                                        addToast('No se pudo eliminar la factura', 'error');
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Eliminar factura"
+                                                        >
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination Bar */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+                            <div className="text-xs text-gray-500 font-medium">
+                                Mostrando {Math.min((page - 1) * limit + 1, total)} - {Math.min(page * limit, total)} de {total.toLocaleString()} facturas
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                    <span>Filas por página:</span>
+                                    <select
+                                        value={limit}
+                                        onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+                                        className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 outline-none text-xs font-semibold"
+                                    >
+                                        <option value={50}>50</option>
+                                        <option value={100}>100</option>
+                                        <option value={250}>250</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                                        disabled={page <= 1}
+                                        className="p-1.5 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none"
+                                        title="Página anterior"
+                                    >
+                                        <ChevronLeft size={16} />
+                                    </button>
+                                    <span className="text-xs font-semibold px-2">
+                                        Página {page} de {totalPages}
+                                    </span>
+                                    <button
+                                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={page >= totalPages}
+                                        className="p-1.5 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none"
+                                        title="Página siguiente"
+                                    >
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </>
                 )}
             </div>
 
