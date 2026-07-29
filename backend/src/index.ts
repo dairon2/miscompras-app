@@ -359,8 +359,18 @@ app.use('/api/ai', aiRoutes);
 
 // NOTE: Budget CRUD is handled by budgetRoutes mounted at /api/budgets
 
-app.get('/health', (req: Request, res: Response) => {
-    res.json({ status: 'OK', message: 'API Miscompras en ejecución' });
+app.get('/health', async (req: Request, res: Response) => {
+    try {
+        const invoicesCount = await prisma.invoice.count();
+        const suppliersCount = await prisma.supplier.count();
+        res.json({ 
+            status: 'OK', 
+            message: 'API Miscompras en ejecución',
+            stats: { invoices: invoicesCount, suppliers: suppliersCount }
+        });
+    } catch (e) {
+        res.json({ status: 'OK', message: 'API en ejecución, conectividad BD temporalmente inaccesible' });
+    }
 });
 
 // Error handling middleware
