@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { prisma } from './db';
 import { authMiddleware, fileAuthMiddleware, roleCheck } from './middlewares/auth';
+import { runAutoSeedInCloud } from './services/seedService';
 
 import authRoutes from './routes/authRoutes';
 import requirementRoutes from './routes/requirementRoutes';
@@ -373,6 +374,8 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    // Ejecutar semilla automática en Azure (Bypass a cualquier proxy web, 100% resiliente)
+    runAutoSeedInCloud().catch(err => console.error('Error in Auto-Seed Cloud Engine:', err));
 });
 
 export { prisma };
