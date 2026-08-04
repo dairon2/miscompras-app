@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import path from 'path';
 import fs from 'fs';
-import { prisma } from '../index';
+import { prisma } from '../db';
 import logger from './logger';
 
 // Auto-siembra directa en Cloud al arrancar el servidor (0 timeouts de Gateway / 0 fallos de Payload Proxy)

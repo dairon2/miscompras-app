@@ -3,7 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 import { prisma } from './db';
 import { authMiddleware, fileAuthMiddleware, roleCheck } from './middlewares/auth';
 import { runAutoSeedInCloud } from './services/seedService';
@@ -366,10 +365,15 @@ app.get('/health', async (req: Request, res: Response) => {
         res.json({ 
             status: 'OK', 
             message: 'API Miscompras en ejecución',
+            database: 'OK',
             stats: { invoices: invoicesCount, suppliers: suppliersCount }
         });
     } catch (e) {
-        res.json({ status: 'OK', message: 'API en ejecución, conectividad BD temporalmente inaccesible' });
+        res.status(503).json({
+            status: 'DEGRADED',
+            message: 'API en ejecución, pero la base de datos no está disponible',
+            database: 'UNAVAILABLE'
+        });
     }
 });
 
@@ -384,8 +388,11 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    // Ejecutar semilla automática en Azure (Bypass a cualquier proxy web, 100% resiliente)
-    runAutoSeedInCloud().catch(err => console.error('Error in Auto-Seed Cloud Engine:', err));
+    if (process.env.AUTO_SEED_INVOICES === 'true') {
+        runAutoSeedInCloud().catch(err => console.error('Error in Auto-Seed Cloud Engine:', err));
+    } else {
+        console.log('Auto-seed de facturas deshabilitado; usar la sincronización explícita del módulo de Facturas.');
+    }
 });
 
 export { prisma };

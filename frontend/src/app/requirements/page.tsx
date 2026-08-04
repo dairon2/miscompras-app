@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Search,
@@ -66,10 +66,10 @@ interface Requirement {
     isAsiento?: boolean;
     createdAt: string;
     groupId?: number;
-    attachments?: { id: string }[];
+    _count?: { attachments: number };
     receivedAtSatisfaction?: boolean;
     createdById: string;
-    createdBy?: { name: string; email: string };
+    createdBy?: { name: string };
 }
 
 export default function RequirementsPage() {
@@ -86,6 +86,9 @@ export default function RequirementsPage() {
     };
 
     const [requirements, setRequirements] = useState<Requirement[]>([]);
+    const [totalRequirements, setTotalRequirements] = useState(0);
+    const [page, setPage] = useState(1);
+    const pageSize = 50;
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
     // Use filter store for persistent filters
@@ -93,7 +96,11 @@ export default function RequirementsPage() {
 
 
     const searchTerm = storedFilters.searchTerm;
-    const setSearchTerm = (value: string) => setRequirementsFilter({ searchTerm: value });
+    const deferredSearchTerm = useDeferredValue(searchTerm);
+    const setSearchTerm = (value: string) => {
+        setPage(1);
+        setRequirementsFilter({ searchTerm: value });
+    };
     const [projects, setProjects] = useState([]);
     const [areas, setAreas] = useState([]);
     const [users, setUsers] = useState([]);
@@ -127,16 +134,24 @@ export default function RequirementsPage() {
     // Year filter - from store
     const currentYear = new Date().getFullYear();
     const selectedYear = storedFilters.selectedYear;
-    const setSelectedYear = (year: number) => setRequirementsFilter({ selectedYear: year });
+    const setSelectedYear = (year: number) => {
+        setPage(1);
+        setRequirementsFilter({ selectedYear: year });
+    };
     const [availableYears, setAvailableYears] = useState<number[]>([currentYear]);
     const sortOrder = storedFilters.sortOrder;
-    const setSortOrder = (order: 'desc' | 'asc') => setRequirementsFilter({ sortOrder: order });
+    const setSortOrder = (order: 'desc' | 'asc') => {
+        setPage(1);
+        setRequirementsFilter({ sortOrder: order });
+    };
 
     useEffect(() => {
+        if (!user) return;
+
         api.get('/requirements/years')
             .then(res => setAvailableYears(res.data))
             .catch(err => console.error("Error loading years:", err));
-    }, []);
+    }, [user]);
 
     // Filters from store
     const filters = {
@@ -150,7 +165,10 @@ export default function RequirementsPage() {
         startDate: storedFilters.startDate,
         endDate: storedFilters.endDate
     };
-    const setFilters = (newFilters: Partial<typeof filters>) => setRequirementsFilter(newFilters);
+    const setFilters = (newFilters: Partial<typeof filters>) => {
+        setPage(1);
+        setRequirementsFilter(newFilters);
+    };
 
     // Role-based permissions
     const userRole = user?.role || 'USER';
@@ -158,14 +176,17 @@ export default function RequirementsPage() {
     // PERMISO DE ELIMINACIÓN: Solo Director, Coordinador y Admin (Developer para debug si necesario, pero instruccion dice nadie mas)
     const canDelete = ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole);
 
-    // Fetch requirements when year changes
+    // Catalogs are independent of the paginated list and only need to load once per session.
     useEffect(() => {
         if (user) {
-            fetchRequirements();
             fetchCatalogs();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedYear]);
+    }, [user]);
+
+    useEffect(() => {
+        if (user) fetchRequirements();
+    }, [user, selectedYear, page, sortOrder, deferredSearchTerm, filters.status, filters.procurementStatus, filters.areaId, filters.createdById, filters.projectId, filters.reqCategory, filters.supplierId, filters.startDate, filters.endDate]);
 
     const fetchRequirements = async () => {
         try {
@@ -173,10 +194,17 @@ export default function RequirementsPage() {
             // Admins/Directors/Leaders see all requirements, Users see only their own
             const endpoint = isAdmin ? "/requirements/all" : "/requirements/me";
             const response = await api.get(endpoint, {
-                params: { year: selectedYear }
+                params: {
+                    year: selectedYear,
+                    page,
+                    pageSize,
+                    sortOrder,
+                    search: deferredSearchTerm,
+                    ...filters
+                }
             });
-            const data = response.data.data || response.data;
-            setRequirements(data);
+            setRequirements(response.data.data || response.data);
+            setTotalRequirements(response.data.total ?? 0);
         } catch (err) {
             console.error("Error fetching requirements", err);
         } finally {
@@ -185,20 +213,22 @@ export default function RequirementsPage() {
     };
 
     const fetchCatalogs = async () => {
-        try {
-            const [p, a, u, s] = await Promise.all([
-                api.get('/projects'),
-                api.get('/areas'),
-                api.get('/users'),
-                api.get('/suppliers')
-            ]);
-            setProjects(p.data);
-            setAreas(a.data);
-            setUsers(u.data);
-            setSuppliersList(s.data);
-        } catch (err) {
-            console.error("Error fetching catalogs", err);
-        }
+        const results = await Promise.allSettled([
+            api.get('/projects'),
+            api.get('/areas'),
+            api.get('/users'),
+            api.get('/suppliers')
+        ]);
+
+        const [projectsResult, areasResult, usersResult, suppliersResult] = results;
+        if (projectsResult.status === 'fulfilled') setProjects(projectsResult.value.data);
+        else console.error("Error fetching projects catalog", projectsResult.reason);
+        if (areasResult.status === 'fulfilled') setAreas(areasResult.value.data);
+        else console.error("Error fetching areas catalog", areasResult.reason);
+        if (usersResult.status === 'fulfilled') setUsers(usersResult.value.data);
+        else console.error("Error fetching users catalog", usersResult.reason);
+        if (suppliersResult.status === 'fulfilled') setSuppliersList(suppliersResult.value.data);
+        else console.error("Error fetching suppliers catalog", suppliersResult.reason);
     };
 
     const handleDeleteClick = (req: any) => {
@@ -272,48 +302,7 @@ export default function RequirementsPage() {
         }
     };
 
-    const filteredReqs = requirements.filter((r: any) => {
-        const searchText = searchTerm.toLowerCase().trim();
-
-        // Smart search: if only numbers, search by groupId; if has letters, search by title/description
-        const isOnlyNumbers = /^\d+$/.test(searchText);
-
-        let matchesSearch = true;
-        if (searchText) {
-            if (isOnlyNumbers) {
-                // Only numbers: search by groupId
-                matchesSearch = r.groupId && r.groupId.toString() === searchText;
-            } else {
-                // Has letters: search by title and description
-                matchesSearch = r.title.toLowerCase().includes(searchText) ||
-                    (r.description && r.description.toLowerCase().includes(searchText));
-            }
-        }
-
-        // FIX: Add Status Filter Logic
-        const matchesStatus = !filters.status || r.status === filters.status;
-        const matchesProc = !filters.procurementStatus || r.procurementStatus === filters.procurementStatus;
-        const matchesArea = !filters.areaId || r.areaId === filters.areaId;
-        const matchesUser = !filters.createdById || r.createdById === filters.createdById;
-        const matchesProject = !filters.projectId || r.projectId === filters.projectId;
-        const matchesCategory = !filters.reqCategory || r.reqCategory === filters.reqCategory;
-        const matchesSupplier = !filters.supplierId || r.supplierId === filters.supplierId;
-
-        // Date range filter
-        const createdAt = new Date(r.createdAt);
-        const start = filters.startDate ? new Date(filters.startDate) : null;
-        let end = filters.endDate ? new Date(filters.endDate) : null;
-
-        if (end) end.setHours(23, 59, 59, 999);
-
-        const matchesDate = (!start || createdAt >= start) && (!end || createdAt <= end);
-
-        return matchesSearch && matchesStatus && matchesProc && matchesArea && matchesUser && matchesProject && matchesCategory && matchesSupplier && matchesDate;
-    }).sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
-        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-    });
+    const totalPages = Math.max(1, Math.ceil(totalRequirements / pageSize));
 
     return (
         <div className="p-6 lg:p-10 max-w-[1600px] mx-auto">
@@ -339,7 +328,7 @@ export default function RequirementsPage() {
                     <button
                         onClick={() => {
                             try {
-                                exportRequirements(filteredReqs);
+                                exportRequirements(requirements);
                             } catch (error) {
                                 console.error('Error al exportar:', error);
                                 alert('Error al generar el archivo Excel');
@@ -524,13 +513,9 @@ export default function RequirementsPage() {
                 <div className="px-6 py-4 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-gray-500">
-                            {filteredReqs.length} {filteredReqs.length === 1 ? 'requerimiento' : 'requerimientos'}
+                            {totalRequirements} {totalRequirements === 1 ? 'requerimiento' : 'requerimientos'}
                         </span>
-                        {filteredReqs.length !== requirements.length && (
-                            <span className="text-xs text-gray-400">
-                                (de {requirements.length} total)
-                            </span>
-                        )}
+                        <span className="text-xs text-gray-400">Página {page} de {totalPages}</span>
                     </div>
                     <button
                         onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
@@ -553,7 +538,7 @@ export default function RequirementsPage() {
                 <AnimatePresence mode="wait">
                     {loading ? (
                         <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-20 text-center font-black uppercase text-gray-400 tracking-widest text-[10px]">Cargando requerimientos...</motion.div>
-                    ) : filteredReqs.length === 0 ? (
+                    ) : requirements.length === 0 ? (
                         <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-20 text-center font-black uppercase text-gray-400 tracking-widest text-[10px]">No se encontraron requerimientos</motion.div>
                     ) : (
                         <>
@@ -592,7 +577,7 @@ export default function RequirementsPage() {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-                                                {filteredReqs.map((req: any) => (
+                                                {requirements.map((req: any) => (
                                                     <tr
                                                         key={req.id}
                                                         onClick={() => router.push(`/requirements/${req.id}`)}
@@ -740,7 +725,7 @@ export default function RequirementsPage() {
                                         </table>
                                     </motion.div>
                                     <div className="lg:hidden space-y-4 p-4">
-                                        {filteredReqs.map((req: any) => (
+                                        {requirements.map((req: any) => (
                                             <RequirementCard
                                                 key={req.id}
                                                 req={req}
@@ -762,7 +747,7 @@ export default function RequirementsPage() {
                                         exit={{ opacity: 0, scale: 0.95 }}
                                         className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                                     >
-                                        {filteredReqs.map((req: any) => (
+                                        {requirements.map((req: any) => (
                                             <RequirementCard
                                                 key={req.id}
                                                 req={req}
@@ -779,6 +764,32 @@ export default function RequirementsPage() {
                         </>
                     )}
                 </AnimatePresence>
+                {!loading && totalRequirements > 0 && (
+                    <div className="flex items-center justify-between gap-4 px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+                        <span className="text-xs font-bold text-gray-400">
+                            Mostrando {requirements.length} de {totalRequirements}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setPage(current => Math.max(1, current - 1))}
+                                disabled={page === 1}
+                                className="px-4 py-2 rounded-xl text-xs font-black border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+                            >
+                                Anterior
+                            </button>
+                            <span className="text-xs font-black text-gray-500">{page} / {totalPages}</span>
+                            <button
+                                type="button"
+                                onClick={() => setPage(current => Math.min(totalPages, current + 1))}
+                                disabled={page >= totalPages}
+                                className="px-4 py-2 rounded-xl text-xs font-black border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Bulk Actions Floating Bar */}
@@ -1001,10 +1012,10 @@ function RequirementCard({ req, onClick, onDuplicate }: { req: Requirement, onCl
                         </span>
                     </div>
                     <div className="flex items-center gap-2 text-primary-600 font-black text-[10px] uppercase tracking-widest">
-                        {(req.attachments && req.attachments.length > 0) && (
+                        {!!req._count?.attachments && (
                             <div className="flex items-center gap-1 mr-2 text-gray-400">
                                 <Paperclip size={12} />
-                                <span>{req.attachments.length}</span>
+                                <span>{req._count.attachments}</span>
                             </div>
                         )}
                         Ver más <ArrowRight size={12} />

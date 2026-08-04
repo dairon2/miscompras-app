@@ -31,6 +31,69 @@ const translateStatus = (status: string): string => {
     return translations[status] || status;
 };
 
+// The list only needs fields rendered in the table/cards. Full relations stay on the detail endpoint.
+const requirementListSelect = {
+    id: true,
+    title: true,
+    description: true,
+    status: true,
+    procurementStatus: true,
+    actualAmount: true,
+    reqCategory: true,
+    createdAt: true,
+    groupId: true,
+    receivedAtSatisfaction: true,
+    areaId: true,
+    createdById: true,
+    projectId: true,
+    supplierId: true,
+    manualSupplierName: true,
+    project: { select: { name: true } },
+    area: { select: { name: true } },
+    supplier: { select: { id: true, name: true } },
+    budget: {
+        select: {
+            id: true,
+            title: true,
+            category: { select: { id: true, name: true } }
+        }
+    },
+    createdBy: { select: { name: true } },
+    _count: { select: { attachments: true } }
+};
+
+const applyRequirementListFilters = (where: any, req: AuthRequest) => {
+    const { status, procurementStatus, areaId, createdById, projectId, supplierId, reqCategory, search, startDate, endDate } = req.query;
+
+    if (typeof status === 'string' && status) where.status = status;
+    if (typeof procurementStatus === 'string' && procurementStatus) where.procurementStatus = procurementStatus;
+    if (typeof areaId === 'string' && areaId) where.areaId = areaId;
+    if (typeof createdById === 'string' && createdById) where.createdById = createdById;
+    if (typeof projectId === 'string' && projectId) where.projectId = projectId;
+    if (typeof supplierId === 'string' && supplierId) where.supplierId = supplierId;
+    if (typeof reqCategory === 'string' && reqCategory) where.reqCategory = reqCategory;
+
+    if (typeof startDate === 'string' || typeof endDate === 'string') {
+        const createdAt: any = {};
+        if (typeof startDate === 'string' && !Number.isNaN(Date.parse(startDate))) createdAt.gte = new Date(`${startDate}T00:00:00.000Z`);
+        if (typeof endDate === 'string' && !Number.isNaN(Date.parse(endDate))) createdAt.lte = new Date(`${endDate}T23:59:59.999Z`);
+        if (Object.keys(createdAt).length > 0) where.createdAt = createdAt;
+    }
+
+    if (typeof search === 'string' && search.trim()) {
+        const term = search.trim();
+        const searchFilter = /^\d+$/.test(term)
+            ? { groupId: Number(term) }
+            : {
+                OR: [
+                    { title: { contains: term, mode: 'insensitive' } },
+                    { description: { contains: term, mode: 'insensitive' } }
+                ]
+            };
+        where.AND = [...(where.AND || []), searchFilter];
+    }
+};
+
 export const createRequirement = async (req: AuthRequest, res: Response) => {
     const { title, description, quantity, projectId, areaId, supplierId, manualSupplierName, suggestedSupplier, budgetId } = req.body;
     const userId = req.user?.id;
@@ -235,9 +298,11 @@ export const createMassRequirements = async (req: AuthRequest, res: Response) =>
 export const getMyRequirements = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
     const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
-    const includeAsientos = req.query.includeAsientos === 'true';
-
-    // No pagination - load all requirements for filtering
+    const requestedPage = parseInt(req.query.page as string);
+    const requestedPageSize = parseInt(req.query.pageSize as string);
+    const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const pageSize = Number.isInteger(requestedPageSize) ? Math.min(Math.max(requestedPageSize, 1), 100) : 50;
+    const skip = (page - 1) * pageSize;
 
     try {
         const where: any = {
@@ -265,38 +330,25 @@ export const getMyRequirements = async (req: AuthRequest, res: Response) => {
             // isAsiento filter removed to show everything by default
         };
 
-        // Get total count for pagination
-        const total = await prisma.requirement.count({ where });
+        applyRequirementListFilters(where, req);
 
-        const requirements = await prisma.requirement.findMany({
-            where,
-            include: {
-                project: true,
-                area: true,
-                supplier: true,
-                payments: true,
-                budget: {
-                    select: {
-                        id: true,
-                        title: true,
-                        code: true,
-                        category: {
-                            select: {
-                                id: true,
-                                name: true,
-                                code: true
-                            }
-                        }
-                    }
-                },
-                attachments: true
-            },
-            orderBy: { createdAt: 'desc' }
-        });
+        const [total, requirements] = await Promise.all([
+            prisma.requirement.count({ where }),
+            prisma.requirement.findMany({
+                where,
+                select: requirementListSelect,
+                orderBy: { createdAt: req.query.sortOrder === 'asc' ? 'asc' : 'desc' },
+                skip,
+                take: pageSize
+            })
+        ]);
 
         res.json({
             data: requirements,
-            total: requirements.length
+            total,
+            page,
+            pageSize,
+            totalPages: Math.ceil(total / pageSize)
         });
     } catch (error: any) {
         res.status(500).json({ error: 'Failed to fetch requirements' });
@@ -757,9 +809,11 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
 // Get ALL requirements - for ADMIN, DIRECTOR, LEADER
 export const getAllRequirements = async (req: AuthRequest, res: Response) => {
     const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
-    const includeAsientos = req.query.includeAsientos === 'true';
-
-    // No pagination - load all requirements for filtering
+    const requestedPage = parseInt(req.query.page as string);
+    const requestedPageSize = parseInt(req.query.pageSize as string);
+    const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const pageSize = Number.isInteger(requestedPageSize) ? Math.min(Math.max(requestedPageSize, 1), 100) : 50;
+    const skip = (page - 1) * pageSize;
 
     const userId = req.user?.id;
     const userRole = req.user?.role;
@@ -769,6 +823,8 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
             year: year
             // isAsiento filter removed to show everything by default
         };
+
+        applyRequirementListFilters(where, req);
 
         // ADMIN, DIRECTOR (global), COORDINATOR, AUDITOR and DEVELOPER see everything. LEADER is restricted to their projects.
         const isGlobalViewer = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR', 'AUDITOR'].includes(userRole || '');
@@ -814,45 +870,23 @@ export const getAllRequirements = async (req: AuthRequest, res: Response) => {
             where.OR = orConditions;
         }
 
-        // Get total count for pagination
-        const total = await prisma.requirement.count({ where });
-
-        const requirements = await prisma.requirement.findMany({
-            where,
-            include: {
-                project: true,
-                area: true,
-                supplier: true,
-                payments: true,
-                budget: {
-                    select: {
-                        id: true,
-                        title: true,
-                        code: true,
-                        category: {
-                            select: {
-                                id: true,
-                                name: true,
-                                code: true
-                            }
-                        }
-                    }
-                },
-                createdBy: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true
-                    }
-                },
-                attachments: true
-            },
-            orderBy: { createdAt: 'desc' }
-        });
+        const [total, requirements] = await Promise.all([
+            prisma.requirement.count({ where }),
+            prisma.requirement.findMany({
+                where,
+                select: requirementListSelect,
+                orderBy: { createdAt: req.query.sortOrder === 'asc' ? 'asc' : 'desc' },
+                skip,
+                take: pageSize
+            })
+        ]);
 
         res.json({
             data: requirements,
-            total: requirements.length
+            total,
+            page,
+            pageSize,
+            totalPages: Math.ceil(total / pageSize)
         });
     } catch (error: any) {
         console.error("Error fetching all requirements:", error);
