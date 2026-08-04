@@ -7,7 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useRef, useCallback } from "react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, User as UserIcon, Bell, Package, LayoutDashboard, Database, Briefcase, FileText, Users, Building2, Settings, Shield, Mail, MapPin, X, BookOpen, UserCog, CheckCircle, HelpCircle } from "lucide-react";
+import { LogOut, User as UserIcon, Bell, Package, LayoutDashboard, Database, Briefcase, FileText, Users, Building2, Settings, Shield, Mail, MapPin, X, BookOpen, UserCog, CheckCircle, HelpCircle, WalletCards } from "lucide-react";
 import ToastContainer from "@/components/ToastContainer";
 import Link from "next/link";
 import Image from "next/image";
@@ -187,6 +187,9 @@ export default function RootLayout({
                     />
                   )}
                   <NavItem icon={<FileText size={14} />} label="Facturas" href="/invoices" active={pathname === "/invoices" || pathname.startsWith("/invoices/")} />
+                  {mounted && ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'].includes(user?.role || '') && (
+                    <NavItem icon={<WalletCards size={14} />} label="Anticipos" href="/advances" active={pathname === "/advances" || pathname.startsWith("/advances/")} />
+                  )}
                   {/* Reports - visible for all authorized roles including USER */}
                   {mounted && ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR', 'USER'].includes(user?.role || '') && (
                     <NavItem icon={<Briefcase size={14} />} label="Informes" href="/reports" active={pathname === "/reports" || pathname.startsWith("/reports/")} />

@@ -19,6 +19,7 @@ import adjustmentRoutes from './routes/adjustmentRoutes';
 import invoiceRoutes from './routes/invoiceRoutes';
 import submissionRulesRoutes from './routes/submissionRulesRoutes';
 import aiRoutes from './routes/aiRoutes';
+import advanceRoutes from './routes/advanceRoutes';
 
 dotenv.config();
 
@@ -408,6 +409,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/adjustments', adjustmentRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/advances', advanceRoutes);
 app.use('/api/submission-rules', submissionRulesRoutes);
 app.use('/api/ai', aiRoutes);
 

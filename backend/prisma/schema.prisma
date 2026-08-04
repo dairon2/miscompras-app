@@ -35,6 +35,10 @@ model User {
   budgetGroups         BudgetGroup[]      @relation("BudgetGroupCreator")
   budgetSubLeader      BudgetSubLeader[]
   invoicesCreated      Invoice[]          @relation("InvoiceCreator")
+  advancesRequested    Advance[]          @relation("AdvanceRequestedBy")
+  advancesApproved     Advance[]          @relation("AdvanceApprovedBy")
+  advancesDisbursed    Advance[]          @relation("AdvanceDisbursedBy")
+  advancesLegalized    Advance[]          @relation("AdvanceLegalizedBy")
   projectsLed          Project[]          @relation("ProjectLeader")
   requirementsCreated  Requirement[]      @relation("CreatedBy")
   requirementsOwned    Requirement[]      @relation("OwnedBy")
@@ -57,6 +61,7 @@ model Project {
   leader       User?         @relation("ProjectLeader", fields: [leaderId], references: [id])
   subLeader    User?         @relation("ProjectSubLeader", fields: [subLeaderId], references: [id])
   requirements Requirement[]
+  advances     Advance[]
 }
 
 model Area {
@@ -66,6 +71,7 @@ model Area {
   updatedAt    DateTime      @updatedAt
   directorId   String?
   commercialInvoices Invoice[] @relation("InvoiceCommercialArea")
+  advances     Advance[]
   director     User?         @relation("AreaDirector", fields: [directorId], references: [id])
   budgets      Budget[]
   requirements Requirement[]
@@ -89,6 +95,7 @@ model Supplier {
   supplierType SupplierType     @default(SUPPLIER)
   activity     String?
   invoices     Invoice[]
+  advances     Advance[]
   requirements Requirement[]
   ratings      SupplierRating[]
 }
@@ -150,6 +157,7 @@ model Budget {
   project           Project            @relation(fields: [projectId], references: [id])
   adjustments       BudgetAdjustment[]
   invoices          Invoice[]          @relation("InvoiceBudget")
+  advances          Advance[]
   subLeaders        BudgetSubLeader[]
   requirements      Requirement[]
 }
@@ -243,6 +251,7 @@ model Requirement {
   attachments            Attachment[]
   logs                   HistoryLog[]
   invoices               Invoice[]
+  advances               Advance[]
   payments               Payment[]
   area                   Area                @relation(fields: [areaId], references: [id])
   budget                 Budget?             @relation(fields: [budgetId], references: [id])
@@ -407,6 +416,90 @@ model InvoiceAuditLog {
   @@index([createdAt])
 }
 
+model AdvanceSequence {
+  year            Int @id
+  nextConsecutive Int
+  updatedAt       DateTime @updatedAt
+}
+
+model Advance {
+  id                   String                @id @default(uuid())
+  consecutive          Int
+  year                 Int
+  requestDate          DateTime              @default(now())
+  beneficiaryType      AdvanceBeneficiaryType @default(SUPPLIER)
+  beneficiaryDocument  String
+  beneficiaryName      String
+  supplierId           String?
+  costCenter           String?
+  costCenterCode       String?
+  purpose              String
+  amount               Decimal               @db.Decimal(15, 2)
+  status               AdvanceStatus         @default(REQUESTED)
+  legalizationDueDate  DateTime?
+  legalizationNotes    String?
+  requirementId        String?
+  budgetId             String?
+  projectId            String?
+  areaId               String?
+  requestedById        String
+  approvedById         String?
+  approvedAt           DateTime?
+  disbursedById        String?
+  disbursedAt          DateTime?
+  legalizedById        String?
+  legalizedAt          DateTime?
+  cancelledAt          DateTime?
+  cancellationReason   String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  supplier             Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  requirement          Requirement?          @relation(fields: [requirementId], references: [id], onDelete: SetNull)
+  budget               Budget?               @relation(fields: [budgetId], references: [id], onDelete: SetNull)
+  project              Project?              @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  area                 Area?                 @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  requestedBy          User                  @relation("AdvanceRequestedBy", fields: [requestedById], references: [id])
+  approvedBy           User?                 @relation("AdvanceApprovedBy", fields: [approvedById], references: [id])
+  disbursedBy          User?                 @relation("AdvanceDisbursedBy", fields: [disbursedById], references: [id])
+  legalizedBy          User?                 @relation("AdvanceLegalizedBy", fields: [legalizedById], references: [id])
+  attachments          AdvanceAttachment[]
+  auditLogs            AdvanceAuditLog[]
+
+  @@unique([year, consecutive])
+  @@index([status])
+  @@index([beneficiaryDocument])
+  @@index([supplierId])
+  @@index([requirementId])
+  @@index([requestDate])
+}
+
+model AdvanceAttachment {
+  id        String   @id @default(uuid())
+  fileName  String
+  fileUrl   String
+  advanceId String
+  createdAt DateTime @default(now())
+  advance   Advance  @relation(fields: [advanceId], references: [id], onDelete: Cascade)
+
+  @@index([advanceId])
+}
+
+model AdvanceAuditLog {
+  id         String        @id @default(uuid())
+  advanceId  String
+  action     String
+  fromStatus AdvanceStatus?
+  toStatus   AdvanceStatus?
+  details    String?
+  actorId    String?
+  actorEmail String?
+  createdAt  DateTime      @default(now())
+  advance    Advance       @relation(fields: [advanceId], references: [id], onDelete: Cascade)
+
+  @@index([advanceId])
+  @@index([createdAt])
+}
+
 model SubmissionRule {
   id            String   @id @default(uuid())
   name          String
@@ -499,4 +592,18 @@ enum InvoiceStatus {
   APPROVED
   PAID
   REJECTED
+}
+
+enum AdvanceBeneficiaryType {
+  SUPPLIER
+  EMPLOYEE
+}
+
+enum AdvanceStatus {
+  REQUESTED
+  APPROVED
+  DISBURSED
+  LEGALIZED
+  REJECTED
+  CANCELLED
 }
