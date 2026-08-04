@@ -197,6 +197,11 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
     try {
         const userId = (req as any).user?.id;
         const userRole = (req as any).user?.role;
+        const isPaginatedRequest = req.query.page !== undefined || req.query.pageSize !== undefined;
+        const requestedPage = parseInt(req.query.page as string);
+        const requestedPageSize = parseInt(req.query.pageSize as string);
+        const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+        const pageSize = Number.isInteger(requestedPageSize) ? Math.min(Math.max(requestedPageSize, 1), 100) : 50;
 
         let whereClause: any = {};
 
@@ -221,18 +226,59 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
             };
         }
 
-        const suppliers = await prisma.supplier.findMany({
+        const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+        const supplierType = req.query.supplierType;
+
+        if (supplierType === 'SUPPLIER' || supplierType === 'SERVICE_PROVIDER') {
+            whereClause.supplierType = supplierType;
+        }
+
+        if (search) {
+            whereClause.AND = [
+                ...(whereClause.AND || []),
+                {
+                    OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { taxId: { contains: search, mode: 'insensitive' } },
+                        { nit: { contains: search, mode: 'insensitive' } },
+                        { contactName: { contains: search, mode: 'insensitive' } },
+                        { contactEmail: { contains: search, mode: 'insensitive' } },
+                        { email: { contains: search, mode: 'insensitive' } },
+                        { contactPhone: { contains: search, mode: 'insensitive' } },
+                        { phone: { contains: search, mode: 'insensitive' } },
+                        { activity: { contains: search, mode: 'insensitive' } }
+                    ]
+                }
+            ];
+        }
+
+        const suppliersQuery = prisma.supplier.findMany({
             where: whereClause,
             orderBy: { name: 'asc' },
-            include: {
-                ratings: {
-                    select: { overallRating: true }
-                },
-                _count: {
-                    select: { requirements: true }
-                }
-            }
+            select: {
+                id: true,
+                name: true,
+                taxId: true,
+                nit: true,
+                contactName: true,
+                contactEmail: true,
+                contactPhone: true,
+                email: true,
+                phone: true,
+                address: true,
+                activity: true,
+                supplierType: true,
+                criticality: true,
+                ratings: { select: { overallRating: true } },
+                _count: { select: { requirements: true } }
+            },
+            ...(isPaginatedRequest ? { skip: (page - 1) * pageSize, take: pageSize } : {})
         });
+
+        const [suppliers, total] = await Promise.all([
+            suppliersQuery,
+            isPaginatedRequest ? prisma.supplier.count({ where: whereClause }) : Promise.resolve(0)
+        ]);
 
         // Calculate average rating for each supplier
         const suppliersWithRatings = suppliers.map(supplier => {
@@ -248,6 +294,16 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
                 ratingsCount
             };
         });
+
+        if (isPaginatedRequest) {
+            return res.json({
+                data: suppliersWithRatings,
+                total,
+                page,
+                pageSize,
+                totalPages: Math.ceil(total / pageSize)
+            });
+        }
 
         res.json(suppliersWithRatings);
     } catch (e) {

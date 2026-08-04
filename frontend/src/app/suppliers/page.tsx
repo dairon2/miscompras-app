@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -39,6 +39,9 @@ export default function SuppliersPage() {
     const { user } = useAuthStore();
     const router = useRouter();
     const [suppliers, setSuppliers] = useState([]);
+    const [totalSuppliers, setTotalSuppliers] = useState(0);
+    const [page, setPage] = useState(1);
+    const pageSize = 50;
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -142,50 +145,46 @@ export default function SuppliersPage() {
 
 
     const searchTerm = storedFilters.searchTerm;
-    const setSearchTerm = (value: string) => setSuppliersFilter({ searchTerm: value });
+    const setSearchTerm = (value: string) => {
+        setPage(1);
+        setSuppliersFilter({ searchTerm: value });
+    };
     const typeFilter = storedFilters.typeFilter;
-    const setTypeFilter = (value: 'ALL' | 'SUPPLIER' | 'SERVICE_PROVIDER') => setSuppliersFilter({ typeFilter: value });
+    const setTypeFilter = (value: 'ALL' | 'SUPPLIER' | 'SERVICE_PROVIDER') => {
+        setPage(1);
+        setSuppliersFilter({ typeFilter: value });
+    };
 
     // Debounce search term for better performance (150ms delay - faster response)
     const debouncedSearchTerm = useDebounce(searchTerm, 150);
     const isSearching = searchTerm !== debouncedSearchTerm;
 
-    // Memoize filtered suppliers for performance
-    const filteredSuppliers = useMemo(() => {
-        const searchLower = debouncedSearchTerm.toLowerCase();
-        return suppliers.filter((s: any) => {
-            const matchesSearch = !debouncedSearchTerm ||
-                (s.name?.toLowerCase() || "").includes(searchLower) ||
-                (s.taxId?.toLowerCase() || "").includes(searchLower) ||
-                (s.nit?.toLowerCase() || "").includes(searchLower) ||
-                (s.contactName?.toLowerCase() || "").includes(searchLower) ||
-                (s.contactEmail?.toLowerCase() || "").includes(searchLower) ||
-                (s.email?.toLowerCase() || "").includes(searchLower) ||
-                (s.contactPhone?.toLowerCase() || "").includes(searchLower) ||
-                (s.phone?.toLowerCase() || "").includes(searchLower) ||
-                (s.activity?.toLowerCase() || "").includes(searchLower);
-
-            const matchesType = typeFilter === 'ALL' || s.supplierType === typeFilter;
-
-            return matchesSearch && matchesType;
-        });
-    }, [suppliers, debouncedSearchTerm, typeFilter]);
-
     useEffect(() => {
-        fetchSuppliers();
-    }, []);
+        if (user) fetchSuppliers();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user, page, debouncedSearchTerm, typeFilter]);
 
     const fetchSuppliers = async () => {
         setLoading(true);
         try {
-            const response = await api.get("/suppliers");
-            setSuppliers(response.data);
+            const response = await api.get("/suppliers", {
+                params: {
+                    page,
+                    pageSize,
+                    search: debouncedSearchTerm,
+                    supplierType: typeFilter === 'ALL' ? undefined : typeFilter
+                }
+            });
+            setSuppliers(response.data.data || []);
+            setTotalSuppliers(response.data.total || 0);
         } catch (err) {
             console.error("Error fetching suppliers", err);
         } finally {
             setLoading(false);
         }
     };
+
+    const totalPages = Math.max(1, Math.ceil(totalSuppliers / pageSize));
 
     const navigateToSupplier = (supplierId: string) => {
         if (!supplierId) return;
@@ -323,7 +322,7 @@ export default function SuppliersPage() {
                     <button
                         onClick={() => {
                             try {
-                                exportSuppliers(filteredSuppliers);
+                                exportSuppliers(suppliers);
                             } catch (error) {
                                 console.error('Error al exportar:', error);
                                 showAlert("Error", "Error al generar el archivo Excel", "error");
@@ -333,7 +332,7 @@ export default function SuppliersPage() {
                     >
                         <FileSpreadsheet size={18} className="text-green-600" />
                         <Download size={18} className="text-primary-600" />
-                        <span>EXPORTAR XLSX</span>
+                    <span>EXPORTAR PÁGINA XLSX</span>
                     </button>
 
                     {canManageSuppliers && (
@@ -349,7 +348,7 @@ export default function SuppliersPage() {
                 <div className="py-24 text-center text-gray-400 font-bold uppercase text-[10px] tracking-widest">
                     Consultando catálogo de proveedores...
                 </div>
-            ) : filteredSuppliers.length === 0 ? (
+            ) : suppliers.length === 0 ? (
                 <div className="py-24 text-center bg-white dark:bg-slate-800 rounded-[3rem] border border-dashed border-gray-200 dark:border-gray-700">
                     <p className="text-gray-400 font-black text-xs uppercase">No se encontraron proveedores</p>
                 </div>
@@ -358,7 +357,7 @@ export default function SuppliersPage() {
                     {viewMode === 'grid' ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-                            {filteredSuppliers.map((supp: any, index: number) => (
+                            {suppliers.map((supp: any, index: number) => (
                                 <SupplierCard
                                     key={supp.id}
                                     supplier={supp}
@@ -375,13 +374,9 @@ export default function SuppliersPage() {
                             <div className="px-6 py-4 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm font-bold text-gray-500">
-                                        {filteredSuppliers.length} {filteredSuppliers.length === 1 ? 'proveedor' : 'proveedores'}
+                                        {totalSuppliers} {totalSuppliers === 1 ? 'proveedor' : 'proveedores'}
                                     </span>
-                                    {filteredSuppliers.length !== suppliers.length && (
-                                        <span className="text-xs text-gray-400">
-                                            (de {suppliers.length} total)
-                                        </span>
-                                    )}
+                                    <span className="text-xs text-gray-400">Página {page} de {totalPages}</span>
                                 </div>
                             </div>
                             <table className="w-full text-left border-collapse">
@@ -396,7 +391,7 @@ export default function SuppliersPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredSuppliers.map((supp: any) => (
+                                    {suppliers.map((supp: any) => (
                                         <tr key={supp.id} className="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors group">
                                             <td className="p-6">
                                                 <p className="font-black text-sm mb-1 group-hover:text-primary-600 transition-colors">{supp.name}</p>
@@ -443,6 +438,28 @@ export default function SuppliersPage() {
                             </table>
                         </div>
                     )}
+                    <div className="mt-8 flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 px-6 py-4 border border-gray-100 dark:border-gray-700">
+                        <span className="text-xs font-bold text-gray-400">Mostrando {suppliers.length} de {totalSuppliers}</span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setPage(current => Math.max(1, current - 1))}
+                                disabled={page === 1}
+                                className="px-4 py-2 rounded-xl text-xs font-black border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+                            >
+                                Anterior
+                            </button>
+                            <span className="text-xs font-black text-gray-500">{page} / {totalPages}</span>
+                            <button
+                                type="button"
+                                onClick={() => setPage(current => Math.min(totalPages, current + 1))}
+                                disabled={page >= totalPages}
+                                className="px-4 py-2 rounded-xl text-xs font-black border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    </div>
                 </>
             )}
 
