@@ -88,6 +88,36 @@ const deleteInvoice = async (token: string, id: string) => {
     return response.data;
 };
 
+const getReconciliationSuggestions = async (token: string, filters?: { page?: number; pageSize?: number; mode?: 'suggested' | 'ambiguous' }) => {
+    const response = await axios.get(`${API_URL}/invoices/reconciliation`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: filters
+    });
+    return response.data;
+};
+
+const reconcileInvoice = async (token: string, invoiceId: string, requirementId: string) => {
+    const response = await axios.patch(`${API_URL}/invoices/reconciliation/${invoiceId}`, { requirementId }, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+const searchCompatibleRequirements = async (token: string, invoiceId: string, search: string) => {
+    const response = await axios.get(`${API_URL}/invoices/${invoiceId}/requirement-options`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { search }
+    });
+    return response.data;
+};
+
+const reconcileInvoicesBatch = async (token: string, items: Array<{ invoiceId: string; requirementId: string }>) => {
+    const response = await axios.patch(`${API_URL}/invoices/reconciliation/batch`, { items }, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
 export const invoiceService = {
     getInvoices,
     exportInvoicesExcel,
@@ -98,5 +128,9 @@ export const invoiceService = {
     verifyInvoice,
     approveInvoice,
     payInvoice,
-    deleteInvoice
+    deleteInvoice,
+    getReconciliationSuggestions,
+    reconcileInvoice,
+    searchCompatibleRequirements,
+    reconcileInvoicesBatch
 };

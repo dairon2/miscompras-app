@@ -11,8 +11,6 @@ import ConfirmModal from '@/components/ConfirmModal';
 import { useToastStore } from '@/store/toastStore';
 import { translateStatus } from '@/lib/translations';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-
 type InvoiceAttachment = { id: string; fileName: string; fileUrl: string };
 type InvoiceAuditLog = { id: string; action: string; details?: string | null; actorEmail?: string | null; createdAt: string };
 type RequirementOption = { id: string; title: string; status: string; actualAmount?: number | string | null; supplierId?: string | null };
@@ -101,17 +99,9 @@ export default function InvoiceDetailPage() {
         const normalizedQuery = searchQuery.trim().toLowerCase();
         if (!normalizedQuery || !invoice) return;
         try {
-            const res = await axios.get(`${API_URL}/requirements/all`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const matches = (res.data.data ? res.data.data : res.data) as RequirementOption[];
-            const filtered = (Array.isArray(matches) ? matches : []).filter((r) =>
-                r.status === 'APPROVED' &&
-                (!invoice.supplierId || !r.supplierId || r.supplierId === invoice.supplierId) &&
-                (r.title?.toLowerCase().includes(normalizedQuery) || r.id?.toLowerCase().includes(normalizedQuery))
-            ).slice(0, 5);
-            setRequirements(filtered);
-            if (filtered.length === 0) addToast('No se encontraron requerimientos aprobados compatibles', 'info');
+            const matches = await invoiceService.searchCompatibleRequirements(token!, invoice.id, normalizedQuery) as RequirementOption[];
+            setRequirements(matches);
+            if (matches.length === 0) addToast('No se encontraron requerimientos aprobados compatibles', 'info');
         } catch (error) {
             console.error(error);
             addToast('No se pudieron consultar los requerimientos', 'error');
@@ -346,7 +336,19 @@ export default function InvoiceDetailPage() {
                             Vinculación (3-Way Match)
                         </h3>
 
-                        {invoice.status === 'RECEIVED' ? (
+                        {invoice.requirement ? (
+                            <div className="text-center py-8 bg-green-50 dark:bg-green-900/10 rounded-xl border border-green-100 dark:border-green-800/30">
+                                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
+                                <p className="font-bold text-green-800 dark:text-green-400">Vinculación confirmada</p>
+                                <div className="mt-4 p-4 bg-white dark:bg-gray-800 mx-4 rounded-lg shadow-sm text-left border dark:border-gray-700">
+                                    <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Requerimiento</p>
+                                    <p className="font-bold text-sm text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/requirements/${invoice.requirement?.id}`)}>
+                                        {invoice.requirement.title || invoice.requirement.id}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 mt-1">ID: {invoice.requirement.id}</p>
+                                </div>
+                            </div>
+                        ) : invoice.status === 'RECEIVED' ? (
                             canManageInvoices ? (
                                 <div className="space-y-4">
                                 <p className="text-xs text-gray-500">Busca el requerimiento aprobado para vincular.</p>
@@ -429,17 +431,14 @@ export default function InvoiceDetailPage() {
                                 </div>
                             )
                         ) : (
-                            <div className="text-center py-8 bg-green-50 dark:bg-green-900/10 rounded-xl border border-green-100 dark:border-green-800/30">
-                                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
-                                <p className="font-bold text-green-800 dark:text-green-400">Vinculación Exitosa</p>
-                                {invoice.requirement && (
-                                    <div className="mt-4 p-4 bg-white dark:bg-gray-800 mx-4 rounded-lg shadow-sm text-left border dark:border-gray-700">
-                                        <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Orden de Compra</p>
-                                        <p className="font-bold text-sm text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/requirements/${invoice.requirement?.id}`)}>
-                                            {invoice.requirement.title}
-                                        </p>
-                                        <p className="text-[10px] text-gray-400 mt-1">ID: {invoice.requirement.id}</p>
-                                    </div>
+                            <div className="text-center py-8 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-800/30">
+                                <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-2" />
+                                <p className="font-bold text-amber-800 dark:text-amber-300">Pendiente de conciliación</p>
+                                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">Esta factura no tiene un requerimiento vinculado. Su estado actual se conservará.</p>
+                                {canManageInvoices && (
+                                    <button onClick={() => router.push('/invoices/reconciliation')} className="mt-4 px-4 py-2 rounded-lg bg-violet-600 text-white text-xs font-bold hover:bg-violet-700">
+                                        Abrir conciliación administrativa
+                                    </button>
                                 )}
                             </div>
                         )}

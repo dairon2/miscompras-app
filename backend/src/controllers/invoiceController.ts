@@ -116,6 +116,92 @@ const parseOptionalBoolean = (value: unknown) => {
     throw new Error('La aprobación del líder debe ser verdadera o falsa');
 };
 
+const normalizeMatchValue = (value: unknown) => String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+
+type ReconciliationMatch = {
+    invoice: any;
+    requirement: any;
+    evidence: string[];
+};
+
+const getReconciliationMatches = async () => {
+    const [invoices, requirements, linkedInvoices] = await Promise.all([
+        prisma.invoice.findMany({
+            where: { requirementId: null },
+            select: {
+                id: true,
+                invoiceNumber: true,
+                purchaseOrderNumber: true,
+                amount: true,
+                issueDate: true,
+                status: true,
+                supplierId: true,
+                supplier: { select: { id: true, name: true, nit: true } }
+            }
+        }),
+        prisma.requirement.findMany({
+            where: { status: 'APPROVED', supplierId: { not: null } },
+            select: {
+                id: true,
+                title: true,
+                purchaseOrderNumber: true,
+                invoiceNumber: true,
+                actualAmount: true,
+                supplierId: true,
+                hasMultiplePayments: true
+            }
+        }),
+        prisma.invoice.findMany({ where: { requirementId: { not: null } }, select: { requirementId: true } })
+    ]);
+
+    const linkedRequirementIds = new Set(linkedInvoices.flatMap(invoice => invoice.requirementId ? [invoice.requirementId] : []));
+
+    const requirementsBySupplier = new Map<string, any[]>();
+    requirements.forEach(requirement => {
+        if (!requirement.supplierId) return;
+        const current = requirementsBySupplier.get(requirement.supplierId) || [];
+        current.push(requirement);
+        requirementsBySupplier.set(requirement.supplierId, current);
+    });
+
+    const candidates = new Map<string, ReconciliationMatch[]>();
+    invoices.forEach(invoice => {
+        const matches = (requirementsBySupplier.get(invoice.supplierId) || []).flatMap(requirement => {
+            if (!requirement.hasMultiplePayments && linkedRequirementIds.has(requirement.id)) return [];
+            const samePurchaseOrder = Boolean(normalizeMatchValue(invoice.purchaseOrderNumber))
+                && normalizeMatchValue(invoice.purchaseOrderNumber) === normalizeMatchValue(requirement.purchaseOrderNumber);
+            const sameInvoiceNumber = Boolean(normalizeMatchValue(invoice.invoiceNumber))
+                && normalizeMatchValue(invoice.invoiceNumber) === normalizeMatchValue(requirement.invoiceNumber);
+            const sameAmount = Math.abs(Number(invoice.amount) - Number(requirement.actualAmount || 0)) < 0.01;
+
+            if (!sameAmount || (!samePurchaseOrder && !sameInvoiceNumber)) return [];
+
+            const evidence = ['Mismo proveedor', 'Mismo valor'];
+            if (samePurchaseOrder) evidence.push('Misma orden de compra');
+            if (sameInvoiceNumber) evidence.push('Mismo número de factura');
+            return [{ invoice, requirement, evidence }];
+        });
+        if (matches.length > 0) candidates.set(invoice.id, matches);
+    });
+
+    const requirementUseCount = new Map<string, number>();
+    candidates.forEach(matches => matches.forEach(match => {
+        requirementUseCount.set(match.requirement.id, (requirementUseCount.get(match.requirement.id) || 0) + 1);
+    }));
+
+    const highConfidence: ReconciliationMatch[] = [];
+    const ambiguous: ReconciliationMatch[] = [];
+    candidates.forEach(matches => {
+        const isUnique = matches.length === 1 && requirementUseCount.get(matches[0].requirement.id) === 1;
+        (isUnique ? highConfidence : ambiguous).push(...matches);
+    });
+
+    return { invoices, highConfidence, ambiguous };
+};
+
 const normalizeOptionalString = (value: unknown) => {
     if (typeof value !== 'string') return null;
     const trimmed = value.trim();
@@ -476,6 +562,210 @@ export const getInvoiceById = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// Administrative reconciliation keeps historical invoice statuses intact while restoring a verified relationship.
+export const getReconciliationSuggestions = async (req: AuthRequest, res: Response) => {
+    if (!hasRole(req.user?.role, INVOICE_MANAGER_ROLES)) {
+        return res.status(403).json({ error: 'No tienes permiso para conciliar facturas' });
+    }
+
+    try {
+        const requestedPage = parseInt(String(req.query.page || '1'), 10);
+        const requestedPageSize = parseInt(String(req.query.pageSize || '50'), 10);
+        const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+        const pageSize = Number.isInteger(requestedPageSize) ? Math.min(Math.max(requestedPageSize, 1), 100) : 50;
+        const mode = req.query.mode === 'ambiguous' ? 'ambiguous' : 'suggested';
+        const [reconciliation, invoicesWithoutFile, overdueOpenInvoices] = await Promise.all([
+            getReconciliationMatches(),
+            prisma.invoice.count({ where: { fileUrl: null } }),
+            prisma.invoice.count({
+                where: {
+                    dueDate: { lt: new Date() },
+                    status: { notIn: ['PAID', 'REJECTED'] }
+                }
+            })
+        ]);
+        const selected = mode === 'ambiguous' ? reconciliation.ambiguous : reconciliation.highConfidence;
+        const ordered = selected.sort((a, b) => new Date(b.invoice.issueDate).getTime() - new Date(a.invoice.issueDate).getTime());
+        const skip = (page - 1) * pageSize;
+
+        return res.json({
+            data: ordered.slice(skip, skip + pageSize).map(match => ({
+                invoice: match.invoice,
+                requirement: match.requirement,
+                evidence: match.evidence,
+                confidence: mode === 'suggested' ? 'HIGH' : 'REVIEW'
+            })),
+            total: ordered.length,
+            page,
+            pageSize,
+            totalPages: Math.ceil(ordered.length / pageSize),
+            stats: {
+                unlinkedInvoices: reconciliation.invoices.length,
+                highConfidence: reconciliation.highConfidence.length,
+                ambiguous: reconciliation.ambiguous.length,
+                invoicesWithoutFile,
+                overdueOpenInvoices
+            }
+        });
+    } catch (error) {
+        logger.error('Error generating reconciliation suggestions:', error);
+        return res.status(500).json({ error: 'No se pudieron generar las sugerencias de conciliación' });
+    }
+};
+
+export const searchCompatibleRequirements = async (req: AuthRequest, res: Response) => {
+    if (!hasRole(req.user?.role, INVOICE_MANAGER_ROLES)) {
+        return res.status(403).json({ error: 'No tienes permiso para vincular facturas' });
+    }
+
+    try {
+        const invoice = await prisma.invoice.findUnique({ where: { id: req.params.id } });
+        if (!invoice) return res.status(404).json({ error: 'Factura no encontrada' });
+
+        const search = String(req.query.search || '').trim();
+        const requirements = await prisma.requirement.findMany({
+            where: {
+                status: 'APPROVED',
+                supplierId: invoice.supplierId,
+                ...(search ? {
+                    OR: [
+                        { title: { contains: search, mode: 'insensitive' } },
+                        { id: { contains: search, mode: 'insensitive' } },
+                        { purchaseOrderNumber: { contains: search, mode: 'insensitive' } },
+                        { invoiceNumber: { contains: search, mode: 'insensitive' } }
+                    ]
+                } : {})
+            },
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                actualAmount: true,
+                supplierId: true,
+                purchaseOrderNumber: true,
+                invoiceNumber: true
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 20
+        });
+        return res.json(requirements);
+    } catch (error) {
+        logger.error('Error searching compatible requirements:', error);
+        return res.status(500).json({ error: 'No se pudieron buscar los requerimientos compatibles' });
+    }
+};
+
+const reconcileInvoiceLink = async (invoiceId: string, requirementId: string, actor: AuthRequest['user']) => {
+    const [invoice, requirement] = await Promise.all([
+        prisma.invoice.findUnique({ where: { id: invoiceId } }),
+        prisma.requirement.findUnique({ where: { id: requirementId } })
+    ]);
+
+    if (!invoice) throw new InvoiceRequestError(404, 'Factura no encontrada');
+    if (invoice.requirementId) throw new InvoiceRequestError(409, 'La factura ya está vinculada a un requerimiento');
+    if (!requirement || requirement.status !== 'APPROVED') throw new InvoiceRequestError(400, 'El requerimiento debe existir y estar aprobado');
+    if (!requirement.supplierId || requirement.supplierId !== invoice.supplierId) {
+        throw new InvoiceRequestError(400, 'El proveedor de la factura no coincide con el del requerimiento');
+    }
+    if (Math.abs(Number(invoice.amount) - Number(requirement.actualAmount || 0)) >= 0.01) {
+        throw new InvoiceRequestError(400, 'El valor de la factura no coincide con el valor del requerimiento');
+    }
+    if (!requirement.hasMultiplePayments && await prisma.invoice.count({ where: { requirementId } }) > 0) {
+        throw new InvoiceRequestError(409, 'El requerimiento ya tiene una factura vinculada y no admite pagos múltiples');
+    }
+
+    return prisma.$transaction(async tx => {
+        const updated = await tx.invoice.update({
+            where: { id: invoiceId },
+            data: { requirementId },
+            include: invoiceInclude
+        });
+        await writeInvoiceAuditLog(tx, {
+            invoiceId,
+            action: 'INVOICE_RECONCILED',
+            fromStatus: invoice.status,
+            toStatus: invoice.status,
+            details: `Vínculo histórico conciliado con requerimiento ${requirementId}; estado conservado: ${invoice.status}`,
+            actorId: actor?.id,
+            actorEmail: actor?.email
+        });
+        return updated;
+    });
+};
+
+export const reconcileInvoice = async (req: AuthRequest, res: Response) => {
+    if (!hasRole(req.user?.role, INVOICE_MANAGER_ROLES)) {
+        return res.status(403).json({ error: 'No tienes permiso para conciliar facturas' });
+    }
+
+    try {
+        if (!req.body?.requirementId) return res.status(400).json({ error: 'Selecciona un requerimiento para conciliar' });
+        const invoice = await reconcileInvoiceLink(req.params.id, String(req.body.requirementId), req.user);
+        return res.json(invoice);
+    } catch (error: any) {
+        return res.status(error instanceof InvoiceRequestError ? error.status : 400).json({ error: error.message || 'No se pudo conciliar la factura' });
+    }
+};
+
+export const reconcileInvoicesBatch = async (req: AuthRequest, res: Response) => {
+    if (!hasRole(req.user?.role, INVOICE_MANAGER_ROLES)) {
+        return res.status(403).json({ error: 'No tienes permiso para conciliar facturas' });
+    }
+
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+    if (items.length === 0 || items.length > 100) {
+        return res.status(400).json({ error: 'Selecciona entre 1 y 100 facturas para conciliar' });
+    }
+
+    try {
+        const suggestions = await getReconciliationMatches();
+        const safePairs = new Map(suggestions.highConfidence.map(match => [match.invoice.id, match.requirement.id]));
+        const uniqueInvoiceIds = new Set<string>();
+        items.forEach((item: any) => {
+            if (!item?.invoiceId || !item?.requirementId || uniqueInvoiceIds.has(item.invoiceId) || safePairs.get(item.invoiceId) !== item.requirementId) {
+                throw new InvoiceRequestError(400, 'El lote contiene una sugerencia inválida o desactualizada');
+            }
+            uniqueInvoiceIds.add(item.invoiceId);
+        });
+
+        await prisma.$transaction(async tx => {
+            const [currentInvoices, currentRequirements] = await Promise.all([
+                tx.invoice.findMany({ where: { id: { in: items.map((item: any) => item.invoiceId) } } }),
+                tx.requirement.findMany({ where: { id: { in: items.map((item: any) => item.requirementId) } } })
+            ]);
+            const invoicesById = new Map(currentInvoices.map(invoice => [invoice.id, invoice]));
+            const requirementsById = new Map(currentRequirements.map(requirement => [requirement.id, requirement]));
+
+            for (const item of items) {
+                const invoice = invoicesById.get(item.invoiceId);
+                const requirement = requirementsById.get(item.requirementId);
+                if (!invoice || invoice.requirementId || !requirement || requirement.status !== 'APPROVED'
+                    || requirement.supplierId !== invoice.supplierId
+                    || Math.abs(Number(invoice.amount) - Number(requirement.actualAmount || 0)) >= 0.01) {
+                    throw new InvoiceRequestError(409, 'Una factura o requerimiento cambió; actualiza las sugerencias antes de confirmar');
+                }
+                if (!requirement.hasMultiplePayments && await tx.invoice.count({ where: { requirementId: requirement.id } }) > 0) {
+                    throw new InvoiceRequestError(409, 'Un requerimiento del lote ya tiene una factura vinculada');
+                }
+
+                await tx.invoice.update({ where: { id: invoice.id }, data: { requirementId: requirement.id } });
+                await writeInvoiceAuditLog(tx, {
+                    invoiceId: invoice.id,
+                    action: 'INVOICE_RECONCILED',
+                    fromStatus: invoice.status,
+                    toStatus: invoice.status,
+                    details: `Vínculo histórico conciliado con requerimiento ${requirement.id}; estado conservado: ${invoice.status}`,
+                    actorId: req.user?.id,
+                    actorEmail: req.user?.email
+                });
+            }
+        });
+        return res.json({ success: true, reconciled: items.length });
+    } catch (error: any) {
+        return res.status(error instanceof InvoiceRequestError ? error.status : 400).json({ error: error.message || 'No se pudo conciliar el lote' });
+    }
+};
+
 // Soft duplicate validation for invoice reception
 export const checkDuplicateInvoice = async (req: AuthRequest, res: Response) => {
     const { supplierId, invoiceNumber } = req.query;
@@ -691,6 +981,9 @@ export const updateInvoice = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) return res.status(401).json({ error: 'User not authenticated' });
+    if (!hasRole(userRole, INVOICE_MANAGER_ROLES)) {
+        return res.status(403).json({ error: 'No tienes permiso para editar facturas' });
+    }
 
     try {
         const currentInvoice = await prisma.invoice.findUnique({ where: { id } });
@@ -1160,10 +1453,10 @@ export const importInvoicesFromExcel = async (req: AuthRequest, res: Response) =
         const invoiceRows: any[] = XLSX.utils.sheet_to_json(sheet2, { header: 1 });
 
         const existingInvoices = await prisma.invoice.findMany({ select: { id: true, invoiceNumber: true, supplierId: true, itemNumber: true } });
-        const existingInvMap = new Map<string, string>(); // key -> id
+        const existingInvMap = new Map<string, { id: string }>(); // key -> existing invoice
         for (const inv of existingInvoices) {
-            if (inv.supplierId && inv.invoiceNumber) existingInvMap.set(`${inv.supplierId}-${inv.invoiceNumber.toLowerCase()}`, inv.id);
-            if (inv.itemNumber) existingInvMap.set(`item-${inv.itemNumber}`, inv.id);
+            if (inv.supplierId && inv.invoiceNumber) existingInvMap.set(`${inv.supplierId}-${inv.invoiceNumber.toLowerCase()}`, inv);
+            if (inv.itemNumber) existingInvMap.set(`item-${inv.itemNumber}`, inv);
         }
 
         const invoicesToCreate: any[] = [];
@@ -1246,16 +1539,13 @@ export const importInvoicesFromExcel = async (req: AuthRequest, res: Response) =
                 legalObservations,
                 causationNumber,
                 causationObservations,
-                // Garantía total de aislamiento para no afectar presupuestos ni requerimientos
-                budgetId: null,
-                requirementId: null,
-                commercialAreaId: null
+                // Las relaciones se omiten para conservar las conciliaciones ya confirmadas.
             };
 
-            const existingId = existingInvMap.get(`${supplierId}-${finalNumber.toLowerCase()}`) || existingInvMap.get(`item-${itemNum}`);
-            if (existingId) {
+            const existingInvoice = existingInvMap.get(`${supplierId}-${finalNumber.toLowerCase()}`) || existingInvMap.get(`item-${itemNum}`);
+            if (existingInvoice) {
                 // Actualizar sin frenar el flujo
-                await prisma.invoice.update({ where: { id: existingId }, data: payload }).catch(e => logger.warn(`Skipping inv update ${existingId}`, e));
+                await prisma.invoice.update({ where: { id: existingInvoice.id }, data: payload }).catch(e => logger.warn(`Skipping inv update ${existingInvoice.id}`, e));
                 updatedInvoicesCount++;
             } else {
                 invoicesToCreate.push({

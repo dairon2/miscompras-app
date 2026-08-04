@@ -369,6 +369,7 @@ model Invoice {
   supplier                 Supplier            @relation(fields: [supplierId], references: [id])
 
   @@index([supplierId, invoiceNumber])
+  @@index([requirementId])
   @@index([status])
   @@index([dueDate])
   @@index([paidAt])

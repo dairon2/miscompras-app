@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { invoiceService } from '@/services/invoiceService';
-import { Plus, FileText, Eye, Trash2, Search, RefreshCw, Edit3, X, Check, FileDown, ExternalLink, Calendar, ChevronLeft, ChevronRight, Download, UploadCloud } from 'lucide-react';
+import { Plus, FileText, Eye, Trash2, Search, RefreshCw, Edit3, X, Check, FileDown, ExternalLink, Calendar, ChevronLeft, ChevronRight, Download, UploadCloud, Link as LinkIcon } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
 
 type InvoiceItem = {
@@ -85,6 +85,7 @@ export default function InvoicesPage() {
 
     const { addToast } = useToastStore();
     const canDeleteInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(user?.role || '');
+    const canManageInvoices = canDeleteInvoices;
 
     const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -239,6 +240,15 @@ export default function InvoicesPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                    {canManageInvoices && (
+                        <button
+                            onClick={() => router.push('/invoices/reconciliation')}
+                            className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-all shadow-sm hover:shadow-md font-medium"
+                        >
+                            <LinkIcon className="w-4 h-4" />
+                            Conciliar requerimientos
+                        </button>
+                    )}
                     <input 
                         type="file" 
                         ref={fileInputRef} 
@@ -485,13 +495,15 @@ export default function InvoicesPage() {
                                             {/* ACCIONES */}
                                             <td className="px-3 py-3 text-right sticky right-0 bg-white dark:bg-gray-800 shadow-sm border-l border-gray-100 dark:border-gray-700">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    <button
-                                                        onClick={() => openEditModal(inv)}
-                                                        className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                                        title="Editar campos de mi área"
-                                                    >
-                                                        <Edit3 size={15} />
-                                                    </button>
+                                                    {canManageInvoices && (
+                                                        <button
+                                                            onClick={() => openEditModal(inv)}
+                                                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                            title="Editar factura"
+                                                        >
+                                                            <Edit3 size={15} />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => router.push(`/invoices/${inv.id}`)}
                                                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
