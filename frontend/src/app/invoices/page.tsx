@@ -20,6 +20,12 @@ type InvoiceItem = {
     fileUrl?: string | null;
     supplier?: { name?: string | null; nit?: string | null; taxId?: string | null } | null;
     requirement?: { id: string; groupId?: number | null; title?: string | null } | null;
+    advance?: { id: string; year: number; consecutive: number; amount: number | string; beneficiaryName?: string | null } | null;
+    advanceId?: string | null;
+    advanceAmount?: number | string | null;
+    leaderResponsibleId?: string | null;
+    leaderResponsible?: { id: string; name?: string | null; email: string; role?: string | null } | null;
+    leaderApproval?: boolean | null;
     passToArea?: string | null;
     observations?: string | null;
     purchaseOrderNumber?: string | null;
@@ -29,7 +35,10 @@ type InvoiceItem = {
     legalValidation?: string | null;
     legalObservations?: string | null;
     causationNumber?: string | null;
+    causationDate?: string | null;
     causationObservations?: string | null;
+    policyApproverName?: string | null;
+    policyReviewObservations?: string | null;
 };
 
 type RequirementOption = {
@@ -39,6 +48,18 @@ type RequirementOption = {
     actualAmount?: number | string | null;
     purchaseOrderNumber?: string | null;
 };
+
+type AdvanceOption = {
+    id: string;
+    year: number;
+    consecutive: number;
+    amount: number | string;
+    beneficiaryName?: string | null;
+    beneficiaryDocument?: string | null;
+    status?: string | null;
+};
+
+type UserOption = { id: string; name?: string | null; email: string; role: string };
 
 const AREA_OPTIONS = [
     'ADMINISTRATIVO',
@@ -91,6 +112,9 @@ export default function InvoicesPage() {
     const [editForm, setEditForm] = useState<Partial<InvoiceItem>>({});
     const [editRequirements, setEditRequirements] = useState<RequirementOption[]>([]);
     const [editRequirementSearch, setEditRequirementSearch] = useState('');
+    const [editAdvances, setEditAdvances] = useState<AdvanceOption[]>([]);
+    const [editAdvanceSearch, setEditAdvanceSearch] = useState('');
+    const [users, setUsers] = useState<UserOption[]>([]);
     const [saving, setSaving] = useState(false);
     const [exporting, setExporting] = useState(false);
     const [importing, setImporting] = useState(false);
@@ -175,6 +199,15 @@ export default function InvoicesPage() {
         return () => clearTimeout(timeout);
     }, [token, loadInvoices]);
 
+    useEffect(() => {
+        if (!token) return;
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+        fetch(`${apiUrl}/users?isActive=true`, { headers: { Authorization: `Bearer ${token}` } })
+            .then(response => response.ok ? response.json() : [])
+            .then(setUsers)
+            .catch(console.error);
+    }, [token]);
+
     const handleExportExcel = async () => {
         if (!token) return;
         setExporting(true);
@@ -204,15 +237,23 @@ export default function InvoicesPage() {
             observations: inv.observations || '',
             purchaseOrderNumber: inv.purchaseOrderNumber || '',
             requirementId: inv.requirement?.id || '',
+            advanceId: inv.advance?.id || '',
+            advanceAmount: inv.advanceAmount || inv.advance?.amount || '',
+            leaderResponsibleId: inv.leaderResponsible?.id || '',
+            leaderApproval: inv.leaderApproval,
             costCenterOrProject: inv.costCenterOrProject || '',
             purchaseObservations: inv.purchaseObservations || '',
             commercialValidation: inv.commercialValidation || '',
             legalValidation: inv.legalValidation || '',
             legalObservations: inv.legalObservations || '',
             causationNumber: inv.causationNumber || '',
-            causationObservations: inv.causationObservations || ''
+            causationDate: inv.causationDate ? new Date(inv.causationDate).toISOString().split('T')[0] : '',
+            causationObservations: inv.causationObservations || '',
+            policyApproverName: inv.policyApproverName || '',
+            policyReviewObservations: inv.policyReviewObservations || ''
         });
         setEditRequirementSearch(inv.requirement?.groupId ? String(inv.requirement.groupId) : '');
+        setEditAdvanceSearch(inv.advance ? `${inv.advance.year}-${inv.advance.consecutive}` : '');
     };
 
     useEffect(() => {
@@ -236,6 +277,27 @@ export default function InvoicesPage() {
 
         return () => clearTimeout(timeout);
     }, [token, editingInvoice, editRequirementSearch]);
+
+    useEffect(() => {
+        if (!token || !editingInvoice) {
+            setEditAdvances([]);
+            return;
+        }
+
+        const timeout = setTimeout(async () => {
+            try {
+                const result = await invoiceService.searchInvoiceAdvanceOptions(token, {
+                    supplierId: editingInvoice.supplierId,
+                    search: editAdvanceSearch.trim() || undefined
+                });
+                setEditAdvances(result);
+            } catch (requestError) {
+                console.error(requestError);
+            }
+        }, 250);
+
+        return () => clearTimeout(timeout);
+    }, [token, editingInvoice, editAdvanceSearch]);
 
     const handleSaveEdit = async () => {
         if (!editingInvoice || !token) return;
@@ -703,6 +765,44 @@ export default function InvoicesPage() {
                                         </div>
                                     </div>
                                     <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Número de Anticipo:</label>
+                                        <div className="mt-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                                            <SearchableSelect
+                                                value={editForm.advanceId || ''}
+                                                onChange={(val) => {
+                                                    const selected = editAdvances.find(advance => advance.id === val);
+                                                    setEditForm({
+                                                        ...editForm,
+                                                        advanceId: val,
+                                                        advanceAmount: selected ? String(selected.amount) : ''
+                                                    });
+                                                }}
+                                                onInputChange={(value, meta) => {
+                                                    if (meta.action === 'input-change') setEditAdvanceSearch(value);
+                                                }}
+                                                options={[
+                                                    { value: '', label: 'Sin anticipo vinculado' },
+                                                    ...editAdvances.map(advance => ({
+                                                        value: advance.id,
+                                                        label: `${advance.year}-${advance.consecutive} - ${advance.beneficiaryName || 'Beneficiario'} · $${Number(advance.amount).toLocaleString('es-CO')}`
+                                                    }))
+                                                ]}
+                                                placeholder="Buscar por número o beneficiario..."
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Valor Anticipo:</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={editForm.advanceAmount || ''}
+                                            onChange={e => setEditForm({ ...editForm, advanceAmount: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono"
+                                        />
+                                    </div>
+                                    <div>
                                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Centro de Costos o Proyecto:</label>
                                         <select
                                             value={editForm.costCenterOrProject || ''}
@@ -730,17 +830,44 @@ export default function InvoicesPage() {
                             {/* Sección Comercial */}
                             <div className="border rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-purple-600">3. Sección Comercial</h4>
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Validación Comercial:</label>
-                                    <select
-                                        value={editForm.commercialValidation || ''}
-                                        onChange={e => setEditForm({ ...editForm, commercialValidation: e.target.value })}
-                                        className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
-                                    >
-                                        <option value="">-- Pendiente --</option>
-                                        <option value="APROBADO">APROBADO</option>
-                                        <option value="RECHAZADO">RECHAZADO</option>
-                                    </select>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Validación Comercial:</label>
+                                        <select
+                                            value={editForm.commercialValidation || ''}
+                                            onChange={e => setEditForm({ ...editForm, commercialValidation: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        >
+                                            <option value="">-- Pendiente --</option>
+                                            <option value="APROBADO">APROBADO</option>
+                                            <option value="RECHAZADO">RECHAZADO</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Líder responsable de aprobación:</label>
+                                        <div className="mt-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                                            <SearchableSelect
+                                                value={editForm.leaderResponsibleId || ''}
+                                                onChange={(val) => setEditForm({ ...editForm, leaderResponsibleId: val })}
+                                                options={[
+                                                    { value: '', label: 'Sin líder asignado' },
+                                                    ...users.map(u => ({ value: u.id, label: `${u.name || u.email} · ${u.role}` }))
+                                                ]}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Aprobación del Líder:</label>
+                                        <select
+                                            value={editForm.leaderApproval === true ? 'true' : editForm.leaderApproval === false ? 'false' : ''}
+                                            onChange={e => setEditForm({ ...editForm, leaderApproval: e.target.value === 'true' ? true : e.target.value === 'false' ? false : null })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        >
+                                            <option value="">Pendiente / No aplica</option>
+                                            <option value="true">Aprobada</option>
+                                            <option value="false">No aprobada</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -786,11 +913,38 @@ export default function InvoicesPage() {
                                         />
                                     </div>
                                     <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Fecha de Causación:</label>
+                                        <input
+                                            type="date"
+                                            value={editForm.causationDate || ''}
+                                            onChange={e => setEditForm({ ...editForm, causationDate: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Aprueba Pólizas:</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.policyApproverName || ''}
+                                            onChange={e => setEditForm({ ...editForm, policyApproverName: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        />
+                                    </div>
+                                    <div>
                                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Observaciones desde Contabilidad:</label>
                                         <input
                                             type="text"
                                             value={editForm.causationObservations || ''}
                                             onChange={e => setEditForm({ ...editForm, causationObservations: e.target.value })}
+                                            className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Observaciones de Revisión de Pólizas:</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.policyReviewObservations || ''}
+                                            onChange={e => setEditForm({ ...editForm, policyReviewObservations: e.target.value })}
                                             className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs"
                                         />
                                     </div>

@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from 'express';
-import { getInvoices, getInvoiceById, checkDuplicateInvoice, createInvoice, updateInvoice, verifyInvoice, approveInvoice, payInvoice, deleteInvoice, exportInvoicesExcel, importInvoicesFromExcel, getReconciliationSuggestions, reconcileInvoice, reconcileInvoicesBatch, searchCompatibleRequirements, searchInvoiceRequirementOptions } from '../controllers/invoiceController';
+import { getInvoices, getInvoiceById, checkDuplicateInvoice, createInvoice, updateInvoice, verifyInvoice, approveInvoice, payInvoice, deleteInvoice, exportInvoicesExcel, importInvoicesFromExcel, getReconciliationSuggestions, reconcileInvoice, reconcileInvoicesBatch, searchCompatibleRequirements, searchInvoiceRequirementOptions, searchInvoiceAdvanceOptions } from '../controllers/invoiceController';
 import { authMiddleware } from '../middlewares/auth';
 import multer from 'multer';
 import path from 'path';
@@ -112,6 +112,7 @@ router.get('/reconciliation', authMiddleware, getReconciliationSuggestions);
 router.patch('/reconciliation/batch', authMiddleware, reconcileInvoicesBatch);
 router.patch('/reconciliation/:id', authMiddleware, reconcileInvoice);
 router.get('/requirement-options', authMiddleware, searchInvoiceRequirementOptions);
+router.get('/advance-options', authMiddleware, searchInvoiceAdvanceOptions);
 router.get('/:id/requirement-options', authMiddleware, searchCompatibleRequirements);
 router.get('/:id', authMiddleware, getInvoiceById);
 router.post('/import-excel', authMiddleware, uploadExcel, (req, res) => importInvoicesFromExcel(req, res));

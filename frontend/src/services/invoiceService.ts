@@ -122,6 +122,17 @@ const searchInvoiceRequirementOptions = async (
     return response.data;
 };
 
+const searchInvoiceAdvanceOptions = async (
+    token: string,
+    filters?: { supplierId?: string; search?: string }
+) => {
+    const response = await axios.get(`${API_URL}/invoices/advance-options`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: filters
+    });
+    return response.data;
+};
+
 const reconcileInvoicesBatch = async (token: string, items: Array<{ invoiceId: string; requirementId: string }>) => {
     const response = await axios.patch(`${API_URL}/invoices/reconciliation/batch`, { items }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -144,5 +155,6 @@ export const invoiceService = {
     reconcileInvoice,
     searchCompatibleRequirements,
     searchInvoiceRequirementOptions,
+    searchInvoiceAdvanceOptions,
     reconcileInvoicesBatch
 };

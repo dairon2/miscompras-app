@@ -22,6 +22,16 @@ type RequirementOption = {
     actualAmount?: number | string | null;
     purchaseOrderNumber?: string | null;
 };
+type AdvanceOption = {
+    id: string;
+    year: number;
+    consecutive: number;
+    amount: number | string;
+    beneficiaryName?: string | null;
+    beneficiaryDocument?: string | null;
+    status?: string | null;
+};
+type UserOption = { id: string; name?: string | null; email: string; role: string };
 
 const getRequestErrorMessage = (error: unknown, fallback: string) => {
     if (axios.isAxiosError(error)) return error.response?.data?.error || error.response?.data?.details || fallback;
@@ -38,6 +48,9 @@ export default function NewInvoicePage() {
     const [areas, setAreas] = useState<AreaOption[]>([]);
     const [requirements, setRequirements] = useState<RequirementOption[]>([]);
     const [requirementSearch, setRequirementSearch] = useState('');
+    const [advances, setAdvances] = useState<AdvanceOption[]>([]);
+    const [advanceSearch, setAdvanceSearch] = useState('');
+    const [users, setUsers] = useState<UserOption[]>([]);
     const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
@@ -46,6 +59,9 @@ export default function NewInvoicePage() {
         requirementId: '',
         budgetId: '',
         commercialAreaId: '',
+        advanceId: '',
+        advanceAmount: '',
+        leaderResponsibleId: '',
         amount: '',
         subtotal: '',
         taxAmount: '',
@@ -53,12 +69,6 @@ export default function NewInvoicePage() {
         dueDate: '',
         supplierId: '',
         observations: '',
-        causationNumber: '',
-        causationDate: '',
-        leaderApproval: '',
-        policyApproverName: '',
-        policyReviewObservations: '',
-        causationObservations: '',
         passToArea: '',
         costCenterOrProject: ''
     });
@@ -68,15 +78,17 @@ export default function NewInvoicePage() {
     const loadCatalogs = useCallback(async () => {
         if (!token) return;
         try {
-            const [supplierResult, budgetResult, areaResult] = await Promise.allSettled([
+            const [supplierResult, budgetResult, areaResult, userResult] = await Promise.allSettled([
                 axios.get(`${API_URL}/suppliers`, { headers: { Authorization: `Bearer ${token}` } }),
                 axios.get(`${API_URL}/budgets`, { headers: { Authorization: `Bearer ${token}` } }),
-                axios.get(`${API_URL}/admin/areas`, { headers: { Authorization: `Bearer ${token}` } })
+                axios.get(`${API_URL}/admin/areas`, { headers: { Authorization: `Bearer ${token}` } }),
+                axios.get(`${API_URL}/users`, { headers: { Authorization: `Bearer ${token}` }, params: { isActive: true } })
             ]);
 
             if (supplierResult.status === 'fulfilled') setSuppliers(supplierResult.value.data);
             if (budgetResult.status === 'fulfilled') setBudgets(budgetResult.value.data);
             if (areaResult.status === 'fulfilled') setAreas(areaResult.value.data);
+            if (userResult.status === 'fulfilled') setUsers(userResult.value.data);
         } catch (error) {
             console.error(error);
         }
@@ -102,6 +114,23 @@ export default function NewInvoicePage() {
 
         return () => clearTimeout(timeout);
     }, [token, formData.supplierId, requirementSearch]);
+
+    useEffect(() => {
+        if (!token) return;
+        const timeout = setTimeout(async () => {
+            try {
+                const result = await invoiceService.searchInvoiceAdvanceOptions(token, {
+                    supplierId: formData.supplierId || undefined,
+                    search: advanceSearch.trim() || undefined
+                });
+                setAdvances(result);
+            } catch (error) {
+                console.error('Error loading advances:', error);
+            }
+        }, 250);
+
+        return () => clearTimeout(timeout);
+    }, [token, formData.supplierId, advanceSearch]);
 
     useEffect(() => {
         if (!token || !formData.supplierId || !formData.invoiceNumber.trim()) {
@@ -168,15 +197,12 @@ export default function NewInvoicePage() {
             appendIfPresent(data, 'requirementId', formData.requirementId);
             appendIfPresent(data, 'budgetId', formData.budgetId);
             appendIfPresent(data, 'commercialAreaId', formData.commercialAreaId);
+            appendIfPresent(data, 'advanceId', formData.advanceId);
+            appendIfPresent(data, 'advanceAmount', formData.advanceAmount);
+            appendIfPresent(data, 'leaderResponsibleId', formData.leaderResponsibleId);
             appendIfPresent(data, 'subtotal', formData.subtotal);
             appendIfPresent(data, 'taxAmount', formData.taxAmount);
             appendIfPresent(data, 'observations', formData.observations);
-            appendIfPresent(data, 'causationNumber', formData.causationNumber);
-            appendIfPresent(data, 'causationDate', formData.causationDate);
-            appendIfPresent(data, 'leaderApproval', formData.leaderApproval);
-            appendIfPresent(data, 'policyApproverName', formData.policyApproverName);
-            appendIfPresent(data, 'policyReviewObservations', formData.policyReviewObservations);
-            appendIfPresent(data, 'causationObservations', formData.causationObservations);
             appendIfPresent(data, 'passToArea', formData.passToArea);
             appendIfPresent(data, 'costCenterOrProject', formData.costCenterOrProject);
             attachments.forEach(attachment => data.append('attachments', attachment));
@@ -213,7 +239,7 @@ export default function NewInvoicePage() {
                                 <div className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700/50">
                                     <SearchableSelect
                                         value={formData.supplierId}
-                                        onChange={(val) => setFormData({ ...formData, supplierId: val, requirementId: '' })}
+                                        onChange={(val) => setFormData({ ...formData, supplierId: val, requirementId: '', advanceId: '', advanceAmount: '' })}
                                         options={[
                                             { value: "", label: "Selecciona un proveedor" },
                                             ...suppliers.map(s => ({ value: s.id, label: `${s.name} (${s.nit || s.taxId || 'Sin NIT'})` }))
@@ -329,18 +355,54 @@ export default function NewInvoicePage() {
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Aprobación del Líder</label>
-                                <select
-                                    value={formData.leaderApproval}
-                                    onChange={e => setFormData({ ...formData, leaderApproval: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                >
-                                    <option value="">Pendiente / No aplica</option>
-                                    <option value="true">Aprobada</option>
-                                    <option value="false">No aprobada</option>
-                                </select>
+                            <div className="z-10">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Líder responsable de aprobación</label>
+                                <div className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                                    <SearchableSelect
+                                        value={formData.leaderResponsibleId}
+                                        onChange={(val) => setFormData({ ...formData, leaderResponsibleId: val })}
+                                        options={[
+                                            { value: "", label: "Selecciona un líder responsable" },
+                                            ...users.map(u => ({ value: u.id, label: `${u.name || u.email} · ${u.role}` }))
+                                        ]}
+                                    />
+                                </div>
                             </div>
+                        </div>
+                    </section>
+
+                    <section className="space-y-4">
+                        <h2 className="text-sm font-black uppercase tracking-wider text-gray-400">Anticipo</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="z-10">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Número de Anticipo</label>
+                                <div className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                                    <SearchableSelect
+                                        value={formData.advanceId}
+                                        onChange={(val) => {
+                                            const selected = advances.find(advance => advance.id === val);
+                                            setFormData({
+                                                ...formData,
+                                                advanceId: val,
+                                                advanceAmount: selected ? String(selected.amount) : ''
+                                            });
+                                        }}
+                                        onInputChange={(value, meta) => {
+                                            if (meta.action === 'input-change') setAdvanceSearch(value);
+                                        }}
+                                        options={[
+                                            { value: "", label: "Sin anticipo vinculado" },
+                                            ...advances.map(advance => ({
+                                                value: advance.id,
+                                                label: `${advance.year}-${advance.consecutive} - ${advance.beneficiaryName || 'Beneficiario'} · $${Number(advance.amount).toLocaleString('es-CO')}`
+                                            }))
+                                        ]}
+                                        placeholder="Buscar por número o beneficiario..."
+                                    />
+                                </div>
+                            </div>
+
+                            <MoneyInput label="Valor Anticipo" value={formData.advanceAmount} onChange={(value) => setFormData({ ...formData, advanceAmount: value })} />
                         </div>
                     </section>
 
@@ -350,64 +412,6 @@ export default function NewInvoicePage() {
                             <MoneyInput label="Subtotal" value={formData.subtotal} onChange={(value) => updateFinancialField('subtotal', value)} />
                             <MoneyInput label="IVA" value={formData.taxAmount} onChange={(value) => updateFinancialField('taxAmount', value)} />
                             <MoneyInput label="Total" required value={formData.amount} onChange={(value) => updateFinancialField('amount', value)} />
-                        </div>
-                    </section>
-
-                    <section className="space-y-4">
-                        <h2 className="text-sm font-black uppercase tracking-wider text-gray-400">Causación y pólizas</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Número de Causación</label>
-                                <input
-                                    type="text"
-                                    value={formData.causationNumber}
-                                    onChange={e => setFormData({ ...formData, causationNumber: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                    placeholder="Ejs: CAU-2026-001"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de Causación</label>
-                                <input
-                                    type="date"
-                                    value={formData.causationDate}
-                                    onChange={e => setFormData({ ...formData, causationDate: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Revisar pólizas / Quién aprueba</label>
-                                <input
-                                    type="text"
-                                    value={formData.policyApproverName}
-                                    onChange={e => setFormData({ ...formData, policyApproverName: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                    placeholder="Nombre o cargo responsable"
-                                />
-                            </div>
-
-                            <TextareaField
-                                label="Observaciones"
-                                value={formData.observations}
-                                onChange={(value) => setFormData({ ...formData, observations: value })}
-                                placeholder="Observaciones generales de la factura"
-                            />
-                            <TextareaField
-                                label="Observaciones de Causación"
-                                value={formData.causationObservations}
-                                onChange={(value) => setFormData({ ...formData, causationObservations: value })}
-                                placeholder="Notas contables o de causación"
-                            />
-                            <div className="md:col-span-2">
-                                <TextareaField
-                                    label="Observaciones de Revisión de Pólizas"
-                                    value={formData.policyReviewObservations}
-                                    onChange={(value) => setFormData({ ...formData, policyReviewObservations: value })}
-                                    placeholder="Detalle de validación, pendientes o aprobador definido"
-                                />
-                            </div>
                         </div>
                     </section>
 

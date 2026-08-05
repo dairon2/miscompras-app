@@ -39,6 +39,9 @@ type InvoiceDetail = {
     budget?: { title?: string | null; code?: string | null } | null;
     commercialArea?: { name?: string | null } | null;
     requirement?: { id: string; groupId?: number | null; title?: string | null } | null;
+    advance?: { id: string; year: number; consecutive: number; amount: number | string; beneficiaryName?: string | null } | null;
+    advanceAmount?: number | string | null;
+    leaderResponsible?: { id: string; name?: string | null; email: string; role?: string | null } | null;
     attachments?: InvoiceAttachment[];
     auditLogs?: InvoiceAuditLog[];
 };
@@ -278,6 +281,9 @@ export default function InvoiceDetailPage() {
                                 <InfoBlock label="Causación" value={invoice.causationNumber || '-'} />
                                 <InfoBlock label="Fecha Causación" value={invoice.causationDate ? new Date(invoice.causationDate).toLocaleDateString() : '-'} />
                                 <InfoBlock label="Aprobación Líder" value={leaderApprovalLabel} />
+                                <InfoBlock label="Líder Responsable" value={invoice.leaderResponsible?.name || invoice.leaderResponsible?.email || '-'} />
+                                <InfoBlock label="Anticipo" value={invoice.advance ? `${invoice.advance.year}-${invoice.advance.consecutive}` : '-'} />
+                                <InfoBlock label="Valor Anticipo" value={formatCurrency(invoice.advanceAmount || invoice.advance?.amount)} />
                                 <InfoBlock label="Aprueba Pólizas" value={invoice.policyApproverName || '-'} />
                                 <InfoBlock label="Transacción" value={invoice.transactionNumber || '-'} />
                             </div>

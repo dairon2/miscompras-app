@@ -30,6 +30,17 @@ const invoiceInclude = {
         }
     },
     commercialArea: true,
+    advance: {
+        select: {
+            id: true,
+            year: true,
+            consecutive: true,
+            amount: true,
+            beneficiaryName: true,
+            beneficiaryDocument: true,
+            status: true
+        }
+    },
     attachments: {
         orderBy: { createdAt: 'desc' as const }
     },
@@ -47,6 +58,14 @@ const invoiceInclude = {
             id: true,
             name: true,
             email: true
+        }
+    },
+    leaderResponsible: {
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true
         }
     }
 };
@@ -265,6 +284,47 @@ const validateInvoiceRequirement = async (
     }
 
     return requirement;
+};
+
+const validateInvoiceAdvance = async (advanceId: unknown, supplierId: string) => {
+    const normalizedAdvanceId = normalizeOptionalString(advanceId);
+    if (!normalizedAdvanceId) return null;
+
+    const advance = await prisma.advance.findUnique({
+        where: { id: normalizedAdvanceId },
+        select: {
+            id: true,
+            year: true,
+            consecutive: true,
+            amount: true,
+            supplierId: true,
+            status: true
+        }
+    });
+    if (!advance) throw new InvoiceRequestError(404, 'Anticipo no encontrado');
+    if (advance.status === 'CANCELLED') {
+        throw new InvoiceRequestError(400, 'No se puede vincular una factura a un anticipo anulado');
+    }
+    if (advance.supplierId && advance.supplierId !== supplierId) {
+        throw new InvoiceRequestError(400, 'El proveedor de la factura no coincide con el proveedor del anticipo');
+    }
+
+    return advance;
+};
+
+const validateLeaderResponsible = async (leaderResponsibleId: unknown) => {
+    const normalizedLeaderId = normalizeOptionalString(leaderResponsibleId);
+    if (!normalizedLeaderId) return null;
+
+    const leader = await prisma.user.findUnique({
+        where: { id: normalizedLeaderId },
+        select: { id: true, isActive: true }
+    });
+    if (!leader || !leader.isActive) {
+        throw new InvoiceRequestError(404, 'Líder responsable no encontrado o inactivo');
+    }
+
+    return leader;
 };
 
 const getUploadedFiles = (req: AuthRequest) => {
@@ -756,6 +816,51 @@ export const searchInvoiceRequirementOptions = async (req: AuthRequest, res: Res
     }
 };
 
+export const searchInvoiceAdvanceOptions = async (req: AuthRequest, res: Response) => {
+    if (!hasRole(req.user?.role, INVOICE_MANAGER_ROLES)) {
+        return res.status(403).json({ error: 'No tienes permiso para consultar anticipos' });
+    }
+
+    try {
+        const search = String(req.query.search || '').trim();
+        const supplierId = normalizeOptionalString(req.query.supplierId);
+        const numericSearch = Number(search);
+        const canSearchByNumber = Number.isSafeInteger(numericSearch) && numericSearch > 0;
+
+        const advances = await prisma.advance.findMany({
+            where: {
+                status: { not: 'CANCELLED' },
+                ...(supplierId ? { OR: [{ supplierId }, { supplierId: null }] } : {}),
+                ...(search ? {
+                    OR: [
+                        { beneficiaryName: { contains: search, mode: 'insensitive' } },
+                        { beneficiaryDocument: { contains: search.replace(/[\s,]/g, ''), mode: 'insensitive' } },
+                        { purpose: { contains: search, mode: 'insensitive' } },
+                        ...(canSearchByNumber ? [{ consecutive: numericSearch }, { year: numericSearch }] : [])
+                    ]
+                } : {})
+            },
+            select: {
+                id: true,
+                year: true,
+                consecutive: true,
+                amount: true,
+                beneficiaryName: true,
+                beneficiaryDocument: true,
+                status: true,
+                supplierId: true
+            },
+            orderBy: [{ year: 'desc' }, { consecutive: 'desc' }],
+            take: 50
+        });
+
+        return res.json(advances);
+    } catch (error) {
+        logger.error('Error searching invoice advance options:', error);
+        return res.status(500).json({ error: 'No se pudieron consultar los anticipos' });
+    }
+};
+
 const reconcileInvoiceLink = async (invoiceId: string, requirementId: string, actor: AuthRequest['user']) => {
     const [invoice, requirement] = await Promise.all([
         prisma.invoice.findUnique({ where: { id: invoiceId } }),
@@ -914,17 +1019,14 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
         purchaseOrderNumber,
         budgetId,
         observations,
-        causationNumber,
-        causationDate,
-        leaderApproval,
         subtotal,
         taxAmount,
         commercialAreaId,
-        policyApproverName,
-        policyReviewObservations,
-        causationObservations,
         requirementNumber,
-        requirementId
+        requirementId,
+        advanceId,
+        advanceAmount,
+        leaderResponsibleId
     } = req.body;
     const userId = req.user?.id;
     const { invoicePdf, attachments } = getUploadedFiles(req);
@@ -952,9 +1054,9 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
         const parsedAmount = parsePositiveAmount(amount);
         const parsedSubtotal = parseOptionalAmount(subtotal, 'El subtotal');
         const parsedTaxAmount = parseOptionalAmount(taxAmount, 'El IVA');
+        const parsedAdvanceAmount = parseOptionalAmount(advanceAmount, 'El valor del anticipo');
         const parsedIssueDate = parseRequiredDate(issueDate, 'La fecha de emisión');
         const parsedDueDate = parseOptionalDate(dueDate, 'La fecha de vencimiento');
-        const parsedCausationDate = parseOptionalDate(causationDate, 'La fecha de causación');
 
         if (parsedDueDate && parsedDueDate < parsedIssueDate) {
             throw new Error('La fecha de vencimiento no puede ser anterior a la fecha de emisión');
@@ -982,6 +1084,8 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
         }
 
         const selectedRequirement = await validateInvoiceRequirement(requirementId, supplierId);
+        const selectedAdvance = await validateInvoiceAdvance(advanceId, supplierId);
+        const selectedLeader = await validateLeaderResponsible(leaderResponsibleId);
 
         const duplicateInvoice = await prisma.invoice.findFirst({
             where: {
@@ -1038,15 +1142,12 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
                 purchaseOrderNumber: normalizeOptionalString(purchaseOrderNumber),
                 budgetId: normalizedBudgetId,
                 observations: normalizeOptionalString(observations),
-                causationNumber: normalizeOptionalString(causationNumber),
-                causationDate: parsedCausationDate,
-                leaderApproval: parseOptionalBoolean(leaderApproval),
                 commercialAreaId: normalizedCommercialAreaId,
-                policyApproverName: normalizeOptionalString(policyApproverName),
-                policyReviewObservations: normalizeOptionalString(policyReviewObservations),
-                causationObservations: normalizeOptionalString(causationObservations),
                 requirementId: selectedRequirement?.id || null,
                 requirementNumber: selectedRequirement?.groupId ? String(selectedRequirement.groupId) : normalizeOptionalString(requirementNumber),
+                advanceId: selectedAdvance?.id || null,
+                advanceAmount: parsedAdvanceAmount ?? selectedAdvance?.amount ?? null,
+                leaderResponsibleId: selectedLeader?.id || null,
                 passToArea: normalizeOptionalString(passToArea),
                 costCenterOrProject: normalizeOptionalString(costCenterOrProject),
                 purchaseObservations: normalizeOptionalString(purchaseObservations),
@@ -1112,7 +1213,14 @@ export const updateInvoice = async (req: AuthRequest, res: Response) => {
             legalObservations,
             causationNumber,
             causationObservations,
-            requirementId
+            causationDate,
+            policyApproverName,
+            policyReviewObservations,
+            leaderApproval,
+            requirementId,
+            advanceId,
+            advanceAmount,
+            leaderResponsibleId
         } = req.body;
 
         if (invoiceNumber !== undefined) updateData.invoiceNumber = String(invoiceNumber).trim();
@@ -1133,6 +1241,10 @@ export const updateInvoice = async (req: AuthRequest, res: Response) => {
 
         if (causationNumber !== undefined) updateData.causationNumber = normalizeOptionalString(causationNumber);
         if (causationObservations !== undefined) updateData.causationObservations = normalizeOptionalString(causationObservations);
+        if (causationDate !== undefined) updateData.causationDate = parseOptionalDate(causationDate, 'Fecha de causación');
+        if (policyApproverName !== undefined) updateData.policyApproverName = normalizeOptionalString(policyApproverName);
+        if (policyReviewObservations !== undefined) updateData.policyReviewObservations = normalizeOptionalString(policyReviewObservations);
+        if (leaderApproval !== undefined) updateData.leaderApproval = parseOptionalBoolean(leaderApproval);
         if (requirementId !== undefined) {
             const selectedRequirement = await validateInvoiceRequirement(
                 requirementId,
@@ -1141,6 +1253,18 @@ export const updateInvoice = async (req: AuthRequest, res: Response) => {
             );
             updateData.requirementId = selectedRequirement?.id || null;
             updateData.requirementNumber = selectedRequirement?.groupId ? String(selectedRequirement.groupId) : null;
+        }
+        if (advanceId !== undefined) {
+            const selectedAdvance = await validateInvoiceAdvance(advanceId, updateData.supplierId || currentInvoice.supplierId);
+            updateData.advanceId = selectedAdvance?.id || null;
+            const parsedAdvanceAmount = parseOptionalAmount(advanceAmount, 'El valor del anticipo');
+            updateData.advanceAmount = parsedAdvanceAmount ?? selectedAdvance?.amount ?? null;
+        } else if (advanceAmount !== undefined) {
+            updateData.advanceAmount = parseOptionalAmount(advanceAmount, 'El valor del anticipo');
+        }
+        if (leaderResponsibleId !== undefined) {
+            const selectedLeader = await validateLeaderResponsible(leaderResponsibleId);
+            updateData.leaderResponsibleId = selectedLeader?.id || null;
         }
 
         const updated = await prisma.invoice.update({
