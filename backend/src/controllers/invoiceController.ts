@@ -146,6 +146,7 @@ const getReconciliationMatches = async () => {
             where: { status: 'APPROVED', supplierId: { not: null } },
             select: {
                 id: true,
+                groupId: true,
                 title: true,
                 purchaseOrderNumber: true,
                 invoiceNumber: true,
@@ -623,6 +624,8 @@ export const searchCompatibleRequirements = async (req: AuthRequest, res: Respon
         if (!invoice) return res.status(404).json({ error: 'Factura no encontrada' });
 
         const search = String(req.query.search || '').trim();
+        const groupId = Number(search);
+        const canSearchByGroupId = Number.isSafeInteger(groupId) && groupId > 0;
         const requirements = await prisma.requirement.findMany({
             where: {
                 status: 'APPROVED',
@@ -630,6 +633,7 @@ export const searchCompatibleRequirements = async (req: AuthRequest, res: Respon
                 ...(search ? {
                     OR: [
                         { title: { contains: search, mode: 'insensitive' } },
+                        ...(canSearchByGroupId ? [{ groupId }] : []),
                         { id: { contains: search, mode: 'insensitive' } },
                         { purchaseOrderNumber: { contains: search, mode: 'insensitive' } },
                         { invoiceNumber: { contains: search, mode: 'insensitive' } }
@@ -638,6 +642,7 @@ export const searchCompatibleRequirements = async (req: AuthRequest, res: Respon
             },
             select: {
                 id: true,
+                groupId: true,
                 title: true,
                 status: true,
                 actualAmount: true,
@@ -685,7 +690,7 @@ const reconcileInvoiceLink = async (invoiceId: string, requirementId: string, ac
             action: 'INVOICE_RECONCILED',
             fromStatus: invoice.status,
             toStatus: invoice.status,
-            details: `Vínculo histórico conciliado con requerimiento ${requirementId}; estado conservado: ${invoice.status}`,
+            details: `Vínculo histórico conciliado con requerimiento${requirement.groupId ? ` #${requirement.groupId}` : ''}; estado conservado: ${invoice.status}`,
             actorId: actor?.id,
             actorEmail: actor?.email
         });
@@ -754,7 +759,7 @@ export const reconcileInvoicesBatch = async (req: AuthRequest, res: Response) =>
                     action: 'INVOICE_RECONCILED',
                     fromStatus: invoice.status,
                     toStatus: invoice.status,
-                    details: `Vínculo histórico conciliado con requerimiento ${requirement.id}; estado conservado: ${invoice.status}`,
+                    details: `Vínculo histórico conciliado con requerimiento${requirement.groupId ? ` #${requirement.groupId}` : ''}; estado conservado: ${invoice.status}`,
                     actorId: req.user?.id,
                     actorEmail: req.user?.email
                 });
@@ -1104,7 +1109,7 @@ export const verifyInvoice = async (req: AuthRequest, res: Response) => {
                 action: 'INVOICE_VERIFIED',
                 fromStatus: 'RECEIVED',
                 toStatus: 'VERIFIED',
-                details: `Factura vinculada al requerimiento ${requirementId}`,
+                details: `Factura vinculada al requerimiento${requirement.groupId ? ` #${requirement.groupId}` : ''}`,
                 actorId: req.user?.id,
                 actorEmail: req.user?.email
             });

@@ -13,7 +13,7 @@ import { translateStatus } from '@/lib/translations';
 
 type InvoiceAttachment = { id: string; fileName: string; fileUrl: string };
 type InvoiceAuditLog = { id: string; action: string; details?: string | null; actorEmail?: string | null; createdAt: string };
-type RequirementOption = { id: string; title: string; status: string; actualAmount?: number | string | null; supplierId?: string | null };
+type RequirementOption = { id: string; groupId?: number | null; title: string; status: string; actualAmount?: number | string | null; supplierId?: string | null };
 type InvoiceDetail = {
     id: string;
     invoiceNumber: string;
@@ -38,9 +38,16 @@ type InvoiceDetail = {
     supplier?: { name?: string | null } | null;
     budget?: { title?: string | null; code?: string | null } | null;
     commercialArea?: { name?: string | null } | null;
-    requirement?: { id: string; title?: string | null } | null;
+    requirement?: { id: string; groupId?: number | null; title?: string | null } | null;
     attachments?: InvoiceAttachment[];
     auditLogs?: InvoiceAuditLog[];
+};
+
+const formatRequirementReference = (groupId?: number | null, storedNumber?: string | null) => {
+    const value = groupId ?? storedNumber;
+    if (value === null || value === undefined || String(value).trim() === '') return null;
+    const text = String(value).trim();
+    return text.startsWith('#') ? text : `#${text}`;
 };
 
 const getRequestErrorMessage = (error: unknown, fallback: string) => {
@@ -177,9 +184,15 @@ export default function InvoiceDetailPage() {
     const canPayInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(userRole);
     const formatCurrency = (value: number | string | null | undefined) => value !== null && value !== undefined ? `$${Number(value).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
     const leaderApprovalLabel = invoice.leaderApproval === true ? 'Aprobada' : invoice.leaderApproval === false ? 'No aprobada' : 'Pendiente / No aplica';
+    const requirementReference = formatRequirementReference(invoice.requirement?.groupId, invoice.requirementNumber);
+    const getAuditDetails = (log: InvoiceAuditLog) => {
+        if (!log.details || !invoice.requirement?.id || !requirementReference || !['INVOICE_RECONCILED', 'INVOICE_VERIFIED'].includes(log.action)) return log.details;
+        return log.details.replaceAll(invoice.requirement.id, requirementReference);
+    };
     const auditActionLabel = (action: string) => ({
         INVOICE_CREATED: 'Factura recepcionada',
         INVOICE_VERIFIED: 'Factura vinculada',
+        INVOICE_RECONCILED: 'Vínculo conciliado',
         INVOICE_APPROVED: 'Pago autorizado',
         INVOICE_PAID: 'Pago registrado',
         INVOICE_DELETED: 'Factura eliminada'
@@ -258,7 +271,7 @@ export default function InvoiceDetailPage() {
                                 <InfoBlock label="Subtotal" value={formatCurrency(invoice.subtotal)} />
                                 <InfoBlock label="IVA" value={formatCurrency(invoice.taxAmount)} />
                                 <InfoBlock label="Orden de Compra" value={invoice.purchaseOrderNumber || '-'} />
-                                <InfoBlock label="Requerimiento" value={invoice.requirementNumber || invoice.requirement?.id || '-'} />
+                                <InfoBlock label="Requerimiento" value={requirementReference || (invoice.requirement ? 'Vinculado' : '-')} />
                                 <InfoBlock label="Vencimiento" value={invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '-'} />
                                 <InfoBlock label="Presupuesto" value={invoice.budget?.title || invoice.budget?.code || '-'} />
                                 <InfoBlock label="Área Comercial" value={invoice.commercialArea?.name || '-'} />
@@ -306,7 +319,7 @@ export default function InvoiceDetailPage() {
                                                 <span className="absolute -left-[23px] top-0.5 h-2.5 w-2.5 rounded-full bg-blue-500 ring-4 ring-white dark:ring-gray-800" />
                                                 <p className="font-semibold text-gray-800 dark:text-gray-200">{auditActionLabel(log.action)}</p>
                                                 <p className="text-gray-500">{new Date(log.createdAt).toLocaleString()} {log.actorEmail ? `· ${log.actorEmail}` : ''}</p>
-                                                {log.details && <p className="mt-1 text-gray-600 dark:text-gray-400">{log.details}</p>}
+                                                {getAuditDetails(log) && <p className="mt-1 text-gray-600 dark:text-gray-400">{getAuditDetails(log)}</p>}
                                             </div>
                                         ))}
                                     </div>
@@ -341,11 +354,10 @@ export default function InvoiceDetailPage() {
                                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
                                 <p className="font-bold text-green-800 dark:text-green-400">Vinculación confirmada</p>
                                 <div className="mt-4 p-4 bg-white dark:bg-gray-800 mx-4 rounded-lg shadow-sm text-left border dark:border-gray-700">
-                                    <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Requerimiento</p>
+                                    <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Requerimiento {requirementReference || 'vinculado'}</p>
                                     <p className="font-bold text-sm text-blue-600 hover:underline cursor-pointer" onClick={() => router.push(`/requirements/${invoice.requirement?.id}`)}>
-                                        {invoice.requirement.title || invoice.requirement.id}
+                                        {invoice.requirement.title || `Abrir requerimiento ${requirementReference || ''}`}
                                     </p>
-                                    <p className="text-[10px] text-gray-400 mt-1">ID: {invoice.requirement.id}</p>
                                 </div>
                             </div>
                         ) : invoice.status === 'RECEIVED' ? (
@@ -355,7 +367,7 @@ export default function InvoiceDetailPage() {
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
-                                        placeholder="ID o Título..."
+                                        placeholder="Número, OC o título..."
                                         className="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
@@ -376,7 +388,7 @@ export default function InvoiceDetailPage() {
                                                 onClick={() => setSelectedReq(req)}
                                                 className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedReq?.id === req.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                                             >
-                                                <p className="font-bold text-sm">{req.title}</p>
+                                                <p className="font-bold text-sm">Requerimiento {formatRequirementReference(req.groupId) || 'sin número'} · {req.title}</p>
                                                 <div className="flex justify-between text-xs mt-1">
                                                     <span className={req.status === 'APPROVED' ? 'text-green-600' : 'text-amber-600'}>{translateStatus(req.status)}</span>
                                                     <span className="font-mono font-bold">${Number(req.actualAmount || 0).toLocaleString()}</span>

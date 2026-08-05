@@ -165,7 +165,7 @@ describe('Invoice Controller', () => {
             req.body = { requirementId: 'req-1' };
 
             (prisma.invoice.findUnique as jest.Mock).mockResolvedValue({ id: 'inv-1', status: 'RECEIVED', supplierId: 'sup-1' });
-            (prisma.requirement.findUnique as jest.Mock).mockResolvedValue({ id: 'req-1', status: 'APPROVED', supplierId: 'sup-1' });
+            (prisma.requirement.findUnique as jest.Mock).mockResolvedValue({ id: 'req-1', groupId: 456, status: 'APPROVED', supplierId: 'sup-1' });
             (prisma.invoice.update as jest.Mock).mockResolvedValue({ id: 'inv-1', status: 'VERIFIED', requirementId: 'req-1' });
 
             await verifyInvoice(req as Request, res as Response);
@@ -175,7 +175,7 @@ describe('Invoice Controller', () => {
                 data: expect.objectContaining({ requirementId: 'req-1', status: 'VERIFIED', verifiedById: 'user-1' })
             });
             expect(prisma.invoiceAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
-                data: expect.objectContaining({ action: 'INVOICE_VERIFIED', invoiceId: 'inv-1' })
+                data: expect.objectContaining({ action: 'INVOICE_VERIFIED', invoiceId: 'inv-1', details: 'Factura vinculada al requerimiento #456' })
             }));
             expect(json).toHaveBeenCalled();
         });
@@ -203,7 +203,7 @@ describe('Invoice Controller', () => {
                 id: 'inv-1', status: 'PAID', supplierId: 'sup-1', amount: 1000, requirementId: null
             });
             (prisma.requirement.findUnique as jest.Mock).mockResolvedValue({
-                id: 'req-1', status: 'APPROVED', supplierId: 'sup-1', actualAmount: 1000, hasMultiplePayments: false
+                id: 'req-1', groupId: 789, status: 'APPROVED', supplierId: 'sup-1', actualAmount: 1000, hasMultiplePayments: false
             });
             (prisma.invoice.count as jest.Mock).mockResolvedValue(0);
             (prisma.invoice.update as jest.Mock).mockResolvedValue({ id: 'inv-1', status: 'PAID', requirementId: 'req-1' });
@@ -215,7 +215,7 @@ describe('Invoice Controller', () => {
                 data: { requirementId: 'req-1' }
             }));
             expect(prisma.invoiceAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
-                data: expect.objectContaining({ action: 'INVOICE_RECONCILED', fromStatus: 'PAID', toStatus: 'PAID' })
+                data: expect.objectContaining({ action: 'INVOICE_RECONCILED', fromStatus: 'PAID', toStatus: 'PAID', details: 'Vínculo histórico conciliado con requerimiento #789; estado conservado: PAID' })
             }));
             expect(json).toHaveBeenCalledWith(expect.objectContaining({ status: 'PAID', requirementId: 'req-1' }));
         });

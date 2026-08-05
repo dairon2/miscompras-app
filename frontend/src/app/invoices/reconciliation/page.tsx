@@ -18,6 +18,7 @@ type ReconciliationItem = {
     };
     requirement: {
         id: string;
+        groupId?: number | null;
         title: string;
         actualAmount?: number | string | null;
         purchaseOrderNumber?: string | null;
@@ -178,6 +179,7 @@ export default function ReconciliationPage() {
                                             <p className="text-xs font-mono mt-1">{formatCurrency(item.invoice.amount)} · {item.invoice.status}</p>
                                         </td>
                                         <td className="p-4 align-top">
+                                            <p className="text-xs font-bold text-violet-700 dark:text-violet-300">Requerimiento {item.requirement.groupId ? `#${item.requirement.groupId}` : 'sin número'}</p>
                                             <button onClick={() => router.push(`/requirements/${item.requirement.id}`)} className="font-semibold text-blue-600 hover:underline text-left">{item.requirement.title}</button>
                                             <p className="text-xs text-gray-500 mt-1">OC: {item.requirement.purchaseOrderNumber || 'Sin OC'} · {formatCurrency(item.requirement.actualAmount)}</p>
                                         </td>
