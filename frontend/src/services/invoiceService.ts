@@ -111,6 +111,17 @@ const searchCompatibleRequirements = async (token: string, invoiceId: string, se
     return response.data;
 };
 
+const searchInvoiceRequirementOptions = async (
+    token: string,
+    filters?: { supplierId?: string; search?: string; currentInvoiceId?: string }
+) => {
+    const response = await axios.get(`${API_URL}/invoices/requirement-options`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: filters
+    });
+    return response.data;
+};
+
 const reconcileInvoicesBatch = async (token: string, items: Array<{ invoiceId: string; requirementId: string }>) => {
     const response = await axios.patch(`${API_URL}/invoices/reconciliation/batch`, { items }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -132,5 +143,6 @@ export const invoiceService = {
     getReconciliationSuggestions,
     reconcileInvoice,
     searchCompatibleRequirements,
+    searchInvoiceRequirementOptions,
     reconcileInvoicesBatch
 };

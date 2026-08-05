@@ -209,6 +209,64 @@ const normalizeOptionalString = (value: unknown) => {
     return trimmed || null;
 };
 
+const buildRequirementSearchFilter = (search: string) => {
+    if (!search) return {};
+    const groupId = Number(search);
+    const canSearchByGroupId = Number.isSafeInteger(groupId) && groupId > 0;
+
+    return {
+        OR: [
+            { title: { contains: search, mode: 'insensitive' as const } },
+            ...(canSearchByGroupId ? [{ groupId }] : []),
+            { id: { contains: search, mode: 'insensitive' as const } },
+            { purchaseOrderNumber: { contains: search, mode: 'insensitive' as const } },
+            { invoiceNumber: { contains: search, mode: 'insensitive' as const } }
+        ]
+    };
+};
+
+const validateInvoiceRequirement = async (
+    requirementId: unknown,
+    supplierId: string,
+    currentInvoiceId?: string
+) => {
+    const normalizedRequirementId = normalizeOptionalString(requirementId);
+    if (!normalizedRequirementId) return null;
+
+    const requirement = await prisma.requirement.findUnique({
+        where: { id: normalizedRequirementId },
+        select: {
+            id: true,
+            groupId: true,
+            status: true,
+            supplierId: true,
+            hasMultiplePayments: true
+        }
+    });
+    if (!requirement) throw new InvoiceRequestError(404, 'Requerimiento no encontrado');
+    if (requirement.status !== 'APPROVED') {
+        throw new InvoiceRequestError(400, 'El requerimiento debe estar aprobado para vincular una factura');
+    }
+    if (requirement.supplierId && requirement.supplierId !== supplierId) {
+        throw new InvoiceRequestError(400, 'El proveedor de la factura no coincide con el proveedor del requerimiento');
+    }
+
+    if (!requirement.hasMultiplePayments) {
+        const existingLinkedInvoice = await prisma.invoice.findFirst({
+            where: {
+                requirementId: requirement.id,
+                ...(currentInvoiceId ? { id: { not: currentInvoiceId } } : {})
+            },
+            select: { id: true }
+        });
+        if (existingLinkedInvoice) {
+            throw new InvoiceRequestError(409, 'El requerimiento ya tiene una factura vinculada y no admite pagos múltiples');
+        }
+    }
+
+    return requirement;
+};
+
 const getUploadedFiles = (req: AuthRequest) => {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
     return {
@@ -624,21 +682,11 @@ export const searchCompatibleRequirements = async (req: AuthRequest, res: Respon
         if (!invoice) return res.status(404).json({ error: 'Factura no encontrada' });
 
         const search = String(req.query.search || '').trim();
-        const groupId = Number(search);
-        const canSearchByGroupId = Number.isSafeInteger(groupId) && groupId > 0;
         const requirements = await prisma.requirement.findMany({
             where: {
                 status: 'APPROVED',
                 supplierId: invoice.supplierId,
-                ...(search ? {
-                    OR: [
-                        { title: { contains: search, mode: 'insensitive' } },
-                        ...(canSearchByGroupId ? [{ groupId }] : []),
-                        { id: { contains: search, mode: 'insensitive' } },
-                        { purchaseOrderNumber: { contains: search, mode: 'insensitive' } },
-                        { invoiceNumber: { contains: search, mode: 'insensitive' } }
-                    ]
-                } : {})
+                ...buildRequirementSearchFilter(search)
             },
             select: {
                 id: true,
@@ -657,6 +705,54 @@ export const searchCompatibleRequirements = async (req: AuthRequest, res: Respon
     } catch (error) {
         logger.error('Error searching compatible requirements:', error);
         return res.status(500).json({ error: 'No se pudieron buscar los requerimientos compatibles' });
+    }
+};
+
+export const searchInvoiceRequirementOptions = async (req: AuthRequest, res: Response) => {
+    if (!hasRole(req.user?.role, INVOICE_MANAGER_ROLES)) {
+        return res.status(403).json({ error: 'No tienes permiso para consultar requerimientos' });
+    }
+
+    try {
+        const search = String(req.query.search || '').trim();
+        const supplierId = normalizeOptionalString(req.query.supplierId);
+        const currentInvoiceId = normalizeOptionalString(req.query.currentInvoiceId);
+
+        const [requirements, linkedInvoices] = await Promise.all([
+            prisma.requirement.findMany({
+                where: {
+                    status: 'APPROVED',
+                    ...(supplierId ? { OR: [{ supplierId }, { supplierId: null }] } : {}),
+                    ...buildRequirementSearchFilter(search)
+                },
+                select: {
+                    id: true,
+                    groupId: true,
+                    title: true,
+                    status: true,
+                    actualAmount: true,
+                    supplierId: true,
+                    hasMultiplePayments: true,
+                    purchaseOrderNumber: true,
+                    invoiceNumber: true
+                },
+                orderBy: [{ groupId: 'desc' }, { createdAt: 'desc' }],
+                take: 50
+            }),
+            prisma.invoice.findMany({
+                where: {
+                    requirementId: { not: null },
+                    ...(currentInvoiceId ? { id: { not: currentInvoiceId } } : {})
+                },
+                select: { requirementId: true }
+            })
+        ]);
+
+        const linkedRequirementIds = new Set(linkedInvoices.flatMap(invoice => invoice.requirementId ? [invoice.requirementId] : []));
+        return res.json(requirements.filter(requirement => requirement.hasMultiplePayments || !linkedRequirementIds.has(requirement.id)));
+    } catch (error) {
+        logger.error('Error searching invoice requirement options:', error);
+        return res.status(500).json({ error: 'No se pudieron consultar los requerimientos' });
     }
 };
 
@@ -827,7 +923,8 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
         policyApproverName,
         policyReviewObservations,
         causationObservations,
-        requirementNumber
+        requirementNumber,
+        requirementId
     } = req.body;
     const userId = req.user?.id;
     const { invoicePdf, attachments } = getUploadedFiles(req);
@@ -883,6 +980,8 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
             const area = await prisma.area.findUnique({ where: { id: normalizedCommercialAreaId } });
             if (!area) throw new InvoiceRequestError(404, 'Área comercial no encontrada');
         }
+
+        const selectedRequirement = await validateInvoiceRequirement(requirementId, supplierId);
 
         const duplicateInvoice = await prisma.invoice.findFirst({
             where: {
@@ -946,7 +1045,8 @@ export const createInvoice = async (req: AuthRequest, res: Response) => {
                 policyApproverName: normalizeOptionalString(policyApproverName),
                 policyReviewObservations: normalizeOptionalString(policyReviewObservations),
                 causationObservations: normalizeOptionalString(causationObservations),
-                requirementNumber: normalizeOptionalString(requirementNumber),
+                requirementId: selectedRequirement?.id || null,
+                requirementNumber: selectedRequirement?.groupId ? String(selectedRequirement.groupId) : normalizeOptionalString(requirementNumber),
                 passToArea: normalizeOptionalString(passToArea),
                 costCenterOrProject: normalizeOptionalString(costCenterOrProject),
                 purchaseObservations: normalizeOptionalString(purchaseObservations),
@@ -1011,7 +1111,8 @@ export const updateInvoice = async (req: AuthRequest, res: Response) => {
             legalValidation,
             legalObservations,
             causationNumber,
-            causationObservations
+            causationObservations,
+            requirementId
         } = req.body;
 
         if (invoiceNumber !== undefined) updateData.invoiceNumber = String(invoiceNumber).trim();
@@ -1032,6 +1133,15 @@ export const updateInvoice = async (req: AuthRequest, res: Response) => {
 
         if (causationNumber !== undefined) updateData.causationNumber = normalizeOptionalString(causationNumber);
         if (causationObservations !== undefined) updateData.causationObservations = normalizeOptionalString(causationObservations);
+        if (requirementId !== undefined) {
+            const selectedRequirement = await validateInvoiceRequirement(
+                requirementId,
+                updateData.supplierId || currentInvoice.supplierId,
+                id
+            );
+            updateData.requirementId = selectedRequirement?.id || null;
+            updateData.requirementNumber = selectedRequirement?.groupId ? String(selectedRequirement.groupId) : null;
+        }
 
         const updated = await prisma.invoice.update({
             where: { id },

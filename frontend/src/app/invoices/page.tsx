@@ -6,17 +6,20 @@ import { useAuthStore } from '@/store/authStore';
 import { invoiceService } from '@/services/invoiceService';
 import { Plus, FileText, Eye, Trash2, Search, RefreshCw, Edit3, X, Check, FileDown, ExternalLink, Calendar, ChevronLeft, ChevronRight, Download, UploadCloud, Link as LinkIcon } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
+import SearchableSelect from '@/components/SearchableSelect';
 
 type InvoiceItem = {
     id: string;
     itemNumber?: number | null;
     invoiceNumber: string;
+    supplierId: string;
+    requirementId?: string | null;
     amount: number | string;
     issueDate: string;
     status: string;
     fileUrl?: string | null;
     supplier?: { name?: string | null; nit?: string | null; taxId?: string | null } | null;
-    requirement?: { id: string; title?: string | null } | null;
+    requirement?: { id: string; groupId?: number | null; title?: string | null } | null;
     passToArea?: string | null;
     observations?: string | null;
     purchaseOrderNumber?: string | null;
@@ -27,6 +30,14 @@ type InvoiceItem = {
     legalObservations?: string | null;
     causationNumber?: string | null;
     causationObservations?: string | null;
+};
+
+type RequirementOption = {
+    id: string;
+    groupId?: number | null;
+    title?: string | null;
+    actualAmount?: number | string | null;
+    purchaseOrderNumber?: string | null;
 };
 
 const AREA_OPTIONS = [
@@ -78,6 +89,8 @@ export default function InvoicesPage() {
     const [error, setError] = useState<string | null>(null);
     const [editingInvoice, setEditingInvoice] = useState<InvoiceItem | null>(null);
     const [editForm, setEditForm] = useState<Partial<InvoiceItem>>({});
+    const [editRequirements, setEditRequirements] = useState<RequirementOption[]>([]);
+    const [editRequirementSearch, setEditRequirementSearch] = useState('');
     const [saving, setSaving] = useState(false);
     const [exporting, setExporting] = useState(false);
     const [importing, setImporting] = useState(false);
@@ -190,6 +203,7 @@ export default function InvoicesPage() {
             passToArea: inv.passToArea || '',
             observations: inv.observations || '',
             purchaseOrderNumber: inv.purchaseOrderNumber || '',
+            requirementId: inv.requirement?.id || '',
             costCenterOrProject: inv.costCenterOrProject || '',
             purchaseObservations: inv.purchaseObservations || '',
             commercialValidation: inv.commercialValidation || '',
@@ -198,7 +212,30 @@ export default function InvoicesPage() {
             causationNumber: inv.causationNumber || '',
             causationObservations: inv.causationObservations || ''
         });
+        setEditRequirementSearch(inv.requirement?.groupId ? String(inv.requirement.groupId) : '');
     };
+
+    useEffect(() => {
+        if (!token || !editingInvoice) {
+            setEditRequirements([]);
+            return;
+        }
+
+        const timeout = setTimeout(async () => {
+            try {
+                const result = await invoiceService.searchInvoiceRequirementOptions(token, {
+                    supplierId: editingInvoice.supplierId,
+                    search: editRequirementSearch.trim() || undefined,
+                    currentInvoiceId: editingInvoice.id
+                });
+                setEditRequirements(result);
+            } catch (requestError) {
+                console.error(requestError);
+            }
+        }, 250);
+
+        return () => clearTimeout(timeout);
+    }, [token, editingInvoice, editRequirementSearch]);
 
     const handleSaveEdit = async () => {
         if (!editingInvoice || !token) return;
@@ -644,6 +681,26 @@ export default function InvoicesPage() {
                                             onChange={e => setEditForm({ ...editForm, purchaseOrderNumber: e.target.value })}
                                             className="w-full mt-1 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono"
                                         />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Requerimiento:</label>
+                                        <div className="mt-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                                            <SearchableSelect
+                                                value={editForm.requirementId || ''}
+                                                onChange={(val) => setEditForm({ ...editForm, requirementId: val })}
+                                                onInputChange={(value, meta) => {
+                                                    if (meta.action === 'input-change') setEditRequirementSearch(value);
+                                                }}
+                                                options={[
+                                                    { value: '', label: 'Sin requerimiento vinculado' },
+                                                    ...editRequirements.map(req => ({
+                                                        value: req.id,
+                                                        label: `${req.groupId ? `#${req.groupId}` : 'Sin número'} - ${req.title || 'Requerimiento'}${req.purchaseOrderNumber ? ` · OC ${req.purchaseOrderNumber}` : ''}`
+                                                    }))
+                                                ]}
+                                                placeholder="Buscar por número, OC o título..."
+                                            />
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Centro de Costos o Proyecto:</label>

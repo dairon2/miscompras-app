@@ -15,6 +15,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 type SupplierOption = { id: string; name: string; nit?: string | null; taxId?: string | null };
 type BudgetOption = { id: string; title?: string | null; description?: string | null; code?: string | null; category?: { name?: string | null } | null };
 type AreaOption = { id: string; name: string };
+type RequirementOption = {
+    id: string;
+    groupId?: number | null;
+    title?: string | null;
+    actualAmount?: number | string | null;
+    purchaseOrderNumber?: string | null;
+};
 
 const getRequestErrorMessage = (error: unknown, fallback: string) => {
     if (axios.isAxiosError(error)) return error.response?.data?.error || error.response?.data?.details || fallback;
@@ -29,12 +36,14 @@ export default function NewInvoicePage() {
     const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
     const [budgets, setBudgets] = useState<BudgetOption[]>([]);
     const [areas, setAreas] = useState<AreaOption[]>([]);
+    const [requirements, setRequirements] = useState<RequirementOption[]>([]);
+    const [requirementSearch, setRequirementSearch] = useState('');
     const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         invoiceNumber: '',
         purchaseOrderNumber: '',
-        requirementNumber: '',
+        requirementId: '',
         budgetId: '',
         commercialAreaId: '',
         amount: '',
@@ -76,6 +85,23 @@ export default function NewInvoicePage() {
     useEffect(() => {
         loadCatalogs();
     }, [loadCatalogs]);
+
+    useEffect(() => {
+        if (!token) return;
+        const timeout = setTimeout(async () => {
+            try {
+                const result = await invoiceService.searchInvoiceRequirementOptions(token, {
+                    supplierId: formData.supplierId || undefined,
+                    search: requirementSearch.trim() || undefined
+                });
+                setRequirements(result);
+            } catch (error) {
+                console.error('Error loading requirements:', error);
+            }
+        }, 250);
+
+        return () => clearTimeout(timeout);
+    }, [token, formData.supplierId, requirementSearch]);
 
     useEffect(() => {
         if (!token || !formData.supplierId || !formData.invoiceNumber.trim()) {
@@ -139,7 +165,7 @@ export default function NewInvoicePage() {
 
             appendIfPresent(data, 'dueDate', formData.dueDate);
             appendIfPresent(data, 'purchaseOrderNumber', formData.purchaseOrderNumber);
-            appendIfPresent(data, 'requirementNumber', formData.requirementNumber);
+            appendIfPresent(data, 'requirementId', formData.requirementId);
             appendIfPresent(data, 'budgetId', formData.budgetId);
             appendIfPresent(data, 'commercialAreaId', formData.commercialAreaId);
             appendIfPresent(data, 'subtotal', formData.subtotal);
@@ -187,7 +213,7 @@ export default function NewInvoicePage() {
                                 <div className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700/50">
                                     <SearchableSelect
                                         value={formData.supplierId}
-                                        onChange={(val) => setFormData({ ...formData, supplierId: val })}
+                                        onChange={(val) => setFormData({ ...formData, supplierId: val, requirementId: '' })}
                                         options={[
                                             { value: "", label: "Selecciona un proveedor" },
                                             ...suppliers.map(s => ({ value: s.id, label: `${s.name} (${s.nit || s.taxId || 'Sin NIT'})` }))
@@ -212,17 +238,6 @@ export default function NewInvoicePage() {
                                         <span>{duplicateWarning} Revisa antes de continuar.</span>
                                     </div>
                                 )}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Número de Requerimiento</label>
-                                <input
-                                    type="text"
-                                    value={formData.requirementNumber}
-                                    onChange={e => setFormData({ ...formData, requirementNumber: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                    placeholder="Ejs: REQ-2026-001"
-                                />
                             </div>
 
                             <div>
@@ -260,6 +275,27 @@ export default function NewInvoicePage() {
                                     className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                     placeholder="Ejs: OC-2026-001"
                                 />
+                            </div>
+
+                            <div className="z-20">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Requerimiento</label>
+                                <div className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                                    <SearchableSelect
+                                        value={formData.requirementId}
+                                        onChange={(val) => setFormData({ ...formData, requirementId: val })}
+                                        onInputChange={(value, meta) => {
+                                            if (meta.action === 'input-change') setRequirementSearch(value);
+                                        }}
+                                        options={[
+                                            { value: "", label: "Sin requerimiento vinculado" },
+                                            ...requirements.map(req => ({
+                                                value: req.id,
+                                                label: `${req.groupId ? `#${req.groupId}` : 'Sin número'} - ${req.title || 'Requerimiento'}${req.purchaseOrderNumber ? ` · OC ${req.purchaseOrderNumber}` : ''}`
+                                            }))
+                                        ]}
+                                        placeholder="Buscar por número, OC o título..."
+                                    />
+                                </div>
                             </div>
 
                             <div className="z-10">
