@@ -157,7 +157,7 @@ export default function RootLayout({
           {!isAuthPage && (
             <header className="glass fixed top-0 left-0 right-0 z-50 border-b border-gray-100 dark:border-white/5 px-8 py-4">
               <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-                <Link href="/" className="flex items-center gap-4 group">
+                <Link href={user?.role === 'INVOICE_VALIDATOR' ? '/invoices' : '/'} className="flex items-center gap-4 group">
                   <div className="relative w-10 h-10 overflow-hidden rounded-xl shadow-lg ring-1 ring-black/5 bg-white dark:bg-slate-800">
                     <Image
                       src="/images/logo-museo.png"
@@ -173,10 +173,14 @@ export default function RootLayout({
                 </Link>
 
                 <nav className="hidden lg:flex items-center gap-10 text-[11px] font-black uppercase tracking-widest text-gray-400">
-                  <NavItem href="/" icon={<LayoutDashboard size={14} />} label="Inicio" active={pathname === "/"} />
-                  <NavItem icon={<FileText size={14} />} label="Requerimientos" href="/requirements" active={pathname === "/requirements" || pathname.startsWith("/requirements/")} />
-                  <NavItem icon={<Building2 size={14} />} label="Presupuesto" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
-                  <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers" || pathname.startsWith("/suppliers/")} />
+                  {user?.role !== 'INVOICE_VALIDATOR' && (
+                    <>
+                      <NavItem href="/" icon={<LayoutDashboard size={14} />} label="Inicio" active={pathname === "/"} />
+                      <NavItem icon={<FileText size={14} />} label="Requerimientos" href="/requirements" active={pathname === "/requirements" || pathname.startsWith("/requirements/")} />
+                      <NavItem icon={<Building2 size={14} />} label="Presupuesto" href="/budget" active={pathname === "/budget" || pathname.startsWith("/budget")} />
+                      <NavItem icon={<Users size={14} />} label="Proveedores" href="/suppliers" active={pathname === "/suppliers" || pathname.startsWith("/suppliers/")} />
+                    </>
+                  )}
                   {mounted && ['DIRECTOR', 'COORDINATOR'].includes(user?.role || '') && (
                     <NavItem
                       icon={<CheckCircle size={14} />}
@@ -462,13 +466,15 @@ function MobileNavbar({ pathname, userRole }: { pathname: string, userRole: stri
   // Aprobaciones only visible to DIRECTOR and COORDINATOR
   const canApprove = ['DIRECTOR', 'COORDINATOR'].includes(userRole);
 
-  const navItems = [
-    { href: "/", icon: <LayoutDashboard size={20} />, label: "Inicio" },
-    { href: "/requirements", icon: <FileText size={20} />, label: "Reqs" },
-    { href: "/budget", icon: <Building2 size={20} />, label: "Presu" },
-    { href: "/suppliers", icon: <Package size={20} />, label: "Prov" },
-    ...(canApprove ? [{ href: "/approvals", icon: <CheckCircle size={20} />, label: "Aprobar" }] : []),
-  ];
+  const navItems = userRole === 'INVOICE_VALIDATOR'
+    ? [{ href: "/invoices", icon: <FileText size={20} />, label: "Facturas" }]
+    : [
+        { href: "/", icon: <LayoutDashboard size={20} />, label: "Inicio" },
+        { href: "/requirements", icon: <FileText size={20} />, label: "Reqs" },
+        { href: "/budget", icon: <Building2 size={20} />, label: "Presu" },
+        { href: "/suppliers", icon: <Package size={20} />, label: "Prov" },
+        ...(canApprove ? [{ href: "/approvals", icon: <CheckCircle size={20} />, label: "Aprobar" }] : []),
+      ];
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-4 py-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-white/5 flex items-center justify-around pb-safe">

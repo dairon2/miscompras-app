@@ -150,6 +150,7 @@ export const translateRole = (role: string): string => {
         'USER': 'Usuario',
         'AUDITOR': 'Auditor',
         'DEVELOPER': 'Desarrollador',
+        'INVOICE_VALIDATOR': 'Validador de Facturas',
     };
 
     return roleMap[role] || role;

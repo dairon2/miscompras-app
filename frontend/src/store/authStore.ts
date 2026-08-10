@@ -7,6 +7,7 @@ export interface User {
     name?: string;
     role: string;
     areaId?: string;
+    invoiceValidationScope?: 'COMMERCIAL' | 'LEGAL' | 'ACCOUNTING' | null;
     isAreaDirector?: boolean;
     directedAreas?: Array<{ id: string; name: string }>;
     mustChangePassword?: boolean;

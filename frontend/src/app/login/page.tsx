@@ -132,7 +132,7 @@ export default function LoginPage() {
 
             setAuth(user, token);
             addToast(`¡Bienvenido, ${user.name || user.email}!`, "success");
-            router.push("/");
+            router.push(user.role === 'INVOICE_VALIDATOR' ? '/invoices' : '/');
         } catch (err: unknown) {
             const errorMessage = getLoginErrorMessage(err);
             setError(errorMessage);

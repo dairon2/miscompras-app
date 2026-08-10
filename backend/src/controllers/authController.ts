@@ -119,7 +119,7 @@ export const login = async (req: Request, res: Response) => {
         // Create access token
         const tokenExpiry = rememberMe ? '30d' : '8h';
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role, areaId: user.areaId },
+            { id: user.id, email: user.email, role: user.role, areaId: user.areaId, invoiceValidationScope: user.invoiceValidationScope },
             getJwtSecret(),
             { expiresIn: tokenExpiry }
         );
@@ -155,6 +155,7 @@ export const login = async (req: Request, res: Response) => {
                 role: user.role,
                 name: user.name,
                 areaId: user.areaId,
+                invoiceValidationScope: user.invoiceValidationScope,
                 area: (user as any).area,
                 isAreaDirector: (user as any).areasDirected?.length > 0,
                 directedAreas: (user as any).areasDirected || [],
@@ -283,7 +284,7 @@ export const refreshToken = async (req: Request, res: Response) => {
 
         // Create new access token
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role, areaId: user.areaId },
+            { id: user.id, email: user.email, role: user.role, areaId: user.areaId, invoiceValidationScope: user.invoiceValidationScope },
             getJwtSecret(),
             { expiresIn: '8h' }
         );
@@ -296,6 +297,7 @@ export const refreshToken = async (req: Request, res: Response) => {
                 role: user.role,
                 name: user.name,
                 areaId: user.areaId,
+                invoiceValidationScope: user.invoiceValidationScope,
                 area: (user as any).area
             }
         });
@@ -315,7 +317,8 @@ export const getUsers = async (req: Request, res: Response) => {
                 email: true,
                 name: true,
                 role: true,
-                areaId: true
+                areaId: true,
+                invoiceValidationScope: true
             }
         });
         res.json(users);

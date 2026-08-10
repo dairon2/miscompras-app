@@ -150,6 +150,7 @@ export default function ProfilePage() {
             'LEADER': 'Líder / Aux. Compras',
             'AUDITOR': 'Auditor',
             'DEVELOPER': 'Desarrollador',
+            'INVOICE_VALIDATOR': 'Validador de Facturas',
             'USER': 'Usuario'
         };
         return labels[role] || role;

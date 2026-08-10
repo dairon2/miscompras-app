@@ -3,7 +3,7 @@
  */
 
 import { Request, Response } from 'express';
-import { createInvoice, getInvoices, getInvoiceById, verifyInvoice, approveInvoice, payInvoice, reconcileInvoice } from '../../controllers/invoiceController';
+import { createInvoice, getInvoices, getInvoiceById, updateInvoice, verifyInvoice, approveInvoice, payInvoice, reconcileInvoice } from '../../controllers/invoiceController';
 import { prisma } from '../../index';
 
 // Mock Prisma
@@ -33,6 +33,9 @@ jest.mock('../../index', () => ({
         },
         invoiceAuditLog: {
             create: jest.fn()
+        },
+        user: {
+            findUnique: jest.fn()
         },
         $transaction: jest.fn()
     }
@@ -191,6 +194,76 @@ describe('Invoice Controller', () => {
 
             expect(status).toHaveBeenCalledWith(400);
             expect(json).toHaveBeenCalledWith(expect.objectContaining({ error: 'El requerimiento debe estar aprobado para vincular una factura' }));
+        });
+    });
+
+    describe('updateInvoice for invoice validators', () => {
+        beforeEach(() => {
+            (req as any).user = {
+                id: 'validator-1',
+                role: 'INVOICE_VALIDATOR',
+                email: 'juridica@example.com',
+                invoiceValidationScope: 'LEGAL'
+            };
+            req.params = { id: 'inv-1' };
+            (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+                role: 'INVOICE_VALIDATOR',
+                invoiceValidationScope: 'LEGAL',
+                isActive: true
+            });
+        });
+
+        it('allows updating only the legal section of an invoice assigned to Legal', async () => {
+            req.body = { legalValidation: 'APROBADO', legalObservations: 'Documentación completa' };
+            (prisma.invoice.findUnique as jest.Mock).mockResolvedValue({
+                id: 'inv-1',
+                passToArea: 'JURÍDICA',
+                supplierId: 'sup-1'
+            });
+            (prisma.invoice.update as jest.Mock).mockResolvedValue({
+                id: 'inv-1',
+                legalValidation: 'APROBADO',
+                legalObservations: 'Documentación completa'
+            });
+
+            await updateInvoice(req as Request, res as Response);
+
+            expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+                where: { id: 'inv-1' },
+                data: {
+                    legalValidation: 'APROBADO',
+                    legalObservations: 'Documentación completa'
+                }
+            }));
+            expect(json).toHaveBeenCalledWith(expect.objectContaining({ legalValidation: 'APROBADO' }));
+        });
+
+        it('rejects attempts to modify fields outside the legal section', async () => {
+            req.body = { legalValidation: 'APROBADO', amount: 5000 };
+            (prisma.invoice.findUnique as jest.Mock).mockResolvedValue({
+                id: 'inv-1',
+                passToArea: 'JURÍDICA',
+                supplierId: 'sup-1'
+            });
+
+            await updateInvoice(req as Request, res as Response);
+
+            expect(status).toHaveBeenCalledWith(403);
+            expect(prisma.invoice.update).not.toHaveBeenCalled();
+        });
+
+        it('rejects editing an invoice assigned to another area', async () => {
+            req.body = { legalValidation: 'APROBADO' };
+            (prisma.invoice.findUnique as jest.Mock).mockResolvedValue({
+                id: 'inv-1',
+                passToArea: 'COMERCIAL',
+                supplierId: 'sup-1'
+            });
+
+            await updateInvoice(req as Request, res as Response);
+
+            expect(status).toHaveBeenCalledWith(403);
+            expect(prisma.invoice.update).not.toHaveBeenCalled();
         });
     });
 

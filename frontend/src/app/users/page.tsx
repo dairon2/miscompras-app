@@ -22,6 +22,13 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useFilterStore } from "@/store/filterStore";
 import SearchableSelect from "@/components/SearchableSelect";
+import { translateRole } from "@/lib/translations";
+
+const validationScopeLabels: Record<string, string> = {
+    COMMERCIAL: 'Comercial',
+    LEGAL: 'Jurídica',
+    ACCOUNTING: 'Administración y Contabilidad'
+};
 
 export default function UsersPage() {
     const router = useRouter();
@@ -123,6 +130,7 @@ export default function UsersPage() {
             'COORDINATOR': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
             'AUDITOR': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
             'DEVELOPER': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+            'INVOICE_VALIDATOR': 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
             'USER': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
         };
         return colors[role] || colors['USER'];
@@ -195,6 +203,7 @@ export default function UsersPage() {
                                 { value: 'COORDINATOR', label: 'Coordinador' },
                                 { value: 'AUDITOR', label: 'Auditor' },
                                 { value: 'DEVELOPER', label: 'Desarrollador' },
+                                { value: 'INVOICE_VALIDATOR', label: 'Validador de Facturas' },
                                 { value: 'USER', label: 'Usuario' }
                             ]}
                             placeholder="Todos los roles"
@@ -281,8 +290,13 @@ export default function UsersPage() {
                                         </td>
                                         <td className="px-6 py-5">
                                             <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${getRoleBadge(u.role)}`}>
-                                                {u.role}
+                                                {translateRole(u.role)}
                                             </span>
+                                            {u.role === 'INVOICE_VALIDATOR' && u.invoiceValidationScope && (
+                                                <p className="mt-2 text-[10px] font-semibold text-gray-500">
+                                                    {validationScopeLabels[u.invoiceValidationScope]}
+                                                </p>
+                                            )}
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-2">

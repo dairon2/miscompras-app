@@ -12,6 +12,13 @@ const INVOICE_MANAGER_ROLES = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'];
 const INVOICE_APPROVER_ROLES = ['ADMIN', 'DIRECTOR', 'LEADER', 'DEVELOPER', 'COORDINATOR'];
 const INVOICE_PAYMENT_ROLES = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'];
 const INVOICE_STATUSES = ['RECEIVED', 'VERIFIED', 'APPROVED', 'PAID', 'REJECTED'];
+const INVOICE_VALIDATOR_ROLE = 'INVOICE_VALIDATOR';
+
+const VALIDATOR_FIELDS: Record<string, string[]> = {
+    COMMERCIAL: ['commercialValidation'],
+    LEGAL: ['legalValidation', 'legalObservations'],
+    ACCOUNTING: ['causationNumber', 'causationDate', 'causationObservations', 'policyApproverName', 'policyReviewObservations']
+};
 
 class InvoiceRequestError extends Error {
     constructor(public status: number, message: string) {
@@ -72,12 +79,42 @@ const invoiceInclude = {
 
 const hasRole = (role: string | undefined, roles: string[]) => roles.includes(role || '');
 
+const normalizeAreaName = (value?: string | null) => (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+
+const invoiceMatchesValidationScope = (passToArea?: string | null, scope?: string | null) => {
+    const area = normalizeAreaName(passToArea);
+    if (scope === 'COMMERCIAL') return area.includes('COMERCIAL');
+    if (scope === 'LEGAL') return area.includes('JURIDIC');
+    if (scope === 'ACCOUNTING') return area.includes('CONTABIL') || area.includes('ADMINISTR');
+    return false;
+};
+
+const validationScopeFilter = (scope?: string | null): any => {
+    if (scope === 'COMMERCIAL') return { passToArea: { contains: 'COMERCIAL', mode: 'insensitive' } };
+    if (scope === 'LEGAL') return { passToArea: { contains: 'JUR', mode: 'insensitive' } };
+    if (scope === 'ACCOUNTING') return {
+        OR: [
+            { passToArea: { contains: 'CONTABIL', mode: 'insensitive' } },
+            { passToArea: { contains: 'ADMINISTR', mode: 'insensitive' } }
+        ]
+    };
+    return { id: '__invoice_validator_without_scope__' };
+};
+
 const canViewInvoice = (
-    invoice: { createdById: string; requirement?: { createdById: string } | null },
+    invoice: { createdById: string; passToArea?: string | null; requirement?: { createdById: string } | null },
     userRole?: string,
-    userId?: string
+    userId?: string,
+    validationScope?: string | null
 ) => {
     if (hasRole(userRole, GLOBAL_INVOICE_VIEWER_ROLES)) return true;
+    if (userRole === INVOICE_VALIDATOR_ROLE) {
+        return invoiceMatchesValidationScope(invoice.passToArea, validationScope);
+    }
     return Boolean(userId && (invoice.createdById === userId || invoice.requirement?.createdById === userId));
 };
 
@@ -381,22 +418,35 @@ const notifyPassToAreaUsers = async (invoice: any, passToArea: string, actorId: 
         if (!passToArea || !passToArea.trim()) return;
         const areaUpper = passToArea.toUpperCase();
         let targetRoles: string[] = [];
+        let targetValidationScope: 'COMMERCIAL' | 'LEGAL' | 'ACCOUNTING' | null = null;
 
         if (areaUpper.includes('COMPRA')) {
             targetRoles = ['COORDINATOR', 'ADMIN', 'DEVELOPER'];
         } else if (areaUpper.includes('JURIDIC') || areaUpper.includes('JURÍDIC')) {
             targetRoles = ['AUDITOR', 'ADMIN', 'DEVELOPER'];
+            targetValidationScope = 'LEGAL';
         } else if (areaUpper.includes('CONTAB')) {
             targetRoles = ['COORDINATOR', 'ADMIN', 'DEVELOPER'];
+            targetValidationScope = 'ACCOUNTING';
         } else if (areaUpper.includes('COMER')) {
             targetRoles = ['LEADER', 'DIRECTOR', 'ADMIN', 'DEVELOPER'];
+            targetValidationScope = 'COMMERCIAL';
+        } else if (areaUpper.includes('ADMINISTR')) {
+            targetRoles = ['COORDINATOR', 'ADMIN', 'DEVELOPER'];
+            targetValidationScope = 'ACCOUNTING';
         } else {
             targetRoles = ['ADMIN', 'DEVELOPER', 'COORDINATOR'];
         }
 
         const usersToNotify = await prisma.user.findMany({
             where: {
-                role: { in: targetRoles as any },
+                OR: [
+                    { role: { in: targetRoles as any } },
+                    ...(targetValidationScope ? [{
+                        role: INVOICE_VALIDATOR_ROLE as any,
+                        invoiceValidationScope: targetValidationScope
+                    }] : [])
+                ],
                 isActive: true,
                 id: { not: actorId }
             },
@@ -425,6 +475,7 @@ export const exportInvoicesExcel = async (req: AuthRequest, res: Response) => {
     const { status, supplierId, search, startDate, endDate } = req.query;
     const userRole = req.user?.role;
     const userId = req.user?.id;
+    const validationScope = req.user?.invoiceValidationScope;
 
     try {
         if (!userId) return res.status(401).json({ error: 'User not authenticated' });
@@ -471,7 +522,9 @@ export const exportInvoicesExcel = async (req: AuthRequest, res: Response) => {
         }
 
         const isGlobalViewer = hasRole(userRole, GLOBAL_INVOICE_VIEWER_ROLES);
-        if (!isGlobalViewer) {
+        if (userRole === INVOICE_VALIDATOR_ROLE) {
+            filters.push(validationScopeFilter(validationScope));
+        } else if (!isGlobalViewer) {
             filters.push({ OR: [
                 { createdById: userId },
                 { requirement: { createdById: userId } }
@@ -556,6 +609,7 @@ export const getInvoices = async (req: AuthRequest, res: Response) => {
     const { status, supplierId, search, startDate, endDate, page, limit, paginate } = req.query;
     const userRole = req.user?.role;
     const userId = req.user?.id;
+    const validationScope = req.user?.invoiceValidationScope;
 
     try {
         if (!userId) return res.status(401).json({ error: 'User not authenticated' });
@@ -605,7 +659,9 @@ export const getInvoices = async (req: AuthRequest, res: Response) => {
         // Role-based visibility
         const isGlobalViewer = hasRole(userRole, GLOBAL_INVOICE_VIEWER_ROLES);
 
-        if (!isGlobalViewer) {
+        if (userRole === INVOICE_VALIDATOR_ROLE) {
+            filters.push(validationScopeFilter(validationScope));
+        } else if (!isGlobalViewer) {
             filters.push({ OR: [
                 { createdById: userId },
                 { requirement: { createdById: userId } }
@@ -659,6 +715,7 @@ export const getInvoiceById = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const userRole = req.user?.role;
     const userId = req.user?.id;
+    const validationScope = req.user?.invoiceValidationScope;
 
     try {
         const invoice = await prisma.invoice.findUnique({
@@ -670,7 +727,7 @@ export const getInvoiceById = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Factura no encontrada' });
         }
 
-        if (!canViewInvoice(invoice, userRole, userId)) {
+        if (!canViewInvoice(invoice, userRole, userId, validationScope)) {
             return res.status(403).json({ error: 'No tienes permiso para ver esta factura' });
         }
 
@@ -1187,7 +1244,9 @@ export const updateInvoice = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id;
 
     if (!userId) return res.status(401).json({ error: 'User not authenticated' });
-    if (!hasRole(userRole, INVOICE_MANAGER_ROLES)) {
+    const isFullManager = hasRole(userRole, INVOICE_MANAGER_ROLES);
+    const isInvoiceValidator = userRole === INVOICE_VALIDATOR_ROLE;
+    if (!isFullManager && !isInvoiceValidator) {
         return res.status(403).json({ error: 'No tienes permiso para editar facturas' });
     }
 
@@ -1195,6 +1254,27 @@ export const updateInvoice = async (req: AuthRequest, res: Response) => {
         const currentInvoice = await prisma.invoice.findUnique({ where: { id } });
         if (!currentInvoice) {
             return res.status(404).json({ error: 'Factura no encontrada' });
+        }
+
+        let validationScope = req.user?.invoiceValidationScope;
+        if (isInvoiceValidator) {
+            const currentUser = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { role: true, invoiceValidationScope: true, isActive: true }
+            });
+            if (!currentUser?.isActive || currentUser.role !== INVOICE_VALIDATOR_ROLE) {
+                return res.status(403).json({ error: 'Tu asignación para validar facturas no está activa' });
+            }
+            validationScope = currentUser.invoiceValidationScope;
+            if (!invoiceMatchesValidationScope(currentInvoice.passToArea, validationScope)) {
+                return res.status(403).json({ error: 'Esta factura no está asignada a tu área de validación' });
+            }
+
+            const allowedFields = VALIDATOR_FIELDS[validationScope || ''] || [];
+            const unauthorizedFields = Object.keys(req.body).filter(field => !allowedFields.includes(field));
+            if (unauthorizedFields.length > 0) {
+                return res.status(403).json({ error: 'Solo puedes modificar los campos de tu área de validación' });
+            }
         }
 
         const updateData: any = {};
@@ -1276,7 +1356,9 @@ export const updateInvoice = async (req: AuthRequest, res: Response) => {
         await writeInvoiceAuditLog(prisma, {
             invoiceId: id,
             action: 'INVOICE_UPDATED',
-            details: `Factura actualizada por usuario (${userRole || 'USER'})`,
+            details: isInvoiceValidator
+                ? `Validación de factura actualizada en el área ${validationScope}`
+                : `Factura actualizada por usuario (${userRole || 'USER'})`,
             actorId: userId,
             actorEmail: req.user?.email
         });

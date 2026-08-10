@@ -7,6 +7,13 @@ import { uploadBufferToBlobStorage } from '../services/blobStorageService';
 
 const USER_LIST_ROLES = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'];
 const USER_DETAIL_ROLES = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'];
+const INVOICE_VALIDATION_SCOPES = ['COMMERCIAL', 'LEGAL', 'ACCOUNTING'];
+
+const validateInvoiceValidatorAssignment = (role?: string, scope?: string | null) => {
+    if (role === 'INVOICE_VALIDATOR' && !INVOICE_VALIDATION_SCOPES.includes(scope || '')) {
+        throw new Error('Selecciona el área de validación de facturas para este usuario');
+    }
+};
 
 // Get all users with filters
 export const getUsers = async (req: AuthRequest, res: Response) => {
@@ -34,6 +41,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
                 email: true,
                 name: true,
                 role: true,
+                invoiceValidationScope: true,
                 areaId: true,
                 area: { select: { id: true, name: true } },
                 isActive: true,
@@ -69,6 +77,7 @@ export const getUserById = async (req: AuthRequest, res: Response) => {
                 email: true,
                 name: true,
                 role: true,
+                invoiceValidationScope: true,
                 areaId: true,
                 area: { select: { id: true, name: true } },
                 isActive: true,
@@ -92,13 +101,14 @@ export const getUserById = async (req: AuthRequest, res: Response) => {
 
 // Create new user (ADMIN only)
 export const createUser = async (req: AuthRequest, res: Response) => {
-    const { email, password, name, role, areaId, phone, position } = req.body;
+    const { email, password, name, role, areaId, phone, position, invoiceValidationScope } = req.body;
 
     if (!email || !password || !name) {
         return res.status(400).json({ error: 'Email, contraseña y nombre son requeridos' });
     }
 
     try {
+        validateInvoiceValidatorAssignment(role || 'USER', invoiceValidationScope);
         // Check if email already exists
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
@@ -114,6 +124,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
                 password: hashedPassword,
                 name,
                 role: role || 'USER',
+                invoiceValidationScope: role === 'INVOICE_VALIDATOR' ? invoiceValidationScope : null,
                 areaId,
                 phone,
                 position,
@@ -124,6 +135,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
                 email: true,
                 name: true,
                 role: true,
+                invoiceValidationScope: true,
                 areaId: true,
                 isActive: true
             }
@@ -132,20 +144,30 @@ export const createUser = async (req: AuthRequest, res: Response) => {
         res.status(201).json(user);
     } catch (error: any) {
         console.error('Error creating user:', error);
-        res.status(500).json({ error: 'Error al crear el usuario', details: error.message });
+        const isAssignmentError = error.message?.includes('área de validación');
+        res.status(isAssignmentError ? 400 : 500).json({
+            error: isAssignmentError ? error.message : 'Error al crear el usuario',
+            details: error.message
+        });
     }
 };
 
 // Update user (ADMIN only)
 export const updateUser = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { email, name, role, areaId, phone, position, password } = req.body;
+    const { email, name, role, areaId, phone, position, password, invoiceValidationScope } = req.body;
 
     try {
         const existingUser = await prisma.user.findUnique({ where: { id } });
         if (!existingUser) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
+
+        const resultingRole = role || existingUser.role;
+        const resultingScope = invoiceValidationScope !== undefined
+            ? invoiceValidationScope
+            : existingUser.invoiceValidationScope;
+        validateInvoiceValidatorAssignment(resultingRole, resultingScope);
 
         // If email is changing, check it's not already taken
         if (email && email !== existingUser.email) {
@@ -159,6 +181,7 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
             ...(email && { email }),
             ...(name && { name }),
             ...(role && { role }),
+            invoiceValidationScope: resultingRole === 'INVOICE_VALIDATOR' ? resultingScope : null,
             ...(areaId !== undefined && { areaId }),
             ...(phone !== undefined && { phone }),
             ...(position !== undefined && { position })
@@ -177,6 +200,7 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
                 email: true,
                 name: true,
                 role: true,
+                invoiceValidationScope: true,
                 areaId: true,
                 area: { select: { id: true, name: true } },
                 isActive: true,
@@ -188,7 +212,10 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
         res.json(user);
     } catch (error: any) {
         console.error('Error updating user:', error);
-        res.status(500).json({ error: 'Error al actualizar el usuario' });
+        const isAssignmentError = error.message?.includes('área de validación');
+        res.status(isAssignmentError ? 400 : 500).json({
+            error: isAssignmentError ? error.message : 'Error al actualizar el usuario'
+        });
     }
 };
 
@@ -306,6 +333,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
                 email: true,
                 name: true,
                 role: true,
+                invoiceValidationScope: true,
                 areaId: true,
                 phone: true,
                 position: true

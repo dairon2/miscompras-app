@@ -34,6 +34,7 @@ export default function NewUserPage() {
         email: '',
         password: '',
         role: 'USER',
+        invoiceValidationScope: '',
         areaId: '',
         phone: '',
         position: ''
@@ -84,6 +85,11 @@ export default function NewUserPage() {
 
         if (form.password.length < 8) {
             alert('La contraseña debe tener al menos 8 caracteres');
+            return;
+        }
+
+        if (form.role === 'INVOICE_VALIDATOR' && !form.invoiceValidationScope) {
+            alert('Selecciona el área que validará este usuario');
             return;
         }
 
@@ -227,11 +233,30 @@ export default function NewUserPage() {
                                         { value: 'DIRECTOR', label: 'Director' },
                                         { value: 'ADMIN', label: 'Administrador / Auxiliar de Compra' },
                                         { value: 'AUDITOR', label: 'Auditor' },
-                                        { value: 'DEVELOPER', label: 'Desarrollador' }
+                                        { value: 'DEVELOPER', label: 'Desarrollador' },
+                                        { value: 'INVOICE_VALIDATOR', label: 'Validador de Facturas' }
                                     ]}
                                     placeholder="Seleccionar rol"
                                 />
                             </div>
+
+                            {form.role === 'INVOICE_VALIDATOR' && (
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-gray-600">Área de validación de facturas *</label>
+                                    <SearchableSelect
+                                        value={form.invoiceValidationScope}
+                                        onChange={(val) => setForm({ ...form, invoiceValidationScope: val })}
+                                        className="w-full"
+                                        options={[
+                                            { value: 'COMMERCIAL', label: 'Comercial' },
+                                            { value: 'LEGAL', label: 'Jurídica' },
+                                            { value: 'ACCOUNTING', label: 'Administración y Contabilidad' }
+                                        ]}
+                                        placeholder="Seleccionar responsabilidad"
+                                    />
+                                    <p className="text-[11px] text-gray-500">Solo podrá editar la sección seleccionada cuando la factura llegue a esa área.</p>
+                                </div>
+                            )}
 
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-gray-600">Área</label>

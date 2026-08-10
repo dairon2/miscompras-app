@@ -123,6 +123,9 @@ export default function InvoicesPage() {
     const { addToast } = useToastStore();
     const canDeleteInvoices = ['ADMIN', 'DIRECTOR', 'DEVELOPER', 'COORDINATOR'].includes(user?.role || '');
     const canManageInvoices = canDeleteInvoices;
+    const isInvoiceValidator = user?.role === 'INVOICE_VALIDATOR';
+    const validationScope = user?.invoiceValidationScope || null;
+    const canEditInvoices = canManageInvoices || isInvoiceValidator;
 
     const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -200,13 +203,13 @@ export default function InvoicesPage() {
     }, [token, loadInvoices]);
 
     useEffect(() => {
-        if (!token) return;
+        if (!token || !canManageInvoices) return;
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
         fetch(`${apiUrl}/users?isActive=true`, { headers: { Authorization: `Bearer ${token}` } })
             .then(response => response.ok ? response.json() : [])
             .then(setUsers)
             .catch(console.error);
-    }, [token]);
+    }, [token, canManageInvoices]);
 
     const handleExportExcel = async () => {
         if (!token) return;
@@ -257,7 +260,7 @@ export default function InvoicesPage() {
     };
 
     useEffect(() => {
-        if (!token || !editingInvoice) {
+        if (!token || !editingInvoice || !canManageInvoices) {
             setEditRequirements([]);
             return;
         }
@@ -276,10 +279,10 @@ export default function InvoicesPage() {
         }, 250);
 
         return () => clearTimeout(timeout);
-    }, [token, editingInvoice, editRequirementSearch]);
+    }, [token, editingInvoice, editRequirementSearch, canManageInvoices]);
 
     useEffect(() => {
-        if (!token || !editingInvoice) {
+        if (!token || !editingInvoice || !canManageInvoices) {
             setEditAdvances([]);
             return;
         }
@@ -297,13 +300,24 @@ export default function InvoicesPage() {
         }, 250);
 
         return () => clearTimeout(timeout);
-    }, [token, editingInvoice, editAdvanceSearch]);
+    }, [token, editingInvoice, editAdvanceSearch, canManageInvoices]);
 
     const handleSaveEdit = async () => {
         if (!editingInvoice || !token) return;
         setSaving(true);
         try {
-            await invoiceService.updateInvoice(token, editingInvoice.id, editForm);
+            let payload = editForm;
+            if (isInvoiceValidator) {
+                const fieldsByScope: Record<string, Array<keyof InvoiceItem>> = {
+                    COMMERCIAL: ['commercialValidation'],
+                    LEGAL: ['legalValidation', 'legalObservations'],
+                    ACCOUNTING: ['causationNumber', 'causationDate', 'causationObservations', 'policyApproverName', 'policyReviewObservations']
+                };
+                payload = Object.fromEntries(
+                    (fieldsByScope[validationScope || ''] || []).map(field => [field, editForm[field]])
+                );
+            }
+            await invoiceService.updateInvoice(token, editingInvoice.id, payload);
             addToast('Factura actualizada correctamente', 'success');
             setEditingInvoice(null);
             loadInvoices();
@@ -375,13 +389,15 @@ export default function InvoicesPage() {
                         {exporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                         Exportar a Excel (.xlsx)
                     </button>
-                    <button
-                        onClick={() => router.push('/invoices/new')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Nueva Factura
-                    </button>
+                    {canManageInvoices && (
+                        <button
+                            onClick={() => router.push('/invoices/new')}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Nueva Factura
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -594,7 +610,7 @@ export default function InvoicesPage() {
                                             {/* ACCIONES */}
                                             <td className="px-3 py-3 text-right sticky right-0 bg-white dark:bg-gray-800 shadow-sm border-l border-gray-100 dark:border-gray-700">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    {canManageInvoices && (
+                                                    {canEditInvoices && (
                                                         <button
                                                             onClick={() => openEditModal(inv)}
                                                             className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
@@ -703,6 +719,7 @@ export default function InvoicesPage() {
 
                         <div className="space-y-6">
                             {/* Sección Archivo / General */}
+                            {canManageInvoices && (
                             <div className="border rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600">1. Datos de Archivo / Recepción</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -730,8 +747,10 @@ export default function InvoicesPage() {
                                     </div>
                                 </div>
                             </div>
+                            )}
 
                             {/* Sección Compras */}
+                            {canManageInvoices && (
                             <div className="border rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">2. Sección Compras</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -826,8 +845,10 @@ export default function InvoicesPage() {
                                     </div>
                                 </div>
                             </div>
+                            )}
 
                             {/* Sección Comercial */}
+                            {(canManageInvoices || validationScope === 'COMMERCIAL') && (
                             <div className="border rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-purple-600">3. Sección Comercial</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -843,7 +864,7 @@ export default function InvoicesPage() {
                                             <option value="RECHAZADO">RECHAZADO</option>
                                         </select>
                                     </div>
-                                    <div>
+                                    {canManageInvoices && <div>
                                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Líder responsable de aprobación:</label>
                                         <div className="mt-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                                             <SearchableSelect
@@ -855,8 +876,8 @@ export default function InvoicesPage() {
                                                 ]}
                                             />
                                         </div>
-                                    </div>
-                                    <div>
+                                    </div>}
+                                    {canManageInvoices && <div>
                                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Aprobación del Líder:</label>
                                         <select
                                             value={editForm.leaderApproval === true ? 'true' : editForm.leaderApproval === false ? 'false' : ''}
@@ -867,11 +888,13 @@ export default function InvoicesPage() {
                                             <option value="true">Aprobada</option>
                                             <option value="false">No aprobada</option>
                                         </select>
-                                    </div>
+                                    </div>}
                                 </div>
                             </div>
+                            )}
 
                             {/* Sección Jurídica */}
+                            {(canManageInvoices || validationScope === 'LEGAL') && (
                             <div className="border rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-red-600">4. Sección Jurídica</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -898,8 +921,10 @@ export default function InvoicesPage() {
                                     </div>
                                 </div>
                             </div>
+                            )}
 
                             {/* Sección Contabilidad */}
+                            {(canManageInvoices || validationScope === 'ACCOUNTING') && (
                             <div className="border rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 space-y-3">
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600">5. Sección Contabilidad</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -950,6 +975,7 @@ export default function InvoicesPage() {
                                     </div>
                                 </div>
                             </div>
+                            )}
                         </div>
 
                         <div className="flex justify-end gap-3 border-t pt-4 dark:border-gray-700">
