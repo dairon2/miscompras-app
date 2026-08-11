@@ -25,6 +25,11 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { StarRatingDisplay } from "@/components/StarRating";
+import {
+    getSupplierManagementBadgeClass,
+    getSupplierManagementLabel,
+    type SupplierManagement
+} from "@/lib/supplierManagement";
 
 interface SupplierRating {
     id: string;
@@ -51,6 +56,9 @@ interface SupplierDetail {
     createdAt: string;
     criticality?: 'LOW' | 'MEDIUM' | 'HIGH';
     supplierType?: 'SUPPLIER' | 'SERVICE_PROVIDER';
+    management?: SupplierManagement;
+    managementSource?: string;
+    managementClassifiedAt?: string;
     requirements: Array<{
         id: string;
         title: string;
@@ -184,6 +192,17 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                                     {(supplier.taxId || supplier.nit) && (
                                         <p className="text-gray-400 font-bold text-xs mt-1">NIT: {supplier.taxId || supplier.nit}</p>
                                     )}
+                                    <div className="flex flex-wrap items-center gap-2 mt-3">
+                                        <span className={`inline-flex px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider ${getSupplierManagementBadgeClass(supplier.management)}`}>
+                                            {getSupplierManagementLabel(supplier.management)}
+                                        </span>
+                                        {supplier.managementSource === 'INVOICE_WORKFLOW_CONSISTENT' && (
+                                            <span className="text-[9px] font-bold text-gray-400">Clasificación sugerida por historial de facturas</span>
+                                        )}
+                                        {supplier.managementSource === 'MANUAL' && (
+                                            <span className="text-[9px] font-bold text-gray-400">Clasificación confirmada manualmente</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <span className={`px-4 py-2 rounded-full text-xs font-black uppercase flex items-center gap-1 ${supplier.criticality === 'HIGH'

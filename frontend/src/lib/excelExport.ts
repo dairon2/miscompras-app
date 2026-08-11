@@ -145,7 +145,8 @@ export const exportSuppliers = (suppliers: any[]) => {
         { header: 'Dirección', key: 'address', width: 35 },
         { header: 'Actividad', key: 'activity', width: 35 },
         { header: 'Tipo', key: 'supplierType', width: 20 },
-        { header: 'Criticidad', key: 'criticality', width: 15 }
+        { header: 'Criticidad', key: 'criticality', width: 15 },
+        { header: 'Gestión responsable', key: 'management', width: 28 }
     ];
 
     const data = suppliers.map(s => ({
@@ -157,7 +158,16 @@ export const exportSuppliers = (suppliers: any[]) => {
         address: s.address || 'N/A',
         activity: s.activity || 'N/A',
         supplierType: s.supplierType === 'SERVICE_PROVIDER' ? 'Prestador de servicio' : 'Proveedor',
-        criticality: s.criticality === 'HIGH' ? 'Alta' : s.criticality === 'MEDIUM' ? 'Media' : 'Baja'
+        criticality: s.criticality === 'HIGH' ? 'Alta' : s.criticality === 'MEDIUM' ? 'Media' : 'Baja',
+        management: s.management === 'COMMERCIAL'
+            ? 'Gestión Comercial'
+            : s.management === 'ADMINISTRATIVE_PURCHASING'
+                ? 'Compras Administrativas'
+                : s.management === 'PAYROLL'
+                    ? 'Nómina'
+                    : s.management === 'SHARED'
+                        ? 'Gestión compartida'
+                        : 'Sin clasificar'
     }));
 
     exportToExcel({

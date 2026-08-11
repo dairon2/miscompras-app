@@ -37,6 +37,7 @@ model User {
   budgetSubLeader        BudgetSubLeader[]
   invoicesCreated        Invoice[]               @relation("InvoiceCreator")
   invoicesLed            Invoice[]               @relation("InvoiceLeaderResponsible")
+  suppliersClassified    Supplier[]              @relation("SupplierManagementClassifiedBy")
   advancesRequested      Advance[]               @relation("AdvanceRequestedBy")
   advancesApproved       Advance[]               @relation("AdvanceApprovedBy")
   advancesDisbursed      Advance[]               @relation("AdvanceDisbursedBy")
@@ -81,25 +82,33 @@ model Area {
 }
 
 model Supplier {
-  id           String           @id @default(uuid())
-  name         String
-  taxId        String?          @unique
-  contactEmail String?
-  contactPhone String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  address      String?
-  contactName  String?
-  email        String?
-  nit          String?          @unique
-  phone        String?
-  criticality  Criticality      @default(LOW)
-  supplierType SupplierType     @default(SUPPLIER)
-  activity     String?
-  invoices     Invoice[]
-  advances     Advance[]
-  requirements Requirement[]
-  ratings      SupplierRating[]
+  id                       String             @id @default(uuid())
+  name                     String
+  taxId                    String?            @unique
+  contactEmail             String?
+  contactPhone             String?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  address                  String?
+  contactName              String?
+  email                    String?
+  nit                      String?            @unique
+  phone                    String?
+  criticality              Criticality        @default(LOW)
+  supplierType             SupplierType       @default(SUPPLIER)
+  activity                 String?
+  management               SupplierManagement @default(UNCLASSIFIED)
+  managementSource         String?
+  managementClassifiedAt   DateTime?
+  managementClassifiedById String?
+  managementClassifiedBy   User?              @relation("SupplierManagementClassifiedBy", fields: [managementClassifiedById], references: [id], onDelete: SetNull)
+  invoices                 Invoice[]
+  advances                 Advance[]
+  requirements             Requirement[]
+  ratings                  SupplierRating[]
+
+  @@index([management])
+  @@index([managementClassifiedById])
 }
 
 model SupplierRating {
@@ -534,6 +543,14 @@ model ColombianHoliday {
 enum SupplierType {
   SUPPLIER
   SERVICE_PROVIDER
+}
+
+enum SupplierManagement {
+  UNCLASSIFIED
+  COMMERCIAL
+  ADMINISTRATIVE_PURCHASING
+  PAYROLL
+  SHARED
 }
 
 enum Criticality {

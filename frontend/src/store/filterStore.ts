@@ -21,6 +21,7 @@ interface RequirementsFilters {
 interface SuppliersFilters {
     searchTerm: string;
     typeFilter: 'ALL' | 'SUPPLIER' | 'SERVICE_PROVIDER';
+    managementFilter: 'ALL' | 'UNCLASSIFIED' | 'COMMERCIAL' | 'ADMINISTRATIVE_PURCHASING' | 'PAYROLL' | 'SHARED';
 }
 
 // Users filter state
@@ -93,6 +94,7 @@ const defaultRequirementsFilters: RequirementsFilters = {
 const defaultSuppliersFilters: SuppliersFilters = {
     searchTerm: '',
     typeFilter: 'ALL',
+    managementFilter: 'ALL',
 };
 
 const defaultUsersFilters: UsersFilters = {

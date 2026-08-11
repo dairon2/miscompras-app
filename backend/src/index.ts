@@ -229,9 +229,20 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
 
         const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
         const supplierType = req.query.supplierType;
+        const management = req.query.management;
 
         if (supplierType === 'SUPPLIER' || supplierType === 'SERVICE_PROVIDER') {
             whereClause.supplierType = supplierType;
+        }
+
+        if (typeof management === 'string' && [
+            'UNCLASSIFIED',
+            'COMMERCIAL',
+            'ADMINISTRATIVE_PURCHASING',
+            'PAYROLL',
+            'SHARED'
+        ].includes(management)) {
+            whereClause.management = management;
         }
 
         if (search) {
@@ -270,6 +281,9 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
                 activity: true,
                 supplierType: true,
                 criticality: true,
+                management: true,
+                managementSource: true,
+                managementClassifiedAt: true,
                 ratings: { select: { overallRating: true } },
                 _count: { select: { requirements: true } }
             },

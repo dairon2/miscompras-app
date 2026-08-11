@@ -17,6 +17,12 @@ import { useFilterStore } from "@/store/filterStore";
 import { StarRatingDisplay } from "@/components/StarRating";
 import AlertModal from "@/components/AlertModal";
 import SearchableSelect from "@/components/SearchableSelect";
+import {
+    getSupplierManagementBadgeClass,
+    getSupplierManagementLabel,
+    supplierManagementOptions,
+    type SupplierManagement
+} from "@/lib/supplierManagement";
 
 // Custom hook for debounce
 function useDebounce<T>(value: T, delay: number): T {
@@ -54,7 +60,8 @@ export default function SuppliersPage() {
         address: "",
         supplierType: "SUPPLIER" as "SUPPLIER" | "SERVICE_PROVIDER",
         criticality: "LOW" as "LOW" | "MEDIUM" | "HIGH",
-        activity: ""
+        activity: "",
+        management: "UNCLASSIFIED" as SupplierManagement
     });
 
     // Import modal state
@@ -93,7 +100,8 @@ export default function SuppliersPage() {
             address: supplier.address || '',
             supplierType: supplier.supplierType || 'SUPPLIER',
             criticality: supplier.criticality || 'LOW',
-            activity: supplier.activity || ''
+            activity: supplier.activity || '',
+            management: supplier.management || 'UNCLASSIFIED'
         });
         setShowEditModal(true);
     };
@@ -127,7 +135,7 @@ export default function SuppliersPage() {
             await api.put(`/admin/suppliers/${editingSupplier.id}`, formData);
             setShowEditModal(false);
             setEditingSupplier(null);
-            setFormData({ name: '', nit: '', contactName: '', email: '', phone: '', address: '', supplierType: 'SUPPLIER', criticality: 'LOW', activity: '' });
+            setFormData({ name: '', nit: '', contactName: '', email: '', phone: '', address: '', supplierType: 'SUPPLIER', criticality: 'LOW', activity: '', management: 'UNCLASSIFIED' });
             fetchSuppliers();
             showAlert('Actualizado', 'Proveedor actualizado correctamente', 'success');
         } catch (error: any) {
@@ -154,6 +162,11 @@ export default function SuppliersPage() {
         setPage(1);
         setSuppliersFilter({ typeFilter: value });
     };
+    const managementFilter = storedFilters.managementFilter || 'ALL';
+    const setManagementFilter = (value: typeof managementFilter) => {
+        setPage(1);
+        setSuppliersFilter({ managementFilter: value });
+    };
 
     // Debounce search term for better performance (150ms delay - faster response)
     const debouncedSearchTerm = useDebounce(searchTerm, 150);
@@ -162,7 +175,7 @@ export default function SuppliersPage() {
     useEffect(() => {
         if (user) fetchSuppliers();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, page, debouncedSearchTerm, typeFilter]);
+    }, [user, page, debouncedSearchTerm, typeFilter, managementFilter]);
 
     const fetchSuppliers = async () => {
         setLoading(true);
@@ -172,7 +185,8 @@ export default function SuppliersPage() {
                     page,
                     pageSize,
                     search: debouncedSearchTerm,
-                    supplierType: typeFilter === 'ALL' ? undefined : typeFilter
+                    supplierType: typeFilter === 'ALL' ? undefined : typeFilter,
+                    management: managementFilter === 'ALL' ? undefined : managementFilter
                 }
             });
             setSuppliers(response.data.data || []);
@@ -196,9 +210,9 @@ export default function SuppliersPage() {
         try {
             await api.post("/admin/suppliers", formData);
             setShowCreateModal(false);
-            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "" });
+            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "", management: "UNCLASSIFIED" });
             fetchSuppliers();
-            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "" });
+            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "", management: "UNCLASSIFIED" });
             fetchSuppliers();
             showAlert("Registrado", "Proveedor registrado exitosamente", "success");
         } catch (error: any) {
@@ -281,7 +295,8 @@ export default function SuppliersPage() {
             </div>
 
             {/* Toolbar */}
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
+            <div className="flex flex-col xl:flex-row justify-between items-center gap-4 mb-8">
+                <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
                 <div className="flex gap-2 bg-gray-100 dark:bg-slate-800 p-1 rounded-2xl overflow-x-auto max-w-full">
                     <button
                         onClick={() => setTypeFilter('ALL')}
@@ -301,6 +316,18 @@ export default function SuppliersPage() {
                     >
                         Prestadores de Servicios
                     </button>
+                </div>
+                    <select
+                        value={managementFilter}
+                        onChange={(event) => setManagementFilter(event.target.value as typeof managementFilter)}
+                        aria-label="Filtrar por gestión responsable"
+                        className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs font-black text-gray-600 dark:text-gray-200 shadow-sm outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                        <option value="ALL">Todas las gestiones</option>
+                        {supplierManagementOptions.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -387,6 +414,7 @@ export default function SuppliersPage() {
                                         <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Correo</th>
                                         <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Teléfono</th>
                                         <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Actividad</th>
+                                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Gestión responsable</th>
                                         <th className="p-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Acciones</th>
                                     </tr>
                                 </thead>
@@ -402,6 +430,11 @@ export default function SuppliersPage() {
                                             <td className="p-6 text-xs font-bold text-gray-600 dark:text-gray-300">{supp.phone || supp.contactPhone || '-'}</td>
                                             <td className="p-6 text-xs font-medium text-gray-500 max-w-[200px] truncate" title={supp.activity}>
                                                 {supp.activity || '-'}
+                                            </td>
+                                            <td className="p-6">
+                                                <span className={`inline-flex px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider ${getSupplierManagementBadgeClass(supp.management)}`}>
+                                                    {getSupplierManagementLabel(supp.management)}
+                                                </span>
                                             </td>
                                             <td className="p-6 text-right">
                                                 <div className="flex items-center justify-end gap-2">
@@ -608,6 +641,16 @@ export default function SuppliersPage() {
                                             ]}
                                         />
                                     </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Gestión responsable</label>
+                                    <SearchableSelect
+                                        value={formData.management}
+                                        onChange={value => setFormData({ ...formData, management: value as SupplierManagement })}
+                                        options={supplierManagementOptions}
+                                    />
+                                    <p className="px-4 text-[10px] font-medium text-gray-400">Selecciona “Sin clasificar” si todavía no existe evidencia suficiente.</p>
                                 </div>
 
                                 <button type="submit" className="w-full bg-premium-gradient text-white py-5 rounded-2xl font-black shadow-2xl hover:-translate-y-1 hover:shadow-primary-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
@@ -937,6 +980,16 @@ export default function SuppliersPage() {
                                     </div>
                                 </div>
 
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Gestión responsable</label>
+                                    <SearchableSelect
+                                        value={formData.management}
+                                        onChange={value => setFormData({ ...formData, management: value as SupplierManagement })}
+                                        options={supplierManagementOptions}
+                                    />
+                                    <p className="px-4 text-[10px] font-medium text-gray-400">Una selección manual reemplaza la sugerencia automática y deja trazabilidad.</p>
+                                </div>
+
                                 <button type="submit" className="w-full bg-premium-gradient text-white py-5 rounded-2xl font-black shadow-2xl hover:-translate-y-1 hover:shadow-primary-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
                                     <Save size={20} />
                                     Guardar Cambios
@@ -997,6 +1050,10 @@ function SupplierCard({ supplier, index, onClick, canManage, onEdit, onDelete }:
 
             <h3 className="text-xl font-black tracking-tight mb-1 group-hover:text-primary-600 transition-colors">{supplier.name}</h3>
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">NIT: {supplier.taxId}</p>
+
+            <span className={`inline-flex px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider mb-3 ${getSupplierManagementBadgeClass(supplier.management)}`}>
+                {getSupplierManagementLabel(supplier.management)}
+            </span>
 
             {supplier.activity && (
                 <p className="text-xs font-medium text-gray-500 bg-gray-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg mb-6 line-clamp-2">

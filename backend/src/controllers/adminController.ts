@@ -328,6 +328,23 @@ export const deleteCategory = async (req: AuthRequest, res: Response) => {
 
 // ==================== SUPPLIERS ====================
 
+const SUPPLIER_MANAGEMENT_VALUES = [
+    'UNCLASSIFIED',
+    'COMMERCIAL',
+    'ADMINISTRATIVE_PURCHASING',
+    'PAYROLL',
+    'SHARED'
+] as const;
+
+type SupplierManagementValue = typeof SUPPLIER_MANAGEMENT_VALUES[number];
+
+const parseSupplierManagement = (value: unknown): SupplierManagementValue | undefined => {
+    if (typeof value !== 'string') return undefined;
+    return SUPPLIER_MANAGEMENT_VALUES.includes(value as SupplierManagementValue)
+        ? value as SupplierManagementValue
+        : undefined;
+};
+
 export const getSuppliers = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.id;
@@ -495,7 +512,7 @@ export const getSupplierById = async (req: AuthRequest, res: Response) => {
 };
 
 export const createSupplier = async (req: AuthRequest, res: Response) => {
-    const { name, nit, contactName, email, phone, address, activity, supplierType, criticality } = req.body;
+    const { name, nit, contactName, email, phone, address, activity, supplierType, criticality, management } = req.body;
 
     console.log('[DEBUG] Intento de creación de proveedor:', { name, nit, supplierType });
 
@@ -503,10 +520,15 @@ export const createSupplier = async (req: AuthRequest, res: Response) => {
         return res.status(400).json({ error: 'El nombre es requerido' });
     }
 
+    if (management !== undefined && !parseSupplierManagement(management)) {
+        return res.status(400).json({ error: 'La gestión responsable seleccionada no es válida' });
+    }
+
     try {
         const cleanNit = nit?.trim() || null;
         const cleanEmail = email?.trim() || null;
         const cleanPhone = phone?.trim() || null;
+        const normalizedManagement = parseSupplierManagement(management) || 'UNCLASSIFIED';
 
         // Validation: NIT/TaxID uniqueness check
         // In Colombia, NIT and TaxID are often used interchangeably in systems. 
@@ -544,7 +566,13 @@ export const createSupplier = async (req: AuthRequest, res: Response) => {
                 address: address?.trim() || null,
                 activity: activity?.trim() || null,
                 supplierType: supplierType || 'SUPPLIER',
-                criticality: criticality || 'LOW'
+                criticality: criticality || 'LOW',
+                management: normalizedManagement,
+                ...(normalizedManagement !== 'UNCLASSIFIED' ? {
+                    managementSource: 'MANUAL',
+                    managementClassifiedAt: new Date(),
+                    managementClassifiedById: req.user?.id || null
+                } : {})
             }
         });
 
@@ -568,7 +596,7 @@ export const createSupplier = async (req: AuthRequest, res: Response) => {
 
 export const updateSupplier = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { name, nit, contactName, email, phone, address, activity, supplierType, criticality } = req.body;
+    const { name, nit, contactName, email, phone, address, activity, supplierType, criticality, management } = req.body;
 
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
@@ -578,6 +606,26 @@ export const updateSupplier = async (req: AuthRequest, res: Response) => {
         const cleanNit = nit?.trim() || null;
         const cleanEmail = email?.trim() || null;
         const cleanPhone = phone?.trim() || null;
+        const normalizedManagement = management === undefined ? undefined : parseSupplierManagement(management);
+
+        if (management !== undefined && !normalizedManagement) {
+            return res.status(400).json({ error: 'La gestión responsable seleccionada no es válida' });
+        }
+
+        const currentSupplier = normalizedManagement
+            ? await prisma.supplier.findUnique({
+                where: { id },
+                select: { management: true }
+            })
+            : null;
+
+        if (normalizedManagement && !currentSupplier) {
+            return res.status(404).json({ error: 'Proveedor no encontrado' });
+        }
+
+        const managementChanged = Boolean(
+            normalizedManagement && normalizedManagement !== currentSupplier?.management
+        );
 
         const supplier = await prisma.supplier.update({
             where: { id },
@@ -593,7 +641,15 @@ export const updateSupplier = async (req: AuthRequest, res: Response) => {
                 address: address?.trim() || null,
                 activity: activity?.trim() || null,
                 supplierType: supplierType || undefined,
-                criticality: criticality || undefined
+                criticality: criticality || undefined,
+                ...(normalizedManagement ? {
+                    management: normalizedManagement,
+                } : {}),
+                ...(managementChanged ? {
+                    managementSource: 'MANUAL',
+                    managementClassifiedAt: new Date(),
+                    managementClassifiedById: req.user?.id || null
+                } : {})
             }
         });
         res.json(supplier);
