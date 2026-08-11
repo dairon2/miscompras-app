@@ -8,6 +8,7 @@ import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../index';
 import { processFileUploads } from '../services/blobStorageService';
 import logger from '../services/logger';
+import { renderAdvancePdf } from '../services/advancePdfService';
 
 const ADVANCE_VIEWER_ROLES = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER', 'AUDITOR'];
 const ADVANCE_MANAGER_ROLES = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'];
@@ -425,32 +426,11 @@ export const downloadAdvancePdf = async (req: AuthRequest, res: Response) => {
     try {
         const advance = await getAdvanceOrThrow(req.params.id);
         const document = new PDFDocument({ margin: 48, size: 'LETTER' });
-        const date = new Intl.DateTimeFormat('es-CO').format(new Date(advance.requestDate));
-        const amount = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(advance.amount));
+        const formatName = advance.beneficiaryType === 'EMPLOYEE' ? 'Empleado' : 'Tercero';
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="Solicitud_Anticipo_${advance.year}_${advance.consecutive}.pdf"`);
+        res.setHeader('Content-Disposition', `attachment; filename="Solicitud_Anticipo_${formatName}_${advance.year}_${advance.consecutive}.pdf"`);
         document.pipe(res);
-        document.rect(48, 46, 510, 58).stroke();
-        document.font('Helvetica-Bold').fontSize(15).text('SOLICITUD DE ANTICIPOS', 160, 60, { width: 230, align: 'center' });
-        document.font('Helvetica').fontSize(8).text('Museo de Antioquia', 160, 80, { width: 230, align: 'center' });
-        document.fontSize(8).text('CÓDIGO: FA_4.1_01\nVERSIÓN: 02', 442, 60, { width: 100, align: 'right' });
-        let y = 130;
-        const fields = [
-            ['Nro. Anticipo', `${advance.consecutive}`], ['Fecha del anticipo', date], ['Estado', advance.status],
-            ['Centro de costos', advance.costCenter || '-'], ['Cédula o NIT', advance.beneficiaryDocument],
-            ['Funcionario o empresa', advance.beneficiaryName], ['Motivo del anticipo', advance.purpose], ['Valor del anticipo', amount]
-        ];
-        fields.forEach(([label, value]) => {
-            document.font('Helvetica-Bold').fontSize(9).text(label, 55, y, { width: 155 });
-            document.font('Helvetica').fontSize(10).text(value, 215, y, { width: 325 });
-            document.moveTo(55, y + 19).lineTo(540, y + 19).strokeColor('#D1D5DB').stroke();
-            y += 33;
-        });
-        if (advance.beneficiaryType === 'EMPLOYEE') {
-            document.fillColor('#111827').font('Helvetica-Bold').fontSize(9).text('AUTORIZACIÓN PARA DESCUENTO POR NÓMINA', 55, y + 15);
-            document.font('Helvetica').fontSize(8).text('El plazo para legalizar este anticipo es de quince (15) días calendario. En caso de no legalización, el beneficiario autoriza el descuento correspondiente conforme a las políticas vigentes.', 55, y + 33, { width: 485, align: 'justify' });
-        }
-        document.fontSize(8).fillColor('#6B7280').text(`Generado desde MisCompras el ${new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())}`, 55, 715, { width: 485, align: 'center' });
+        renderAdvancePdf(document, advance);
         document.end();
     } catch (error: any) {
         return res.status(404).json({ error: error.message || 'No se pudo generar el formato' });
