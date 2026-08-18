@@ -16,10 +16,10 @@ const groq = new OpenAI({
 // Fallback Chain Strategy: If one fails (429/404), try the next.
 // Each model has separate quota, so more models = more daily requests.
 const FALLBACK_MODELS = [
-    "gemini-2.0-flash",       // Primary (Reliable)
-    "groq/llama-3.3-70b-versatile", // Fast OpenSource Fallback
-    "gemini-2.0-flash-lite",
-    "groq/llama-3.1-8b-instant" // Small fast fallback
+    "gemini-3.6-flash", // Primary Google model
+    "groq/openai/gpt-oss-120b", // Groq production fallback
+    "gemini-3.5-flash-lite", // Lower-cost Google fallback
+    "groq/openai/gpt-oss-20b" // Small, fast Groq fallback
 ];
 
 // Roles that can see ALL data (global statistics, all suppliers, all budgets, etc.)
