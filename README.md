@@ -58,7 +58,7 @@
 - **Almacenamiento**: Azure Blob Storage
 - **Email**: Nodemailer (SMTP)
 - **PDF**: PDFKit
-- **IA**: Google Gemini (Flash 2.5 / Pro 1.5)
+- **IA**: Google Gemini 3.6/3.1 con fallback Groq, permisos por rol y confirmaciones auditadas
 
 ### Frontend
 - **Framework**: Next.js 14 (App Router)

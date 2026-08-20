@@ -9,16 +9,13 @@ import {
     BookOpen,
     FileText,
     DollarSign,
-    Package,
     Users,
     Building2,
     Mail,
-    Phone,
     MessageCircle,
     Search,
     CheckCircle,
     AlertCircle,
-    Briefcase,
     ClipboardList,
     Receipt,
     Settings,
@@ -113,12 +110,12 @@ const faqData: FAQItem[] = [
     {
         category: "Asistente IA",
         question: "¿Qué puede hacer el Asistente Virtual?",
-        answer: "El asistente (botón ✨) puede responder preguntas sobre el estado de tus proyectos, presupuestos disponibles y tareas pendientes. Además, puede GENERAR REPORTES EXCEL: solo pídele 'Descarga un reporte del proyecto X' y te dará un enlace directo."
+        answer: "El asistente puede consultar proyectos, presupuestos, requerimientos, facturas, anticipos y proveedores dentro de los permisos de tu rol. También genera reportes Excel. Si una solicitud cambia datos o envía un correo, mostrará primero una tarjeta con la información exacta para confirmar o cancelar."
     },
     {
         category: "Asistente IA",
         question: "¿Qué hago si el asistente no responde?",
-        answer: "El asistente cuenta con un sistema de 'Respaldo Infinito' que cambia automáticamente de servidor si hay congestión. Si aún así falla, verifica tu conexión a internet o intenta recargar la página."
+        answer: "El asistente cambia automáticamente a un proveedor alternativo cuando el servicio principal está temporalmente congestionado. Si no responde, verifica tu conexión, espera un minuto y vuelve a intentarlo."
     }
 ];
 

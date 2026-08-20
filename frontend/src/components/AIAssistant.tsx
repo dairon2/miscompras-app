@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Bot, User, Sparkles, Loader2, Paperclip, FileText, Image as ImageIcon } from "lucide-react";
+import { X, Send, Bot, User, Sparkles, Loader2, Paperclip, FileText, Image as ImageIcon, ShieldCheck, AlertTriangle, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { resolveApiUrl } from "@/lib/utils";
@@ -12,12 +12,22 @@ interface Message {
     role: 'user' | 'model';
     content: string;
     actions?: AssistantAction[];
+    pendingAction?: PendingAssistantAction;
 }
 
 interface AssistantAction {
     label: string;
-    type: 'link' | 'prompt';
+    type: 'link' | 'prompt' | 'download';
     value: string;
+}
+
+interface PendingAssistantAction {
+    token: string;
+    action: string;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    severity: 'info' | 'warning';
 }
 
 interface Attachment {
@@ -45,7 +55,7 @@ export default function AIAssistant() {
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'model',
-            content: '🤖 **MisCompras Bot activo**\n\nConsulta proyectos, presupuestos, requerimientos o busca proveedores. Ejemplos:\n• "¿Cuánto dinero se ha ejecutado?"\n• "Busca proveedores de papelería"\n• "Dame el resumen del proyecto X"'
+            content: '🤖 **MisCompras Bot activo**\n\nConsulta proyectos, presupuestos, requerimientos, facturas, anticipos o proveedores. Las acciones que cambian datos siempre requerirán tu confirmación.'
         }
     ]);
     const [input, setInput] = useState("");
@@ -53,6 +63,34 @@ export default function AIAssistant() {
     const [attachment, setAttachment] = useState<Attachment | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const skipNextHistorySaveRef = useRef(false);
+    const storageKey = user?.id ? `miscompras-ai-history:${user.id}` : null;
+
+    useEffect(() => {
+        if (!storageKey) return;
+        try {
+            const stored = sessionStorage.getItem(storageKey);
+            if (stored) {
+                const parsed = JSON.parse(stored) as Message[];
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    skipNextHistorySaveRef.current = true;
+                    setMessages(parsed.slice(-30));
+                }
+            }
+        } catch {
+            sessionStorage.removeItem(storageKey);
+        }
+    }, [storageKey]);
+
+    useEffect(() => {
+        if (!storageKey) return;
+        if (skipNextHistorySaveRef.current) {
+            skipNextHistorySaveRef.current = false;
+            return;
+        }
+        const safeMessages = messages.slice(-30).map(message => ({ ...message, pendingAction: undefined }));
+        sessionStorage.setItem(storageKey, JSON.stringify(safeMessages));
+    }, [messages, storageKey]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -112,7 +150,7 @@ export default function AIAssistant() {
         setIsLoading(true);
 
         try {
-            const historyToSend = messages.slice(1).map(m => ({ role: m.role, content: m.content }));
+            const historyToSend = messages.slice(1).slice(-16).map(m => ({ role: m.role, content: m.content }));
             const { data } = await api.post('/ai/chat', {
                 message: userMessage || (currentAttachment ? "Analiza este archivo" : ""),
                 history: historyToSend,
@@ -120,18 +158,22 @@ export default function AIAssistant() {
                 mimeType: currentAttachment?.type
             });
 
-            setMessages(prev => [...prev, { role: 'model', content: data.reply, actions: data.actions || [] }]);
+            setMessages(prev => [...prev, {
+                role: 'model',
+                content: data.reply,
+                actions: data.actions || [],
+                pendingAction: data.pendingAction
+            }]);
         } catch (error: unknown) {
             const apiError = error as AssistantApiError;
             console.error(error);
             let errorMessage = apiError.response?.data?.details || apiError.response?.data?.error || 'Lo siento, tuve un problema conectando con mi cerebro. 🧠💥';
-            const apiKeyStatus = apiError.response?.data?.keyPresent !== undefined ? `(Key Present: ${apiError.response.data.keyPresent})` : '';
 
             if (apiError.code === 'ERR_NETWORK' || apiError.message === 'Network Error') {
                 errorMessage = "⚠️ Error de Conexión: No pude contactar al servidor. Verifica tu conexión o la configuración de URL.";
             }
 
-            setMessages(prev => [...prev, { role: 'model', content: `${errorMessage} ${apiKeyStatus} Por favor intenta de nuevo.` }]);
+            setMessages(prev => [...prev, { role: 'model', content: `${errorMessage} Por favor intenta de nuevo.` }]);
         } finally {
             setIsLoading(false);
         }
@@ -152,12 +194,60 @@ export default function AIAssistant() {
     };
 
     const handleActionClick = async (action: AssistantAction) => {
+        if (action.type === 'download') {
+            try {
+                const response = await api.get(action.value, { responseType: 'blob' });
+                const disposition = response.headers['content-disposition'] || '';
+                const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || action.value.split('/').pop() || 'reporte.xlsx';
+                const objectUrl = URL.createObjectURL(response.data);
+                const anchor = document.createElement('a');
+                anchor.href = objectUrl;
+                anchor.download = filename;
+                anchor.click();
+                URL.revokeObjectURL(objectUrl);
+            } catch {
+                setMessages(prev => [...prev, { role: 'model', content: 'No pude descargar el archivo. Intenta generarlo nuevamente.' }]);
+            }
+            return;
+        }
         if (action.type === 'link') {
-            window.location.href = resolveApiUrl(action.value);
+            window.location.href = action.value.startsWith('/api/') || action.value.startsWith('http')
+                ? resolveApiUrl(action.value)
+                : action.value;
             return;
         }
 
         await sendMessage(action.value);
+    };
+
+    const handlePendingAction = async (messageIndex: number, pendingAction: PendingAssistantAction, confirm: boolean) => {
+        setMessages(prev => prev.map((message, index) => index === messageIndex ? { ...message, pendingAction: undefined } : message));
+        if (!confirm) {
+            setMessages(prev => [...prev, { role: 'model', content: 'Acción cancelada. No se modificó ningún dato.' }]);
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const { data } = await api.post('/ai/confirm', { token: pendingAction.token });
+            setMessages(prev => [...prev, { role: 'model', content: data.reply, actions: data.actions || [] }]);
+        } catch (error: unknown) {
+            const apiError = error as AssistantApiError;
+            setMessages(prev => [...prev, {
+                role: 'model',
+                content: apiError.response?.data?.error || 'No fue posible confirmar la acción. No se aplicaron cambios.'
+            }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const clearConversation = () => {
+        if (storageKey) sessionStorage.removeItem(storageKey);
+        setMessages([{
+            role: 'model',
+            content: '🤖 **MisCompras Bot activo**\n\nConsulta proyectos, presupuestos, requerimientos, facturas, anticipos o proveedores. Las acciones que cambian datos siempre requerirán tu confirmación.'
+        }]);
     };
 
     return (
@@ -193,12 +283,25 @@ export default function AIAssistant() {
                                     <p className="text-white/70 text-xs font-medium">Asistente Virtual</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setIsOpen(false)}
-                                className="p-2 hover:bg-white/10 rounded-full text-white transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={clearConversation}
+                                    className="p-2 hover:bg-white/10 rounded-full text-white transition-colors"
+                                    title="Nueva conversación"
+                                    aria-label="Nueva conversación"
+                                >
+                                    <RotateCcw size={18} />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsOpen(false)}
+                                    className="p-2 hover:bg-white/10 rounded-full text-white transition-colors"
+                                    aria-label="Cerrar asistente"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Messages Area */}
@@ -251,6 +354,38 @@ export default function AIAssistant() {
                                                         {action.label}
                                                     </button>
                                                 ))}
+                                            </div>
+                                        )}
+                                        {msg.role === 'model' && msg.pendingAction && (
+                                            <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-slate-800 shadow-sm dark:border-amber-700 dark:bg-amber-950/30 dark:text-slate-100">
+                                                <div className="flex items-start gap-2">
+                                                    <div className="mt-0.5 rounded-lg bg-amber-100 p-1.5 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+                                                        <ShieldCheck size={17} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">Confirmación requerida</p>
+                                                        <p className="mt-1 font-black text-sm">{msg.pendingAction.title}</p>
+                                                        <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{msg.pendingAction.description}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-3 flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        disabled={isLoading}
+                                                        onClick={() => handlePendingAction(idx, msg.pendingAction!, false)}
+                                                        className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                                                    >
+                                                        Cancelar
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={isLoading}
+                                                        onClick={() => handlePendingAction(idx, msg.pendingAction!, true)}
+                                                        className="flex-1 rounded-lg bg-amber-600 px-3 py-2 text-xs font-black text-white hover:bg-amber-700 disabled:opacity-50"
+                                                    >
+                                                        {msg.pendingAction.confirmLabel}
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -314,6 +449,7 @@ export default function AIAssistant() {
                                     onClick={() => fileInputRef.current?.click()}
                                     className="p-3 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-colors"
                                     title="Adjuntar archivo"
+                                    aria-label="Adjuntar archivo"
                                 >
                                     <Paperclip size={20} />
                                 </button>
@@ -329,12 +465,13 @@ export default function AIAssistant() {
                                     type="submit"
                                     disabled={(!input.trim() && !attachment) || isLoading}
                                     className="p-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-colors shadow-lg shadow-indigo-200 dark:shadow-none"
+                                    aria-label="Enviar mensaje"
                                 >
                                     {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
                                 </button>
                             </form>
                             <p className="text-[10px] text-center text-gray-400 mt-1">
-                                Impulsado por Google Gemini AI · <span className="text-amber-500">⚠️ La IA puede cometer errores. Verifica las respuestas.</span>
+                                Respuestas con IA · <span className="text-amber-600 inline-flex items-center gap-1"><AlertTriangle size={10} /> Verifica la información crítica.</span>
                             </p>
                         </div>
                     </motion.div>

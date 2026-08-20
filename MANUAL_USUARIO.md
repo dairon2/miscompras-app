@@ -352,10 +352,12 @@ Haz clic en el botón flotante ✨ (chispas mágicas) ubicado en la esquina infe
 ### Funcionalidades del Asistente
 El asistente conoce tu contexto y puede realizar las siguientes acciones:
 
+> **Seguridad:** las operaciones que crean, aprueban, asignan o envían información muestran una tarjeta con los datos exactos. Nada cambia hasta seleccionar **Confirmar**. El botón **Cancelar** descarta la operación.
+
 #### 1. 📧 Envío de Correos a Proveedores
 Puedes pedirle al bot que contacte a un proveedor directamente.
 - **Ejemplo**: *"Envía un correo a Papelería S.A.S solicitando cotización de resmas de papel"*
-- **Confirmación**: El bot te mostrará un borrador del asunto y mensaje antes de enviar nada.
+- **Confirmación**: El bot mostrará destinatario y propósito en una tarjeta firmada antes de enviar nada.
 - **Contexto**: Si dices *"envía un correo a este proveedor"* mientras ves un requerimiento, ¡el bot sabrá a quién te refieres!
 
 #### 2. 🔍 Búsqueda de Proveedores
@@ -373,7 +375,12 @@ Consulta qué pedidos están pendientes de llegar.
 - *"¿Cuánto presupuesto me queda en el proyecto Colores de la Montaña?"*
 - *"Descarga un reporte del proyecto [Nombre]"* (Genera Excel automático)
 
-> 🚀 **Nota:** El asistente está reforzado para funcionar 24/7. Siempre verifica la información crítica antes de tomar decisiones financieras.
+#### 5. 🧾 Facturas y Anticipos
+- *"Busca la factura FE-1234"*
+- *"¿Cuál es el estado del anticipo 4634?"*
+- Los resultados respetan el alcance del rol y enlazan directamente al registro.
+
+> **Nota:** El asistente utiliza proveedores alternativos ante fallos recuperables. Siempre verifica la información crítica antes de tomar decisiones financieras.
 
 ---
 

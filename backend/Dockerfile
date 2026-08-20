@@ -5,8 +5,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (including dev for building)
-RUN npm install
+# Install exactly the dependency tree validated in CI.
+RUN npm ci
 
 # Copy all source including prisma schema
 COPY . .

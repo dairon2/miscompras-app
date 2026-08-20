@@ -11,8 +11,13 @@ env:
   NEXT_PUBLIC_API_URL: ${{ secrets.PROD_API_URL }} 
 
 jobs:
+  quality-gates:
+    name: Validate before deployment
+    uses: ./.github/workflows/quality-gates.yml
+
   build-and-push:
     runs-on: ubuntu-latest
+    needs: quality-gates
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
