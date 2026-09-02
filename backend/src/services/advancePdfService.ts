@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import { MUSEUM_LOGO_PNG } from '../assets/museumLogo';
 
 type AdvancePdfData = {
     consecutive: number;
@@ -15,6 +16,7 @@ type AdvancePdfData = {
 const NAVY = '#11138A';
 const BLACK = '#111111';
 const LIGHT_GRAY = '#F7F7F7';
+export const ADVANCE_FORMAT_METADATA = 'CÓDIGO:\nFA_4.1_01\nVERSIÓN: 03\n2 de agosto de 2026';
 
 const PAYROLL_AUTHORIZATION =
     'El Museo de Antioquia declara que el plazo para la legalización de anticipos es de quince (15) días calendario, contados a partir de la fecha de este documento de solicitud de anticipo. Por lo anterior, en mi calidad de empleado del Museo de Antioquia y por medio del presente escrito autorizo al Departamento de Nómina, para que descuente en una sola cuota, del valor de mi salario la suma correspondiente al monto total detallado en este documento; solo en el caso de que este no sea legalizado de mi parte en el plazo previsto. Autorizo igualmente al Museo de Antioquia, mi empleador, para que en el caso de que se dé por terminado mi contrato laboral por cualquier causa, dé por cumplido el plazo y haga exigible la totalidad de las obligaciones que por concepto de legalización de anticipos estén pendientes, para lo cual podrá deducir la totalidad del valor adeudado de mis salarios y prestaciones sociales.\n\nEn caso de que dichas sumas de dinero no sean suficientes para cubrir el monto de las obligaciones adquiridas, reconozco mérito ejecutivo a este documento para el cobro de las obligaciones que llegaren a quedar pendientes de mi parte.';
@@ -29,19 +31,6 @@ const formatDate = (value: Date | string) => new Intl.DateTimeFormat('es-CO', {
 const formatAmount = (value: unknown) => new Intl.NumberFormat('es-CO', {
     maximumFractionDigits: 0
 }).format(Number(value));
-
-const drawMuseumMark = (document: PDFKit.PDFDocument, x: number, y: number) => {
-    document.save().lineWidth(0.8).strokeColor(BLACK);
-    document.moveTo(x, y + 24).lineTo(x + 116, y + 24).stroke();
-    document.moveTo(x + 7, y + 22).lineTo(x + 7, y + 6).lineTo(x + 109, y + 6).lineTo(x + 109, y + 22).stroke();
-    for (let column = 0; column < 9; column += 1) {
-        const columnX = x + 13 + (column * 12);
-        document.rect(columnX, y + 10, 5, 12).stroke();
-    }
-    document.font('Helvetica').fontSize(6.5).fillColor(BLACK)
-        .text('M U S E O   D E   A N T I O Q U I A', x, y + 28, { width: 116, align: 'center' });
-    document.restore();
-};
 
 const drawValueBox = (
     document: PDFKit.PDFDocument,
@@ -105,12 +94,16 @@ export const renderAdvancePdf = (document: PDFKit.PDFDocument, advance: AdvanceP
     document.lineWidth(1).rect(56, 52, 500, 72).stroke();
     document.moveTo(216, 52).lineTo(216, 124).stroke();
     document.moveTo(486, 52).lineTo(486, 124).stroke();
-    drawMuseumMark(document, 78, 69);
+    document.image(MUSEUM_LOGO_PNG, 66, 57, {
+        fit: [140, 62],
+        align: 'center',
+        valign: 'center'
+    });
 
     document.font('Times-Bold').fontSize(15).fillColor(BLACK)
         .text('SOLICITUD DE ANTICIPOS', 224, 78, { width: 254, align: 'center' });
     document.font('Helvetica').fontSize(7.2).fillColor(BLACK)
-        .text('CÓDIGO:\nFA_4.1_01\nVERSIÓN: 02\nFebrero 24 de 2021', 491, 58, { width: 60, lineGap: 1 });
+        .text(ADVANCE_FORMAT_METADATA, 491, 56, { width: 60, lineGap: 0.5 });
 
     document.font('Helvetica').fontSize(9.5).fillColor(NAVY).text('Nro Anticipo', 365, 132, { width: 110 });
     drawValueBox(document, String(advance.consecutive), 486, 127, 70, 22, { align: 'center', fontSize: 10 });
