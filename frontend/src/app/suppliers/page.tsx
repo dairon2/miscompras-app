@@ -7,10 +7,9 @@ import {
     Search, Filter, Plus, Truck, Mail, Phone,
     ExternalLink, Building2, List, LayoutGrid, X,
     Package, ArrowRightCircle, FileText, Briefcase, User, Download, FileSpreadsheet, Save, Hash, MapPin, Upload,
-    Edit, Trash2, AlertTriangle, Loader2
+    Edit, Trash2, AlertTriangle, Loader2, CalendarDays
 } from "lucide-react";
 import api from "@/lib/api";
-import { exportSuppliers } from "@/lib/excelExport";
 import { useAuthStore } from "@/store/authStore";
 import { useFilterStore } from "@/store/filterStore";
 
@@ -41,6 +40,16 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
+function toDateTimeLocalInput(value?: string): string {
+    if (!value) return '';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return localDate.toISOString().slice(0, 19);
+}
+
 export default function SuppliersPage() {
     const { user } = useAuthStore();
     const router = useRouter();
@@ -49,6 +58,7 @@ export default function SuppliersPage() {
     const [page, setPage] = useState(1);
     const pageSize = 50;
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [formData, setFormData] = useState({
@@ -61,7 +71,8 @@ export default function SuppliersPage() {
         supplierType: "SUPPLIER" as "SUPPLIER" | "SERVICE_PROVIDER",
         criticality: "LOW" as "LOW" | "MEDIUM" | "HIGH",
         activity: "",
-        management: "UNCLASSIFIED" as SupplierManagement
+        management: "UNCLASSIFIED" as SupplierManagement,
+        createdAt: ""
     });
 
     // Import modal state
@@ -84,6 +95,10 @@ export default function SuppliersPage() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<any>(null);
 
+    const userRole = user?.role || 'USER';
+    const canManageSuppliers = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
+    const canEditCreatedAt = ['ADMIN', 'DEVELOPER'].includes(userRole);
+
     const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
         setAlertState({ open: true, title, message, type });
     };
@@ -101,7 +116,8 @@ export default function SuppliersPage() {
             supplierType: supplier.supplierType || 'SUPPLIER',
             criticality: supplier.criticality || 'LOW',
             activity: supplier.activity || '',
-            management: supplier.management || 'UNCLASSIFIED'
+            management: supplier.management || 'UNCLASSIFIED',
+            createdAt: toDateTimeLocalInput(supplier.createdAt)
         });
         setShowEditModal(true);
     };
@@ -132,21 +148,24 @@ export default function SuppliersPage() {
         e.preventDefault();
         if (!editingSupplier) return;
         try {
-            await api.put(`/admin/suppliers/${editingSupplier.id}`, formData);
+            const { createdAt, ...supplierFields } = formData;
+            const createdAtChanged = canEditCreatedAt
+                && createdAt
+                && createdAt !== toDateTimeLocalInput(editingSupplier.createdAt);
+            const payload = createdAtChanged
+                ? { ...supplierFields, createdAt: new Date(createdAt).toISOString() }
+                : supplierFields;
+
+            await api.put(`/admin/suppliers/${editingSupplier.id}`, payload);
             setShowEditModal(false);
             setEditingSupplier(null);
-            setFormData({ name: '', nit: '', contactName: '', email: '', phone: '', address: '', supplierType: 'SUPPLIER', criticality: 'LOW', activity: '', management: 'UNCLASSIFIED' });
+            setFormData({ name: '', nit: '', contactName: '', email: '', phone: '', address: '', supplierType: 'SUPPLIER', criticality: 'LOW', activity: '', management: 'UNCLASSIFIED', createdAt: '' });
             fetchSuppliers();
             showAlert('Actualizado', 'Proveedor actualizado correctamente', 'success');
         } catch (error: any) {
             showAlert('Error', error.response?.data?.error || 'Error al actualizar proveedor', 'error');
         }
     };
-
-    // Role-based permissions for supplier management
-    const userRole = user?.role || 'USER';
-    const canManageSuppliers = ['ADMIN', 'DIRECTOR', 'LEADER', 'COORDINATOR', 'DEVELOPER'].includes(userRole);
-
 
     // Search and Filter State from store
     const { suppliers: storedFilters, setSuppliersFilter, clearSuppliersFilters } = useFilterStore();
@@ -198,6 +217,46 @@ export default function SuppliersPage() {
         }
     };
 
+    const handleExportSuppliers = async () => {
+        setExporting(true);
+        try {
+            const response = await api.get('/reports/suppliers', {
+                params: {
+                    search: debouncedSearchTerm,
+                    supplierType: typeFilter === 'ALL' ? undefined : typeFilter,
+                    management: managementFilter === 'ALL' ? undefined : managementFilter
+                },
+                responseType: 'blob'
+            });
+
+            const contentType = typeof response.headers['content-type'] === 'string'
+                ? response.headers['content-type']
+                : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            const blob = new Blob([response.data], {
+                type: contentType
+            });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const contentDisposition = response.headers['content-disposition'];
+            const filename = (typeof contentDisposition === 'string'
+                ? contentDisposition.match(/filename="?([^";]+)"?/i)?.[1]
+                : undefined)
+                || `Reporte_Proveedores_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error al exportar proveedores:', error);
+            showAlert("Error", "Error al generar el archivo Excel", "error");
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const totalPages = Math.max(1, Math.ceil(totalSuppliers / pageSize));
 
     const navigateToSupplier = (supplierId: string) => {
@@ -210,9 +269,9 @@ export default function SuppliersPage() {
         try {
             await api.post("/admin/suppliers", formData);
             setShowCreateModal(false);
-            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "", management: "UNCLASSIFIED" });
+            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "", management: "UNCLASSIFIED", createdAt: "" });
             fetchSuppliers();
-            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "", management: "UNCLASSIFIED" });
+            setFormData({ name: "", nit: "", contactName: "", email: "", phone: "", address: "", supplierType: "SUPPLIER", criticality: "LOW", activity: "", management: "UNCLASSIFIED", createdAt: "" });
             fetchSuppliers();
             showAlert("Registrado", "Proveedor registrado exitosamente", "success");
         } catch (error: any) {
@@ -347,19 +406,15 @@ export default function SuppliersPage() {
                     </div>
 
                     <button
-                        onClick={() => {
-                            try {
-                                exportSuppliers(suppliers);
-                            } catch (error) {
-                                console.error('Error al exportar:', error);
-                                showAlert("Error", "Error al generar el archivo Excel", "error");
-                            }
-                        }}
-                        className="bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-6 py-4 rounded-2xl font-black shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 uppercase text-[10px] tracking-widest"
+                        onClick={handleExportSuppliers}
+                        disabled={exporting}
+                        aria-busy={exporting}
+                        title="Descarga todos los proveedores que coinciden con los filtros actuales"
+                        className="bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-6 py-4 rounded-2xl font-black shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 uppercase text-[10px] tracking-widest disabled:opacity-60 disabled:cursor-wait"
                     >
                         <FileSpreadsheet size={18} className="text-green-600" />
                         <Download size={18} className="text-primary-600" />
-                    <span>EXPORTAR PÁGINA XLSX</span>
+                        <span>{exporting ? 'PREPARANDO XLSX...' : 'EXPORTAR FILTRO XLSX'}</span>
                     </button>
 
                     {canManageSuppliers && (
@@ -978,6 +1033,28 @@ export default function SuppliersPage() {
                                             ]}
                                         />
                                     </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Fecha de creación</label>
+                                    <div className="relative">
+                                        <CalendarDays className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                        <input
+                                            type="datetime-local"
+                                            step="1"
+                                            required
+                                            value={formData.createdAt}
+                                            max={toDateTimeLocalInput(new Date().toISOString())}
+                                            onChange={event => setFormData({ ...formData, createdAt: event.target.value })}
+                                            disabled={!canEditCreatedAt}
+                                            className="w-full bg-gray-50 dark:bg-slate-900/50 border-0 rounded-2xl py-5 pl-14 pr-6 font-bold focus:ring-2 focus:ring-primary-500 outline-none transition-all disabled:cursor-not-allowed disabled:opacity-60"
+                                        />
+                                    </div>
+                                    <p className="px-4 text-[10px] font-medium text-gray-400">
+                                        {canEditCreatedAt
+                                            ? 'Este dato es histórico. Modifícalo únicamente cuando exista evidencia de la fecha correcta.'
+                                            : 'Solo administradores y desarrolladores pueden modificar esta fecha.'}
+                                    </p>
                                 </div>
 
                                 <div className="space-y-2">

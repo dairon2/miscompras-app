@@ -2,6 +2,10 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../index';
 import bcrypt from 'bcryptjs';
+import {
+    canEditSupplierCreatedAt,
+    parseSupplierCreatedAt
+} from '../utils/supplierCreatedAt';
 
 // ==================== AREAS ====================
 
@@ -596,7 +600,17 @@ export const createSupplier = async (req: AuthRequest, res: Response) => {
 
 export const updateSupplier = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { name, nit, contactName, email, phone, address, activity, supplierType, criticality, management } = req.body;
+    const { name, nit, contactName, email, phone, address, activity, supplierType, criticality, management, createdAt } = req.body;
+    const createdAtProvided = Object.prototype.hasOwnProperty.call(req.body, 'createdAt');
+
+    if (createdAtProvided && !canEditSupplierCreatedAt(req.user?.role)) {
+        return res.status(403).json({ error: 'Solo administradores y desarrolladores pueden modificar la fecha de creación' });
+    }
+
+    const normalizedCreatedAt = createdAtProvided ? parseSupplierCreatedAt(createdAt) : undefined;
+    if (createdAtProvided && !normalizedCreatedAt) {
+        return res.status(400).json({ error: 'La fecha de creación no es válida o está en el futuro' });
+    }
 
     if (!name || !name.trim()) {
         return res.status(400).json({ error: 'El nombre es requerido' });
@@ -642,6 +656,9 @@ export const updateSupplier = async (req: AuthRequest, res: Response) => {
                 activity: activity?.trim() || null,
                 supplierType: supplierType || undefined,
                 criticality: criticality || undefined,
+                ...(normalizedCreatedAt ? {
+                    createdAt: normalizedCreatedAt
+                } : {}),
                 ...(normalizedManagement ? {
                     management: normalizedManagement,
                 } : {}),

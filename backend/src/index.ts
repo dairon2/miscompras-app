@@ -269,6 +269,7 @@ app.get('/api/suppliers', authMiddleware, async (req, res) => {
             orderBy: { name: 'asc' },
             select: {
                 id: true,
+                createdAt: true,
                 name: true,
                 taxId: true,
                 nit: true,

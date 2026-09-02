@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { prisma } from '../index';
 import { generateExcelWorkbook } from '../services/excelService';
+import { buildSupplierExportWhere } from '../utils/supplierExport';
 
 export const exportRequirements = async (req: AuthRequest, res: Response) => {
     try {
@@ -137,26 +138,28 @@ export const exportSuppliers = async (req: AuthRequest, res: Response) => {
     try {
         const userRole = req.user?.role || '';
         const userId = req.user?.id;
-        const fullAccessRoles = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'AUDITOR', 'DEVELOPER'];
+        const where = buildSupplierExportWhere(userRole, userId, req.query);
 
-        let suppliers;
-        if (fullAccessRoles.includes(userRole)) {
-            suppliers = await prisma.supplier.findMany({
-                orderBy: { name: 'asc' }
-            });
-        } else {
-            // Restricted role: only suppliers they have used in their requirements
-            suppliers = await prisma.supplier.findMany({
-                where: {
-                    requirements: {
-                        some: {
-                            createdById: userId
-                        }
-                    }
-                },
-                orderBy: { name: 'asc' }
-            });
-        }
+        const suppliers = await prisma.supplier.findMany({
+            where,
+            orderBy: { name: 'asc' },
+            select: {
+                name: true,
+                taxId: true,
+                nit: true,
+                contactName: true,
+                contactEmail: true,
+                contactPhone: true,
+                email: true,
+                phone: true,
+                address: true,
+                activity: true,
+                supplierType: true,
+                criticality: true,
+                management: true,
+                createdAt: true
+            }
+        });
 
         const columns = [
             { header: 'NOMBRE PROVEEDOR', key: 'name', width: 35 },
@@ -168,6 +171,8 @@ export const exportSuppliers = async (req: AuthRequest, res: Response) => {
             { header: 'ACTIVIDAD', key: 'activity', width: 35 },
             { header: 'TIPO', key: 'supplierType', width: 22 },
             { header: 'CRITICIDAD', key: 'criticality', width: 15 },
+            { header: 'GESTIÓN RESPONSABLE', key: 'management', width: 28 },
+            { header: 'FECHA DE CREACIÓN', key: 'createdAt', width: 25 },
             { header: 'ESTADO', key: 'status', width: 15 },
         ];
 
@@ -181,6 +186,18 @@ export const exportSuppliers = async (req: AuthRequest, res: Response) => {
             activity: s.activity || 'N/A',
             supplierType: s.supplierType === 'SERVICE_PROVIDER' ? 'Prestador de servicio' : 'Proveedor',
             criticality: s.criticality === 'HIGH' ? 'Alta' : s.criticality === 'MEDIUM' ? 'Media' : 'Baja',
+            management: s.management === 'COMMERCIAL'
+                ? 'Gestión Comercial'
+                : s.management === 'ADMINISTRATIVE_PURCHASING'
+                    ? 'Compras Administrativas'
+                    : s.management === 'PAYROLL'
+                        ? 'Nómina'
+                        : s.management === 'SHARED'
+                            ? 'Gestión compartida'
+                            : 'Sin clasificar',
+            createdAt: s.createdAt
+                ? new Date(s.createdAt).toLocaleString('es-CO', { timeZone: 'America/Bogota' })
+                : 'N/A',
             status: 'ACTIVO',
         }));
 
