@@ -260,6 +260,7 @@ model Requirement {
   receivedDate           DateTime?
   suggestedSupplier      String?
   purchaseComments       String?
+  warehouseComments      String?
   attachments            Attachment[]
   logs                   HistoryLog[]
   invoices               Invoice[]

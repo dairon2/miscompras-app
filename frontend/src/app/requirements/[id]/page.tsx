@@ -86,6 +86,7 @@ interface Requirement {
     coordinatorComment?: string;
     directorComment?: string;
     purchaseComments?: string;
+    warehouseComments?: string;
     groupId?: number;
     budget?: {
         title: string;
@@ -202,6 +203,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                 receivedAtSatisfaction: response.data.receivedAtSatisfaction,
                 suggestedSupplier: response.data.suggestedSupplier || '',
                 purchaseComments: response.data.purchaseComments || '',
+                warehouseComments: response.data.warehouseComments || '',
                 directorComment: response.data.directorComment || '',
                 coordinatorComment: response.data.coordinatorComment || ''
             });
@@ -294,6 +296,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                 else if (key === 'deliveryDate') val = requirement.deliveryDate ? requirement.deliveryDate.split('T')[0] : '';
                 else if (key === 'receivedDate') val = requirement.receivedDate ? requirement.receivedDate.split('T')[0] : '';
                 else if (key === 'purchaseComments') val = requirement.purchaseComments || '';
+                else if (key === 'warehouseComments') val = requirement.warehouseComments || '';
                 else if (key === 'directorComment') val = requirement.directorComment || '';
                 else if (key === 'coordinatorComment') val = requirement.coordinatorComment || '';
 
@@ -721,10 +724,21 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                     </div>
 
                     {/* Observaciones de Aprobación */}
-                    {(requirement.directorComment || requirement.coordinatorComment) && (
+                    {(requirement.directorComment || requirement.coordinatorComment || requirement.warehouseComments) && (
                         <div className="mt-8">
                             <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Observaciones de Aprobación</label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {requirement.warehouseComments && (
+                                    <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-3xl border border-emerald-100 dark:border-emerald-800">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600">
+                                                <Package size={14} />
+                                            </div>
+                                            <span className="text-xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-500">Bodega</span>
+                                        </div>
+                                        <p className="text-gray-700 dark:text-gray-300 font-medium text-sm whitespace-pre-wrap">{requirement.warehouseComments}</p>
+                                    </div>
+                                )}
                                 {requirement.coordinatorComment && (
                                     <div className="bg-amber-50 dark:bg-amber-900/20 p-6 rounded-3xl border border-amber-100 dark:border-amber-800">
                                         <div className="flex items-center gap-2 mb-2">
@@ -1114,19 +1128,35 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                     )}
 
                                     {/* Comment Fields Section - Role-based */}
-                                    {['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole) && (
+                                    {['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole) && (
                                         <div className="space-y-4 bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800">
                                             <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Comentarios del Proceso</h4>
 
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-emerald-600 ml-2">Comentarios de Bodega</label>
+                                                <textarea
+                                                    rows={2}
+                                                    maxLength={4000}
+                                                    value={editForm.warehouseComments || ''}
+                                                    onChange={(e) => setEditForm({ ...editForm, warehouseComments: e.target.value })}
+                                                    placeholder="Novedades sobre recepción, entrega o estado de los bienes..."
+                                                    className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-emerald-500 outline-none resize-none text-sm"
+                                                />
+                                            </div>
+
                                             {/* Purchase Comments - Editable by all 3 roles */}
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-primary-600 ml-2">Comentarios de la Compra</label>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-primary-600 ml-2 flex items-center gap-2">
+                                                    Comentarios de la Compra
+                                                    {userRole === 'DEVELOPER' && <span className="text-gray-400">(Solo lectura)</span>}
+                                                </label>
                                                 <textarea
                                                     rows={2}
                                                     value={editForm.purchaseComments || ''}
                                                     onChange={(e) => setEditForm({ ...editForm, purchaseComments: e.target.value })}
-                                                    placeholder="Notas sobre el proceso de compra..."
-                                                    className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none resize-none text-sm"
+                                                    placeholder={userRole === 'DEVELOPER' ? "Sin comentarios de la Compra" : "Notas sobre el proceso de compra..."}
+                                                    readOnly={userRole === 'DEVELOPER'}
+                                                    className={`w-full border border-gray-200 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none resize-none text-sm ${userRole === 'DEVELOPER' ? 'bg-gray-100 dark:bg-slate-800/50 text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800'}`}
                                                 />
                                             </div>
 

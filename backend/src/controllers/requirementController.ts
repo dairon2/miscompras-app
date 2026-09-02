@@ -9,6 +9,7 @@ import { uploadToBlobStorage, processFileUploads } from '../services/blobStorage
 import { checkSubmissionAllowed } from '../services/submissionRulesService';
 import { sendRequirementNotificationEmail } from '../services/emailService';
 import { sendEmail } from "../services/emailService";
+import { canEditWarehouseComments, normalizeWarehouseComments } from '../utils/requirementWarehouseComments';
 
 // Helper function to translate status to Spanish
 const translateStatus = (status: string): string => {
@@ -509,7 +510,7 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
         receivedDate, reqCategory, procurementStatus,
         receivedAtSatisfaction, satisfactionComments,
         deleteAttachmentIds, hasMultiplePayments, suggestedSupplier,
-        purchaseComments, directorComment, coordinatorComment,
+        purchaseComments, warehouseComments, directorComment, coordinatorComment,
         status // Add status here
     } = req.body;
     const files = req.files as Express.Multer.File[];
@@ -532,6 +533,15 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
         // Determine if this is a Resubmission (Creator/Leader fixing a Rejected requirement)
         let isResubmission = false;
         const isApprover = ['ADMIN', 'DIRECTOR', 'COORDINATOR', 'DEVELOPER'].includes(userRole || '');
+
+        if (warehouseComments !== undefined && !canEditWarehouseComments(userRole)) {
+            return res.status(403).json({ error: 'No tienes permiso para editar los Comentarios de Bodega' });
+        }
+
+        const normalizedWarehouseComments = normalizeWarehouseComments(warehouseComments);
+        if (normalizedWarehouseComments.error) {
+            return res.status(400).json({ error: normalizedWarehouseComments.error });
+        }
 
         if (!isApprover) {
             // Security Check for standard Users/Leaders
@@ -661,6 +671,13 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
             changes.push(`Estado del trámite actualizado a ${procurementStatus}`);
         }
 
+        if (
+            warehouseComments !== undefined &&
+            normalizedWarehouseComments.value !== currentReq.warehouseComments
+        ) {
+            changes.push('Comentarios de Bodega actualizados');
+        }
+
         // Multiple Payments
         const newHasMultiple = hasMultiplePayments === 'true' || hasMultiplePayments === true;
         if (hasMultiplePayments !== undefined && newHasMultiple !== currentReq.hasMultiplePayments) {
@@ -710,6 +727,7 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
 
                 // Role-based comments
                 purchaseComments: ['ADMIN', 'DIRECTOR', 'COORDINATOR'].includes(userRole || '') ? (purchaseComments === 'null' ? null : purchaseComments) : undefined,
+                warehouseComments: canEditWarehouseComments(userRole) ? normalizedWarehouseComments.value : undefined,
                 directorComment: userRole === 'DIRECTOR' || userRole === 'ADMIN' ? (directorComment === 'null' ? null : directorComment) : undefined,
                 coordinatorComment: userRole === 'COORDINATOR' || userRole === 'ADMIN' ? (coordinatorComment === 'null' ? null : coordinatorComment) : undefined,
 
