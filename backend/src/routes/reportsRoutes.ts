@@ -9,6 +9,7 @@ import {
     getMonthlyTrend,
     getPaymentsCalendar
 } from '../controllers/reportsController';
+import { exportSuppliers } from '../controllers/reportController';
 
 const router = Router();
 
@@ -78,6 +79,7 @@ router.get('/requirements-by-status', getRequirementsByStatus);
 
 // Supplier Analytics
 router.get('/top-suppliers', getTopSuppliers);
+router.get('/suppliers', exportSuppliers);
 
 // Trends
 router.get('/monthly-trend', getMonthlyTrend);

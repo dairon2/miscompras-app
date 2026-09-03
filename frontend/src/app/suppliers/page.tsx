@@ -249,9 +249,30 @@ export default function SuppliersPage() {
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Error al exportar proveedores:', error);
-            showAlert("Error", "Error al generar el archivo Excel", "error");
+            let message = 'Error al generar el archivo Excel';
+            const responseData = error && typeof error === 'object' && 'response' in error
+                ? (error as { response?: { data?: unknown } }).response?.data
+                : undefined;
+
+            if (responseData instanceof Blob) {
+                try {
+                    const body: unknown = JSON.parse(await responseData.text());
+                    if (body && typeof body === 'object') {
+                        const details = body as { error?: unknown; message?: unknown };
+                        if (typeof details.error === 'string') message = details.error;
+                        else if (typeof details.message === 'string') message = details.message;
+                    }
+                } catch {
+                    // Preserve the friendly fallback when the server did not return JSON.
+                }
+            } else if (responseData && typeof responseData === 'object') {
+                const details = responseData as { error?: unknown };
+                if (typeof details.error === 'string') message = details.error;
+            }
+
+            showAlert('Error', message, 'error');
         } finally {
             setExporting(false);
         }
