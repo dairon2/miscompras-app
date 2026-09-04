@@ -66,6 +66,7 @@ interface Requirement {
     suggestedSupplier?: string;
     attachments: Attachment[];
     purchaseOrderNumber?: string;
+    purchaseOrderDate?: string;
     invoiceNumber?: string;
     deliveryDate?: string;
     receivedDate?: string;
@@ -94,6 +95,21 @@ interface Requirement {
         managerId?: string;
     };
 }
+
+const toBogotaDateInput = (value: string | Date): string => {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Bogota',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(date);
+    const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(item => item.type === type)?.value || '';
+
+    return `${part('year')}-${part('month')}-${part('day')}`;
+};
 
 export default function RequirementDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -1020,14 +1036,31 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                                                     />
                                                 </div>
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Orden de Compra</label>
-                                                <input
-                                                    type="text"
-                                                    value={editForm.purchaseOrderNumber}
-                                                    onChange={(e) => setEditForm({ ...editForm, purchaseOrderNumber: e.target.value })}
-                                                    className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
-                                                />
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Orden de Compra</label>
+                                                    <input
+                                                        type="text"
+                                                        value={editForm.purchaseOrderNumber}
+                                                        onChange={(e) => setEditForm({ ...editForm, purchaseOrderNumber: e.target.value })}
+                                                        className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold focus:ring-2 ring-primary-500 outline-none"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Fecha Orden de Compra</label>
+                                                    <input
+                                                        type="date"
+                                                        value={editForm.purchaseOrderNumber?.trim()
+                                                            ? editForm.purchaseOrderNumber.trim() === (requirement.purchaseOrderNumber || '').trim()
+                                                                ? requirement.purchaseOrderDate ? toBogotaDateInput(requirement.purchaseOrderDate) : ''
+                                                                : toBogotaDateInput(new Date())
+                                                            : ''}
+                                                        readOnly
+                                                        aria-readonly="true"
+                                                        title="La fecha se registra automáticamente al guardar la orden de compra"
+                                                        className="w-full bg-gray-100 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl font-bold text-gray-600 dark:text-gray-300 outline-none cursor-not-allowed"
+                                                    />
+                                                </div>
                                             </div>
                                         </>
                                     )}

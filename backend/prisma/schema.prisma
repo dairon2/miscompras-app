@@ -239,6 +239,7 @@ model Requirement {
   currentOwnerId         String?
   budgetId               String?
   purchaseOrderNumber    String?
+  purchaseOrderDate      DateTime?
   invoiceNumber          String?
   deliveryDate           DateTime?
   receivedAtSatisfaction Boolean             @default(false)

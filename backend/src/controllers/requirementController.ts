@@ -10,6 +10,10 @@ import { checkSubmissionAllowed } from '../services/submissionRulesService';
 import { sendRequirementNotificationEmail } from '../services/emailService';
 import { sendEmail } from "../services/emailService";
 import { canEditWarehouseComments, normalizeWarehouseComments } from '../utils/requirementWarehouseComments';
+import {
+    buildRequirementPurchaseOrderUpdate,
+    normalizeRequirementPurchaseOrderNumber
+} from '../utils/requirementPurchaseOrder';
 
 // Helper function to translate status to Spanish
 const translateStatus = (status: string): string => {
@@ -527,6 +531,11 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
 
         if (!currentReq) return res.status(404).json({ error: 'Requirement not found' });
 
+        const purchaseOrderUpdate = buildRequirementPurchaseOrderUpdate(
+            currentReq.purchaseOrderNumber,
+            purchaseOrderNumber
+        );
+
         console.log(`[UpdateReq] Req Owner: ${currentReq.createdById}, Status: ${currentReq.status}`);
 
 
@@ -621,9 +630,12 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
         if (actualAmount && parseFloat(actualAmount) !== parseFloat(currentReq.actualAmount?.toString() || '0')) changes.push(`Monto actualizado a $${actualAmount}`);
 
         // Purchase Order
-        const newOC = purchaseOrderNumber === 'null' ? null : purchaseOrderNumber;
-        if (purchaseOrderNumber !== undefined && newOC !== currentReq.purchaseOrderNumber) {
-            changes.push(newOC ? `OC actualizada a ${newOC}` : `OC eliminada`);
+        if (purchaseOrderUpdate.changed) {
+            changes.push(
+                purchaseOrderUpdate.purchaseOrderNumber
+                    ? `OC actualizada a ${purchaseOrderUpdate.purchaseOrderNumber}; fecha de diligenciamiento registrada`
+                    : 'OC eliminada; fecha de diligenciamiento eliminada'
+            );
         }
 
         // Invoice
@@ -707,7 +719,8 @@ export const updateRequirement = async (req: AuthRequest, res: Response) => {
                 supplierId: supplierId === undefined ? undefined : (supplierId === 'null' ? null : supplierId),
                 manualSupplierName: manualSupplierName === undefined ? undefined : (manualSupplierName === 'null' ? null : manualSupplierName),
                 suggestedSupplier: suggestedSupplier === undefined ? undefined : (suggestedSupplier === 'null' ? null : suggestedSupplier),
-                purchaseOrderNumber: purchaseOrderNumber === undefined ? undefined : (purchaseOrderNumber === 'null' ? null : purchaseOrderNumber),
+                purchaseOrderNumber: purchaseOrderUpdate.purchaseOrderNumber,
+                purchaseOrderDate: purchaseOrderUpdate.purchaseOrderDate,
                 invoiceNumber: invoiceNumber === undefined ? undefined : (invoiceNumber === 'null' ? null : invoiceNumber),
                 deliveryDate: deliveryDate === undefined ? undefined : parseSafeDate(deliveryDate),
                 receivedDate: receivedDate === undefined ? undefined : parseSafeDate(receivedDate),
@@ -1810,6 +1823,8 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
 
     // ========== VALIDATIONS FIRST (before any DB operations) ==========
 
+    const purchaseOrderUpdate = buildRequirementPurchaseOrderUpdate(null, purchaseOrderNumber);
+
     // Validate groupId - REQUIRED for asientos
     if (!groupId || groupId === 'null' || groupId === '' || isNaN(parseInt(groupId))) {
         return res.status(400).json({
@@ -1857,7 +1872,8 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
                     manualSupplierName: manualSupplierName === 'null' ? null : manualSupplierName,
                     budgetId: (budgetId && budgetId !== 'null') ? budgetId : null,
                     reqCategory: reqCategory || 'COMPRA',
-                    purchaseOrderNumber: purchaseOrderNumber === 'null' ? null : purchaseOrderNumber,
+                    purchaseOrderNumber: purchaseOrderUpdate.purchaseOrderNumber,
+                    purchaseOrderDate: purchaseOrderUpdate.purchaseOrderDate,
                     invoiceNumber: invoiceNumber === 'null' ? null : invoiceNumber,
                     createdById: userId!,
                     year: new Date().getFullYear(),
@@ -1924,7 +1940,11 @@ export const updateMassRequirements = async (req: AuthRequest, res: Response) =>
         if (updates.supplierId !== undefined) allowedUpdates.supplierId = updates.supplierId;
         if (updates.manualSupplierName !== undefined) allowedUpdates.manualSupplierName = updates.manualSupplierName;
         if (updates.invoiceNumber !== undefined) allowedUpdates.invoiceNumber = updates.invoiceNumber;
-        if (updates.purchaseOrderNumber !== undefined) allowedUpdates.purchaseOrderNumber = updates.purchaseOrderNumber;
+        if (updates.purchaseOrderNumber !== undefined) {
+            const purchaseOrderNumber = normalizeRequirementPurchaseOrderNumber(updates.purchaseOrderNumber);
+            allowedUpdates.purchaseOrderNumber = purchaseOrderNumber;
+            allowedUpdates.purchaseOrderDate = purchaseOrderNumber ? new Date() : null;
+        }
         if (updates.procurementStatus !== undefined) allowedUpdates.procurementStatus = updates.procurementStatus;
         if (updates.status !== undefined) allowedUpdates.status = updates.status;
         if (updates.actualAmount !== undefined) allowedUpdates.actualAmount = updates.actualAmount;
