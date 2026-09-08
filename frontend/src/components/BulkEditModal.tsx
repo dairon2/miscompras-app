@@ -158,6 +158,7 @@ export default function BulkEditModal({ isOpen, onClose, selectedIds, onSuccess 
                                         { value: "", label: "-- No cambiar --" },
                                         { value: "PENDIENTE", label: "Pendiente" },
                                         { value: "EN_TRAMITE", label: "En trámite" },
+                                        { value: "ANUALIZADO", label: "Anualizados" },
                                         { value: "ENTREGADO", label: "Entregado" },
                                         { value: "FINALIZADO", label: "Finalizado" },
                                         { value: "ANULADO", label: "Anulado" },

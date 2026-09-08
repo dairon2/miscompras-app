@@ -20,6 +20,7 @@ describe('Requirement Controller Logic', () => {
             'ENVIADO_PROVEEDOR',
             'RECIBIDO',
             'ENTREGADO',
+            'ANUALIZADO',
             'FINALIZADO'
         ];
 
@@ -36,6 +37,7 @@ describe('Requirement Controller Logic', () => {
 
             expect(isValidProcurementStatus('PENDIENTE')).toBe(true);
             expect(isValidProcurementStatus('FINALIZADO')).toBe(true);
+            expect(isValidProcurementStatus('ANUALIZADO')).toBe(true);
             expect(isValidProcurementStatus('INVALID')).toBe(false);
         });
 

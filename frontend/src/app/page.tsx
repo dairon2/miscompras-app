@@ -11,7 +11,7 @@ import { translateStatus } from "@/lib/translations";
 export default function HomePage() {
   const { user, isAuthenticated } = useAuthStore();
   const router = useRouter();
-  const [stats, setStats] = useState({ pendiente: 0, enTramite: 0, entregado: 0, finalizado: 0, totalAmount: 0 });
+  const [stats, setStats] = useState({ pendiente: 0, enTramite: 0, entregado: 0, finalizado: 0, anualizado: 0, totalAmount: 0 });
   const [recentRequirements, setRecentRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submissionInfo, setSubmissionInfo] = useState<{
@@ -34,13 +34,14 @@ export default function HomePage() {
   const fetchDashboardData = async () => {
     try {
       const response = await api.get("/requirements/dashboard-stats");
-      const { pendiente, enTramite, entregado, finalizado, totalAmount, recent } = response.data;
+      const { pendiente, enTramite, entregado, finalizado, anualizado, totalAmount, recent } = response.data;
 
       setStats({
         pendiente: pendiente || 0,
         enTramite: enTramite || 0,
         entregado: entregado || 0,
         finalizado: finalizado || 0,
+        anualizado: anualizado || 0,
         totalAmount: totalAmount || 0
       });
       setRecentRequirements(recent || []);
@@ -128,7 +129,7 @@ export default function HomePage() {
       </motion.section>
 
       {/* Stats Grid - Enhanced with mini charts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-5 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-5 mb-10">
         <StatCard
           title="Pendientes"
           value={stats.pendiente.toString()}
@@ -164,6 +165,15 @@ export default function HomePage() {
           color="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
           trend={[10, 15, 25, 35, 45, stats.finalizado]}
           trendColor="text-emerald-500"
+        />
+        <StatCard
+          title="Anualizados"
+          value={stats.anualizado.toString()}
+          sub="Gestión anual"
+          icon={<CalendarClock />}
+          color="bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400"
+          trend={[5, 10, 15, 20, 25, stats.anualizado]}
+          trendColor="text-violet-500"
         />
         <StatCard
           title="Total Solicitado"

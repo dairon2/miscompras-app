@@ -129,6 +129,7 @@ export default function NewAsientoPage() {
         { value: '', label: 'Seleccionar estado' },
         { value: 'EN_TRAMITE', label: 'En trámite' },
         { value: 'PENDIENTE', label: 'Pendiente' },
+        { value: 'ANUALIZADO', label: 'Anualizados' },
         { value: 'ENTREGADO', label: 'Entregado' },
         { value: 'FINALIZADO', label: 'Finalizado' },
         { value: 'POSTERGADO', label: 'Postergado' },

@@ -26,6 +26,7 @@ const translateStatus = (status: string): string => {
         'REJECTED': 'Rechazado',
         'CANCELLED': 'Cancelado',
         'FINALIZADO': 'Finalizado',
+        'ANUALIZADO': 'Anualizados',
         'ENTREGADO': 'Entregado',
         'EN_TRAMITE': 'En trámite',
         'PENDIENTE': 'Pendiente',
@@ -1559,7 +1560,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         console.log("[Dashboard] Fetching counts with where:", JSON.stringify(where));
 
         // Count by procurementStatus instead of approval status
-        let pendiente = 0, enTramite = 0, entregado = 0, finalizado = 0;
+        let pendiente = 0, enTramite = 0, entregado = 0, finalizado = 0, anualizado = 0;
 
         try {
             pendiente = await prisma.requirement.count({
@@ -1595,6 +1596,15 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             console.log("[Dashboard] Finalizado count:", finalizado);
         } catch (err: any) {
             console.error("[Dashboard] Error counting finalizado:", err.message);
+        }
+
+        try {
+            anualizado = await prisma.requirement.count({
+                where: { ...where, procurementStatus: 'ANUALIZADO' }
+            });
+            console.log("[Dashboard] Anualizado count:", anualizado);
+        } catch (err: any) {
+            console.error("[Dashboard] Error counting anualizado:", err.message);
         }
 
         // Recent Activity Filters
@@ -1721,6 +1731,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             enTramite,
             entregado,
             finalizado,
+            anualizado,
             totalAmount,
             recent
         });
@@ -1843,7 +1854,7 @@ export const createAsiento = async (req: AuthRequest, res: Response) => {
     }
 
     const validGroupId = parseInt(groupId);
-    const validProcurementStatuses = ['ANULADO', 'ENTREGADO', 'EN_TRAMITE', 'PENDIENTE', 'FINALIZADO', 'POSTERGADO', 'RECHAZADO'];
+    const validProcurementStatuses = ['ANULADO', 'ANUALIZADO', 'ENTREGADO', 'EN_TRAMITE', 'PENDIENTE', 'FINALIZADO', 'POSTERGADO', 'RECHAZADO'];
     const selectedProcurementStatus = procurementStatus || processStatus || 'EN_TRAMITE';
 
     if (!validProcurementStatuses.includes(selectedProcurementStatus)) {

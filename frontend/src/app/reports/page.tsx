@@ -37,6 +37,7 @@ const STATUS_COLORS: Record<string, string> = {
     'Pendiente': COLORS.warning,
     'En Trámite': COLORS.info,
     'Finalizado': COLORS.success,
+    'Anualizados': COLORS.purple,
     'Entregado': COLORS.info, // Reuse info blue or pick another
     'Anulado': COLORS.danger,
     'Postergado': COLORS.slate
@@ -55,6 +56,7 @@ interface ExecutiveSummary {
         enTramite: number;
         entregado: number;
         finalizado: number;
+        anualizado: number;
     };
     invoices: {
         total: number;
@@ -839,6 +841,10 @@ export default function ReportsPage() {
                             <div className="p-4 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-2xl text-center">
                                 <p className="text-3xl font-black text-yellow-600">{summary?.requirements.pendiente || 0}</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">Pendientes</p>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl text-center">
+                                <p className="text-3xl font-black text-violet-600">{summary?.requirements.anualizado || 0}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">Anualizados</p>
                             </div>
                             <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl text-center">
                                 <p className="text-3xl font-black text-indigo-600">{summary?.requirements.total || 0}</p>

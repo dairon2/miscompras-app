@@ -321,7 +321,7 @@ IMPORTANTE para REFERENCIAS:
             - TOP_REQUESTER: Usuario/área que más requerimientos ha creado (Ej: "quién más compra", "qué líder más compra", "área con más requerimientos"). Sin parámetros.
             - TOP_SUPPLIER_MONTH: Proveedor con más compras del mes actual (Ej: "qué proveedor tiene más compras este mes", "proveedor con más gasto mensual"). Sin parámetros.
             - TOP_AREA_SPEND: Área con mayor uso de presupuesto o gasto (Ej: "qué área está usando más presupuesto", "área con más gasto", "dónde se está gastando más por área"). Sin parámetros.
-            - REQ_BY_STATUS: Listar requerimientos filtrados por estado de trámite (Ej: "requerimientos en trámite", "pendientes de entrega", "finalizados"). Parámetros: procurementStatus (PENDIENTE|EN_TRAMITE|ENTREGADO|FINALIZADO|ANULADO|POSTERGADO).
+            - REQ_BY_STATUS: Listar requerimientos filtrados por estado de trámite (Ej: "requerimientos en trámite", "pendientes de entrega", "anualizados", "finalizados"). Parámetros: procurementStatus (PENDIENTE|EN_TRAMITE|ENTREGADO|ANUALIZADO|FINALIZADO|ANULADO|POSTERGADO).
             - REQ_BY_CATEGORY: Contar o listar requerimientos por categoría (Ej: "cuántos son orden de servicio", "requerimientos de compra"). Parámetros: category (COMPRA|SERVICIO|ORDEN_COMPRA|ORDEN_SERVICIO|ANTICIPO|CONTRATO|ORDEN_PRODUCCION|COMPRA_ONLINE).
             - GENERATE_CONTRACT: Generar y enviar contrato al proveedor de un requerimiento (Ej: "genera contrato para req #4", "envía contrato del requerimiento X", "crea contrato para ESE requerimiento"). Parámetros: groupId (number) o title (string).
             - SEND_QUOTE: Preparar solicitud de cotización para un proveedor. Parámetros: supplierName, product, groupId.
@@ -921,6 +921,7 @@ IMPORTANTE para REFERENCIAS:
                         'PENDIENTE': 'Pendientes',
                         'EN_TRAMITE': 'En Trámite',
                         'ENTREGADO': 'Entregados',
+                        'ANUALIZADO': 'Anualizados',
                         'FINALIZADO': 'Finalizados',
                         'ANULADO': 'Anulados',
                         'POSTERGADO': 'Postergados'

@@ -74,12 +74,13 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
             ];
         }
 
-        const [totalRequirements, pendienteProcurement, enTramiteProcurement, entregadoProcurement, finalizadoProcurement] = await Promise.all([
+        const [totalRequirements, pendienteProcurement, enTramiteProcurement, entregadoProcurement, finalizadoProcurement, anualizadoProcurement] = await Promise.all([
             prisma.requirement.count({ where: reqWhere }),
             prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'PENDIENTE' } }),
             prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'EN_TRAMITE' } }),
             prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'ENTREGADO' } }),
-            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'FINALIZADO' } })
+            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'FINALIZADO' } }),
+            prisma.requirement.count({ where: { ...reqWhere, procurementStatus: 'ANUALIZADO' } })
         ]);
 
         // Get invoices summary
@@ -129,7 +130,8 @@ export const getExecutiveSummary = async (req: AuthRequest, res: Response) => {
                 pendiente: pendienteProcurement,
                 enTramite: enTramiteProcurement,
                 entregado: entregadoProcurement,
-                finalizado: finalizadoProcurement
+                finalizado: finalizadoProcurement,
+                anualizado: anualizadoProcurement
             },
             invoices: {
                 total: invoices.length,
@@ -275,6 +277,7 @@ const getStatusLabel = (status: string): string => {
     const labels: Record<string, string> = {
         'PENDIENTE': 'Pendiente',
         'EN_TRAMITE': 'En trámite',
+        'ANUALIZADO': 'Anualizados',
         'FINALIZADO': 'Finalizado',
         'ENTREGADO': 'Entregado',
         'ANULADO': 'Anulado',

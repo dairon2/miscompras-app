@@ -17,6 +17,7 @@ export const translateStatus = (status: string): string => {
 
         // Procurement statuses
         'FINALIZADO': 'Finalizado',
+        'ANUALIZADO': 'Anualizados',
         'ANULADO': 'Anulado',
         'ENTREGADO': 'Entregado',
         'EN_TRAMITE': 'En trámite',
@@ -97,6 +98,7 @@ export const translateLogDetails = (details: string): string => {
         .replace(/RECEIVED/g, 'Recibido')
         .replace(/PAID/g, 'Pagado')
         .replace(/FINALIZADO/g, 'Finalizado')
+        .replace(/ANUALIZADO/g, 'Anualizados')
         .replace(/EN_TRAMITE/g, 'En trámite')
         .replace(/Change status to/gi, 'Cambio de estado a')
         .replace(/Cambio de estado a/gi, 'Cambio de estado a')

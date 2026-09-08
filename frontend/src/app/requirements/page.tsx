@@ -294,6 +294,7 @@ export default function RequirementsPage() {
     const getProcStatusStyle = (status: string) => {
         switch (status) {
             case 'FINALIZADO': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            case 'ANUALIZADO': return 'bg-violet-100 text-violet-700 border-violet-200';
             case 'ANULADO': return 'bg-rose-100 text-rose-700 border-rose-200';
             case 'ENTREGADO': return 'bg-blue-100 text-blue-700 border-blue-200';
             case 'EN_TRAMITE': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
@@ -409,6 +410,7 @@ export default function RequirementsPage() {
                                 options={[
                                     { value: "", label: "Estado Trámite (Todos)" },
                                     { value: "ANULADO", label: "Anulado" },
+                                    { value: "ANUALIZADO", label: "Anualizados" },
                                     { value: "ENTREGADO", label: "Entregado" },
                                     { value: "EN_TRAMITE", label: "En trámite" },
                                     { value: "PENDIENTE", label: "Pendientes" },
@@ -675,6 +677,8 @@ export default function RequirementsPage() {
                                                                     colorClass = 'text-blue-600 bg-blue-50 dark:bg-blue-900/20';
                                                                 } else if (status.includes('FINALIZADO') || status.includes('COMPLETADO')) {
                                                                     colorClass = 'text-green-600 bg-green-50 dark:bg-green-900/20';
+                                                                } else if (status.includes('ANUALIZADO')) {
+                                                                    colorClass = 'text-violet-600 bg-violet-50 dark:bg-violet-900/20';
                                                                 } else if (status.includes('ANULADO') || status.includes('CANCELADO')) {
                                                                     colorClass = 'text-red-600 bg-red-50 dark:bg-red-900/20';
                                                                 }

@@ -621,6 +621,7 @@ enum Status {
 
 enum ProcurementStatus {
   ANULADO
+  ANUALIZADO
   ENTREGADO
   EN_TRAMITE
   PENDIENTE

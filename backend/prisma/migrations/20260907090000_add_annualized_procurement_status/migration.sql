@@ -1,0 +1,1 @@
+ALTER TYPE "ProcurementStatus" ADD VALUE 'ANUALIZADO';

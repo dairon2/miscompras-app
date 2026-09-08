@@ -164,6 +164,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
     const procurementStatusOptions = [
         { value: 'ANULADO', label: 'Anulado' },
+        { value: 'ANUALIZADO', label: 'Anualizados' },
         { value: 'ENTREGADO', label: 'Entregado' },
         { value: 'EN_TRAMITE', label: 'En trámite' },
         { value: 'PENDIENTE', label: 'Pendientes' },
@@ -461,7 +462,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
 
     const canApprovePending = pendingApprovalByCurrentUser && isApprover;
 
-    const canManageProcurement = requirement.status === 'APPROVED' && (requirement.procurementStatus === 'PENDIENTE' || requirement.procurementStatus === 'EN_TRAMITE' || requirement.procurementStatus === 'ENTREGADO');
+    const canManageProcurement = requirement.status === 'APPROVED' && (requirement.procurementStatus === 'PENDIENTE' || requirement.procurementStatus === 'EN_TRAMITE' || requirement.procurementStatus === 'ENTREGADO' || requirement.procurementStatus === 'ANUALIZADO');
     // Allow marking received satisfaction also when FINALIZADO but not yet confirmed (for cases where finalized without evaluation)
     const isBudgetManager = requirement.budget?.managerId === currentUser?.id;
     const isCreatorOrManager = isCreator || isBudgetManager;
@@ -485,6 +486,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
         switch (status) {
             case 'APPROVED':
             case 'FINALIZADO': return <CheckCircle className="text-green-500" />;
+            case 'ANUALIZADO': return <Calendar className="text-violet-500" />;
             case 'REJECTED':
             case 'CANCELLED':
             case 'ANULADO': return <XCircle className="text-red-500" />;
@@ -673,6 +675,7 @@ export default function RequirementDetailPage({ params }: { params: Promise<{ id
                             <div className="flex flex-col items-end gap-2 text-right">
                                 <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Estado Trámite</span>
                                 <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border flex items-center gap-2 ${requirement.procurementStatus === 'FINALIZADO' ? 'bg-green-50 text-green-700 border-green-100' :
+                                    requirement.procurementStatus === 'ANUALIZADO' ? 'bg-violet-50 text-violet-700 border-violet-100' :
                                     requirement.procurementStatus === 'ANULADO' ? 'bg-red-50 text-red-700 border-red-100' :
                                         requirement.procurementStatus === 'ENTREGADO' ? 'bg-blue-50 text-blue-700 border-blue-100' :
                                             'bg-indigo-50 text-indigo-700 border-indigo-100'
